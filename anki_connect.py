@@ -187,12 +187,16 @@ class AjaxServer:
 class AnkiBridge:
     def addNote(self, deckName, modelName, fields, tags=[]):
         note = self.createNote(deckName, modelName, fields, tags)
-        if note is not None:
-            collection = self.collection()
-            collection.addNote(note)
-            collection.autosave()
-            self.startEditing()
-            return note.id
+        if note is None:
+            return
+
+        self.startEditing()
+
+        collection = self.collection()
+        collection.addNote(note)
+        collection.autosave()
+
+        return note.id
 
 
     def canAddNote(self, deckName, modelName, fields):
@@ -202,11 +206,11 @@ class AnkiBridge:
     def createNote(self, deckName, modelName, fields, tags=[]):
         model = self.models().byName(modelName)
         if model is None:
-            return None
+            return
 
         deck = self.decks().byName(deckName)
         if deck is None:
-            return None
+            return
 
         note = anki.notes.Note(self.collection(), model)
         note.model()['did'] = deck['id']
@@ -237,10 +241,6 @@ class AnkiBridge:
 
     def window(self):
         return aqt.mw
-
-
-    def addUiAction(self, action):
-        self.window().form.menuTools.addAction(action)
 
 
     def collection(self):
@@ -292,6 +292,28 @@ class AnkiConnect:
         action = 'api_' + request.get('action', '')
         if hasattr(self, action):
             return getattr(self, action)(**request.get('params', {}))
+
+
+    def api_deckNames(self):
+        return self.anki.deckNames()
+
+
+    def api_modelNames(self):
+        return self.anki.modelNames()
+
+
+    def api_modelFieldNames(self, modelName):
+        return self.anki.modelFieldNames(modelName)
+
+
+    def api_features(self):
+        features = {}
+        for name in dir(self):
+            method = getattr(self, name)
+            if name.startswith('api_') and callable(method):
+                features[name[4:]] = list(method.func_code.co_varnames[1:])
+
+        return features
 
 
 #
