@@ -289,9 +289,9 @@ class AnkiConnect:
 
 
     def handler(self, request):
-        action = 'api_' + request.get('action', '')
+        action = 'api_' + (request.get('action') or '')
         if hasattr(self, action):
-            return getattr(self, action)(**request.get('params', {}))
+            return getattr(self, action)(**(request.get('params') or {}))
 
 
     def api_deckNames(self):
