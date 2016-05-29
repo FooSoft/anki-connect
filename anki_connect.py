@@ -186,13 +186,16 @@ class AjaxServer:
 
 class AnkiBridge:
     def addNote(self, deckName, modelName, fields, tags=[]):
+        collection = self.collection()
+        if collection is None:
+            return
+
         note = self.createNote(deckName, modelName, fields, tags)
         if note is None:
             return
 
         self.startEditing()
 
-        collection = self.collection()
         collection.addNote(note)
         collection.autosave()
 
@@ -204,15 +207,19 @@ class AnkiBridge:
 
 
     def createNote(self, deckName, modelName, fields, tags=[]):
-        model = self.models().byName(modelName)
+        collection = self.collection()
+        if collection is None:
+            return
+
+        model = collection.models.byName(modelName)
         if model is None:
             return
 
-        deck = self.decks().byName(deckName)
+        deck = collection.decks.byName(deckName)
         if deck is None:
             return
 
-        note = anki.notes.Note(self.collection(), model)
+        note = anki.notes.Note(collection, model)
         note.model()['did'] = deck['id']
         note.tags = tags
 
@@ -235,7 +242,7 @@ class AnkiBridge:
 
 
     def stopEditing(self):
-        if self.collection():
+        if self.collection() is not None:
             self.window().maybeReset()
 
 
@@ -247,26 +254,26 @@ class AnkiBridge:
         return self.window().col
 
 
-    def models(self):
-        return self.collection().models
-
-
     def modelNames(self):
-        return self.models().allNames()
+        collection = self.collection()
+        if collection is not None:
+            return collection.models.allNames()
 
 
     def modelFieldNames(self, modelName):
-        model = self.models().byName(modelName)
+        collection = self.collection()
+        if collection is None:
+            return
+
+        model = collection.models.byName(modelName)
         if model is not None:
             return [field['name'] for field in model['flds']]
 
 
-    def decks(self):
-        return self.collection().decks
-
-
     def deckNames(self):
-        return self.decks().allNames()
+        collection = self.collection()
+        if collection is not None:
+            return collection.decks.allNames()
 
 
 #
