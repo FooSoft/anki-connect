@@ -24,6 +24,13 @@ import socket
 
 
 #
+# Constants
+#
+
+API_VERSION = 1
+
+
+#
 # AjaxRequest
 #
 
@@ -342,6 +349,10 @@ class AnkiConnect:
                 features[name[4:]] = list(method.func_code.co_varnames[1:])
 
         return features
+
+
+    def api_version(self):
+        return API_VERSION
 
 
 #
