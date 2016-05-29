@@ -306,6 +306,27 @@ class AnkiConnect:
         return self.anki.modelFieldNames(modelName)
 
 
+    def api_addNote(self, note):
+        return self.anki.addNote(
+            note['deckName'],
+            note['modelName'],
+            note['fields'],
+            note['tags']
+        )
+
+
+    def api_canAddNotes(self, notes):
+        results = []
+        for note in notes:
+            results.append(self.anki.canAddNote(
+                note['deckName'],
+                note['modelName'],
+                note['fields']
+            ))
+
+        return results
+
+
     def api_features(self):
         features = {}
         for name in dir(self):
