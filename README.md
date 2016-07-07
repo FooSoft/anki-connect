@@ -1,10 +1,10 @@
 # AnkiConnect #
 
-The AnkiConnect plugin enables external applications such as [Yomichan for Chrome](https://foosoft.net/projects/yomichan-chrome) to
+The AnkiConnect plugin enables external applications such as [Yomichan for Chrome](https://foosoft.net/projects/yomichan-chrome/) to
 communicate with Anki over a remote API. This makes it possible to execute queries against the user's card deck,
 automatically create new vocabulary and Kanji flash cards, and more.
 
-## Dependencies ##
+## Requirements ##
 
 * [Anki](http://ankisrs.net/)
 
