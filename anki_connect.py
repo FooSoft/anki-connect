@@ -159,9 +159,9 @@ class AjaxServer:
 
         headers = {
             'HTTP/1.1 200 OK': None,
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/json',
             'Content-Length': str(len(body)),
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': 'http://127.0.0.1'
         }
 
         for key, value in headers.items():
