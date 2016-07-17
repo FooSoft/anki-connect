@@ -57,18 +57,19 @@ def audioDownload(kana, kanji):
     if resp.code != 200:
         return None
 
-    data = resp.read()
+    return resp.read()
 
+
+def audioIsPlaceholder(data):
     m = hashlib.md5()
     m.update(data)
-    if m.hexdigest() == '7e2c2f954ef6051373ba916f000168dc':
-        return None
-
-    return data
+    return m.hexdigest() == '7e2c2f954ef6051373ba916f000168dc'
 
 
-def audioFixupField(field, kana, kanji):
-    return field.replace(u'{audio}', audioBuildFilename(kana, kanji))
+def audioInject(note, kana, kanji, fields):
+    for field in fields:
+        if field in note:
+            note[field] += u'[sound:{}]'.format(audioBuildFilename(kana, kanji))
 
 
 #
@@ -237,14 +238,20 @@ class AnkiBridge:
         if collection is None:
             return
 
-        note = self.createNote(deckName, modelName, fields, tags, audio)
+        note = self.createNote(deckName, modelName, fields, tags)
         if note is None:
             return
 
-        self.startEditing()
+        if audio is not None:
+            data = audioDownload(**audio)
+            if data is not None and not audioIsPlaceholder(data):
+                audioInject(note, **audio)
+                self.media().writeData(audioBuildFilename(**audio), data)
 
+        self.startEditing()
         collection.addNote(note)
         collection.autosave()
+        self.stopEditing()
 
         return note.id
 
@@ -253,7 +260,7 @@ class AnkiBridge:
         return bool(self.createNote(deckName, modelName, fields))
 
 
-    def createNote(self, deckName, modelName, fields, tags=[], audio=None):
+    def createNote(self, deckName, modelName, fields, tags=[]):
         collection = self.collection()
         if collection is None:
             return
@@ -272,8 +279,6 @@ class AnkiBridge:
 
         for name, value in fields.items():
             if name in note:
-                if audio is not None:
-                    value = audioFixupField(value, **audio)
                 note[name] = value
 
         if not note.dupeOrEmpty():
@@ -301,6 +306,12 @@ class AnkiBridge:
 
     def collection(self):
         return self.window().col
+
+
+    def media(self):
+        collection = self.collection()
+        if collection is not None:
+            return collection.media
 
 
     def modelNames(self):
