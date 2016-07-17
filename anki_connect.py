@@ -66,10 +66,10 @@ def audioIsPlaceholder(data):
     return m.hexdigest() == '7e2c2f954ef6051373ba916f000168dc'
 
 
-def audioInject(note, kana, kanji, fields):
+def audioInject(note, fields, filename):
     for field in fields:
         if field in note:
-            note[field] += u'[sound:{}]'.format(audioBuildFilename(kana, kanji))
+            note[field] += u'[sound:{}]'.format(filename)
 
 
 #
@@ -243,10 +243,11 @@ class AnkiBridge:
             return
 
         if audio is not None and len(audio['fields']) > 0:
-            data = audioDownload(**audio)
+            data = audioDownload(audio['kana'], audio['kanji'])
             if data is not None and not audioIsPlaceholder(data):
-                audioInject(note, **audio)
-                self.media().writeData(audioBuildFilename(**audio), data)
+                filename = audioBuildFilename(audio['kana'], audio['kanji'])
+                audioInject(note, audio['fields'], filename)
+                self.media().writeData(filename, data)
 
         self.startEditing()
         collection.addNote(note)
