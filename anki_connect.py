@@ -33,10 +33,18 @@ API_VERSION = 1
 
 
 #
-# Helpers
+# Audio helpers
 #
 
-def downloadAudio(kana, kanji):
+def audioBuildFilename(kana, kanji):
+    filename = u'yomichan_{}'.format(kana)
+    if kanji:
+        filename += u'_{}'.format(kanji)
+    filename += u'.mp3'
+    return filename
+
+
+def audioDownload(kana, kanji):
     url = 'http://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kana={}'.format(urllib2.quote(kana.encode('utf-8')))
     if kanji:
         url += '&kanji={}'.format(urllib2.quote(kanji.encode('utf-8')))
@@ -53,17 +61,14 @@ def downloadAudio(kana, kanji):
 
     m = hashlib.md5()
     m.update(data)
-    digest = m.hexdigest()
-
-    if digest == '7e2c2f954ef6051373ba916f000168dc':
+    if m.hexdigest() == '7e2c2f954ef6051373ba916f000168dc':
         return None
 
-    filename = u'yomichan_{}'.format(kana)
-    if kanji:
-        filename += u'_{}'.format(kanji)
-    filename += u'.mp3'
+    return data
 
-    return filename, data
+
+def audioFixupField(field, kana, kanji):
+    return field.replace(u'{audio}', audioBuildFilename(kana, kanji))
 
 
 #
@@ -232,7 +237,7 @@ class AnkiBridge:
         if collection is None:
             return
 
-        note = self.createNote(deckName, modelName, fields, audio, tags)
+        note = self.createNote(deckName, modelName, fields, tags, audio)
         if note is None:
             return
 
@@ -248,7 +253,7 @@ class AnkiBridge:
         return bool(self.createNote(deckName, modelName, fields))
 
 
-    def createNote(self, deckName, modelName, fields, audio=[], tags=[]):
+    def createNote(self, deckName, modelName, fields, tags=[], audio=None):
         collection = self.collection()
         if collection is None:
             return
@@ -267,6 +272,8 @@ class AnkiBridge:
 
         for name, value in fields.items():
             if name in note:
+                if audio is not None:
+                    value = audioFixupField(value, **audio)
                 note[name] = value
 
         if not note.dupeOrEmpty():
@@ -371,8 +378,7 @@ class AnkiConnect:
             results.append(self.anki.canAddNote(
                 note['deckName'],
                 note['modelName'],
-                note['fields'],
-                note.get('audio')
+                note['fields']
             ))
 
         return results
