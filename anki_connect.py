@@ -242,7 +242,7 @@ class AnkiBridge:
         if note is None:
             return
 
-        if audio is not None:
+        if audio is not None and len(audio['fields']) > 0:
             data = audioDownload(**audio)
             if data is not None and not audioIsPlaceholder(data):
                 audioInject(note, **audio)
