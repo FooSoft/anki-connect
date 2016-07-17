@@ -45,9 +45,9 @@ def audioBuildFilename(kana, kanji):
 
 
 def audioDownload(kana, kanji):
-    url = 'http://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kana={}'.format(urllib2.quote(kana.encode('utf-8')))
-    if kanji:
-        url += '&kanji={}'.format(urllib2.quote(kanji.encode('utf-8')))
+    url = 'http://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={}'.format(urllib2.quote(kanji.encode('utf-8')))
+    if kana:
+        url += '&kana={}'.format(urllib2.quote(kana.encode('utf-8')))
 
     try:
         resp = urllib2.urlopen(url)
