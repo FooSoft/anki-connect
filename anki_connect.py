@@ -227,12 +227,12 @@ class AjaxServer:
 #
 
 class AnkiBridge:
-    def addNote(self, deckName, modelName, fields, tags, audioUrl):
+    def addNote(self, deckName, modelName, fields, tags, audio):
         collection = self.collection()
         if collection is None:
             return
 
-        note = self.createNote(deckName, modelName, fields, tags)
+        note = self.createNote(deckName, modelName, fields, audio, tags)
         if note is None:
             return
 
@@ -248,7 +248,7 @@ class AnkiBridge:
         return bool(self.createNote(deckName, modelName, fields))
 
 
-    def createNote(self, deckName, modelName, fields, tags=[]):
+    def createNote(self, deckName, modelName, fields, audio=[], tags=[]):
         collection = self.collection()
         if collection is None:
             return
@@ -361,7 +361,7 @@ class AnkiConnect:
             note['modelName'],
             note['fields'],
             note['tags'],
-            note.get('audioUrl')
+            note.get('audio')
         )
 
 
@@ -372,7 +372,7 @@ class AnkiConnect:
                 note['deckName'],
                 note['modelName'],
                 note['fields'],
-                note.get('audioUrl')
+                note.get('audio')
             ))
 
         return results
