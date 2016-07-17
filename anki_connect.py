@@ -29,7 +29,7 @@ import urllib2
 # Constants
 #
 
-API_VERSION = 2
+API_VERSION = 1
 
 
 #
