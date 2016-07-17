@@ -18,9 +18,11 @@
 import PyQt4
 import anki
 import aqt
+import hashlib
 import json
 import select
 import socket
+import urllib2
 
 
 #
@@ -28,6 +30,40 @@ import socket
 #
 
 API_VERSION = 1
+
+
+#
+# Helpers
+#
+
+def downloadAudio(kana, kanji):
+    url = 'http://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kana={}'.format(urllib2.quote(kana.encode('utf-8')))
+    if kanji:
+        url += '&kanji={}'.format(urllib2.quote(kanji.encode('utf-8')))
+
+    try:
+        resp = urllib2.urlopen(url)
+    except urllib2.URLError:
+        return None
+
+    if resp.code != 200:
+        return None
+
+    data = resp.read()
+
+    m = hashlib.md5()
+    m.update(data)
+    digest = m.hexdigest()
+
+    if digest == '7e2c2f954ef6051373ba916f000168dc':
+        return None
+
+    filename = u'yomichan_{}'.format(kana)
+    if kanji:
+        filename += u'_{}'.format(kanji)
+    filename += u'.mp3'
+
+    return filename, data
 
 
 #
@@ -191,7 +227,7 @@ class AjaxServer:
 #
 
 class AnkiBridge:
-    def addNote(self, deckName, modelName, fields, tags=[]):
+    def addNote(self, deckName, modelName, fields, tags, audioUrl):
         collection = self.collection()
         if collection is None:
             return
@@ -324,7 +360,8 @@ class AnkiConnect:
             note['deckName'],
             note['modelName'],
             note['fields'],
-            note['tags']
+            note['tags'],
+            note.get('audioUrl')
         )
 
 
@@ -334,7 +371,8 @@ class AnkiConnect:
             results.append(self.anki.canAddNote(
                 note['deckName'],
                 note['modelName'],
-                note['fields']
+                note['fields'],
+                note.get('audioUrl')
             ))
 
         return results
