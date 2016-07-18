@@ -286,9 +286,19 @@ class AnkiBridge:
             return note
 
 
-    def browseNote(self, noteId):
+    def browseNote(self, deckName, modelName, fields):
+        fields = self.modelFieldNames(modelName)
+        if fields is None:
+            return
+
+        fieldName = fields[0]
+        fieldValue = fields.get(fieldName)
+
+        if fieldValue is None:
+            return
+
         browser = aqt.dialogs.open('Browser', self.window())
-        browser.form.searchEdit.lineEdit().setText('nid:{0}'.format(noteId))
+        browser.form.searchEdit.lineEdit().setText('deck:{} {}:{}'.format(deckName, fieldName, fieldValue))
         browser.onSearch()
 
 
@@ -394,6 +404,14 @@ class AnkiConnect:
             ))
 
         return results
+
+
+    def api_browseNote(self, note):
+        return self.anki.browseNote(
+            note['deckName'],
+            note['modelName'],
+            note['fields']
+        )
 
 
     def api_features(self):
