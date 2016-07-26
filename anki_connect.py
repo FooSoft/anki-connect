@@ -30,6 +30,7 @@ import urllib2
 #
 
 API_VERSION = 1
+URL_TIMEOUT = 10
 
 
 #
@@ -50,7 +51,7 @@ def audioDownload(kana, kanji):
         url += '&kana={}'.format(urllib2.quote(kana.encode('utf-8')))
 
     try:
-        resp = urllib2.urlopen(url)
+        resp = urllib2.urlopen(url, timeout=URL_TIMEOUT)
     except urllib2.URLError:
         return None
 
