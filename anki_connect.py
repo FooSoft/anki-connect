@@ -15,14 +15,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-import PyQt4
 import anki
 import aqt
 import hashlib
 import json
 import select
 import socket
-import urllib2
 
 
 #
@@ -31,6 +29,28 @@ import urllib2
 
 API_VERSION = 1
 URL_TIMEOUT = 10
+
+
+#
+# General helpers
+#
+
+try:
+    import urllib2
+    urlQuote = urllib2.quote
+    urlOpen = urllib2.urlopen
+except ImportError:
+    from urllib import request
+    urlQuote = request.quote
+    urlOpen = request.urlopen
+
+try:
+    import PyQt4 as PyQt
+except ImportError:
+    import PyQt5 as PyQt
+
+makeBytes = lambda data: data.encode('utf-8')
+makeStr = lambda data: data.decode('utf-8')
 
 
 #
@@ -46,13 +66,13 @@ def audioBuildFilename(kana, kanji):
 
 
 def audioDownload(kana, kanji):
-    url = 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={}'.format(urllib2.quote(kanji.encode('utf-8')))
+    url = 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={}'.format(urlQuote(kanji.encode('utf-8')))
     if kana:
-        url += '&kana={}'.format(urllib2.quote(kana.encode('utf-8')))
+        url += '&kana={}'.format(urlQuote(kana.encode('utf-8')))
 
     try:
-        resp = urllib2.urlopen(url, timeout=URL_TIMEOUT)
-    except urllib2.URLError:
+        resp = urlOpen(url, timeout=URL_TIMEOUT)
+    except:
         return None
 
     if resp.code != 200:
@@ -91,8 +111,8 @@ class AjaxClient:
     def __init__(self, sock, handler):
         self.sock = sock
         self.handler = handler
-        self.readBuff = ''
-        self.writeBuff = ''
+        self.readBuff = bytes()
+        self.writeBuff = bytes()
 
 
     def advance(self, recvSize=1024):
@@ -129,22 +149,22 @@ class AjaxClient:
             self.sock.close()
             self.sock = None
 
-        self.readBuff = ''
-        self.writeBuff = ''
+        self.readBuff = bytes()
+        self.writeBuff = bytes()
 
 
     def parseRequest(self, data):
-        parts = data.split('\r\n\r\n', 1)
+        parts = data.split(makeBytes('\r\n\r\n'), 1)
         if len(parts) == 1:
             return None, 0
 
         headers = {}
-        for line in parts[0].split('\r\n'):
-            pair = line.split(': ')
+        for line in parts[0].split(makeBytes('\r\n')):
+            pair = line.split(makeBytes(': '))
             headers[pair[0]] = pair[1] if len(pair) > 1 else None
 
         headerLength = len(parts[0]) + 4
-        bodyLength = int(headers['Content-Length'])
+        bodyLength = int(headers[makeBytes('Content-Length')])
         totalLength = headerLength + bodyLength
 
         if totalLength > len(data):
@@ -183,7 +203,7 @@ class AjaxServer:
 
 
     def advanceClients(self):
-        self.clients = filter(lambda c: c.advance(), self.clients)
+        self.clients = list(filter(lambda c: c.advance(), self.clients))
 
 
     def listen(self, address='127.0.0.1', port=8765, backlog=5):
@@ -197,22 +217,22 @@ class AjaxServer:
 
 
     def handlerWrapper(self, req):
-        body = json.dumps(self.handler(json.loads(req.body)))
-        resp = ''
+        body = makeBytes(json.dumps(self.handler(json.loads(makeStr(req.body)))))
+        resp = bytes()
 
-        headers = {
-            'HTTP/1.1 200 OK': None,
-            'Content-Type': 'text/json',
-            'Content-Length': str(len(body))
-        }
+        headers = [
+            ['HTTP/1.1 200 OK', None],
+            ['Content-Type', 'text/json'],
+            ['Content-Length', str(len(body))]
+        ]
 
-        for key, value in headers.items():
+        for [key, value] in headers:
             if value is None:
-                resp += '{}\r\n'.format(key)
+                resp += makeBytes('{}\r\n'.format(key))
             else:
-                resp += '{}: {}\r\n'.format(key, value)
+                resp += makeBytes('{}: {}\r\n'.format(key, value))
 
-        resp += '\r\n'
+        resp += makeBytes('\r\n')
         resp += body
 
         return resp
@@ -358,7 +378,7 @@ class AnkiConnect:
         self.server = AjaxServer(self.handler)
         self.server.listen()
 
-        self.timer = PyQt4.QtCore.QTimer()
+        self.timer = PyQt.QtCore.QTimer()
         self.timer.timeout.connect(self.advance)
         self.timer.start(interval)
 
