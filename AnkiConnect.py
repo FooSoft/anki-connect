@@ -19,6 +19,7 @@ import anki
 import aqt
 import hashlib
 import json
+import os.path
 import select
 import socket
 
@@ -37,12 +38,10 @@ URL_TIMEOUT = 10
 
 try:
     import urllib2
-    urlQuote = urllib2.quote
-    urlOpen = urllib2.urlopen
+    web = urllib2
 except ImportError:
     from urllib import request
-    urlQuote = request.quote
-    urlOpen = request.urlopen
+    web = request
 
 try:
     import PyQt4 as PyQt
@@ -57,22 +56,10 @@ makeStr = lambda data: data.decode('utf-8')
 # Audio helpers
 #
 
-def audioBuildFilename(kana, kanji):
-    filename = u'yomichan_{}'.format(kana)
-    if kanji:
-        filename += u'_{}'.format(kanji)
-    filename += u'.mp3'
-    return filename
-
-
-def audioDownload(kana, kanji):
-    url = 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={}'.format(urlQuote(kanji.encode('utf-8')))
-    if kana:
-        url += '&kana={}'.format(urlQuote(kana.encode('utf-8')))
-
+def audioDownload(url):
     try:
-        resp = urlOpen(url, timeout=URL_TIMEOUT)
-    except:
+        resp = web.urlopen(url, timeout=URL_TIMEOUT)
+    except web.URLError:
         return None
 
     if resp.code != 200:
@@ -81,16 +68,31 @@ def audioDownload(kana, kanji):
     return resp.read()
 
 
-def audioIsPlaceholder(data):
-    m = hashlib.md5()
-    m.update(data)
-    return m.hexdigest() == '7e2c2f954ef6051373ba916f000168dc'
-
-
 def audioInject(note, fields, filename):
     for field in fields:
         if field in note:
             note[field] += u'[sound:{}]'.format(filename)
+
+
+#
+# Legacy JPOD101 handlers
+#
+
+def jpodBuildFilename(kana, kanji):
+    filename = u'yomichan_{}'.format(kana)
+    if kanji:
+        filename += u'_{}'.format(kanji)
+
+    filename += u'.mp3'
+    return filename
+
+
+def jpodDownload(kana, kanji):
+    url = 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={}'.format(web.quote(kanji.encode('utf-8')))
+    if kana:
+        url += '&kana={}'.format(web.quote(kana.encode('utf-8')))
+
+    return audioDownload(url)
 
 
 #
@@ -264,11 +266,27 @@ class AnkiBridge:
             return
 
         if audio is not None and len(audio['fields']) > 0:
-            data = audioDownload(audio['kana'], audio['kanji'])
-            if data is not None and not audioIsPlaceholder(data):
-                filename = audioBuildFilename(audio['kana'], audio['kanji'])
-                audioInject(note, audio['fields'], filename)
-                self.media().writeData(filename, data)
+            url = audio.get('url')
+            if url is None:
+                data = jpodDownload(audio['kana'], audio['kanji'])
+                filename = jpodBuildFilename(audio['kana'], audio['kanji'])
+                skipHash = '7e2c2f954ef6051373ba916f000168dc'
+            else:
+                data = audioDownload(url)
+                filename = os.path.basename(audio['filename'])
+                skipHash = audio.get('skipHash')
+
+            if data is not None:
+                if skipHash is None:
+                    skip = False
+                else:
+                    m = hashlib.md5()
+                    m.update(data)
+                    skip = skipHash == m.hexdigest()
+
+                if not skip:
+                    audioInject(note, audio['fields'], filename)
+                    self.media().writeData(filename, data)
 
         self.startEditing()
         collection.addNote(note)
