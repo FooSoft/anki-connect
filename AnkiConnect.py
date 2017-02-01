@@ -325,22 +325,6 @@ class AnkiBridge:
             return note
 
 
-    def browseNote(self, deckName, modelName, fields):
-        fields = self.modelFieldNames(modelName)
-        if fields is None:
-            return
-
-        fieldName = fields[0]
-        fieldValue = fields.get(fieldName)
-
-        if fieldValue is None:
-            return
-
-        browser = aqt.dialogs.open('Browser', self.window())
-        browser.form.searchEdit.lineEdit().setText('deck:{} {}:{}'.format(deckName, fieldName, fieldValue))
-        browser.onSearch()
-
-
     def startEditing(self):
         self.window().requireReset()
 
@@ -443,24 +427,6 @@ class AnkiConnect:
             ))
 
         return results
-
-
-    def api_browseNote(self, note):
-        return self.anki.browseNote(
-            note['deckName'],
-            note['modelName'],
-            note['fields']
-        )
-
-
-    def api_features(self):
-        features = {}
-        for name in dir(self):
-            method = getattr(self, name)
-            if name.startswith('api_') and callable(method):
-                features[name[4:]] = list(method.func_code.co_varnames[1:])
-
-        return features
 
 
     def api_version(self):
