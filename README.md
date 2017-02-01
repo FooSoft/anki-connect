@@ -25,6 +25,83 @@ suspends graphical applications running in the background, thus preventing Anki 
 Until this problem is resolved, users of this Mac OS X will have to keep both the browser window and Anki on-screen.
 Sorry for the lameness; I am researching a fix for this issue.
 
+## API ##
+
+Ankiconnect accepts HTTP POST request with POST body in JSON format, and then return an id(version id/ note id) or a list(decks, models and fields) as response data.
+
+### Request URI:
+```JavaScript
+var uri = http://127.0.0.1:8765
+```
+
+### Request Method:
+**HTTP POST**
+
+### JS call example:
+```JavaScript
+var xhr = $.post(uri, postdata, (response, status) => {});
+```
+
+### POST body & response
+#### Check Version:
+```JavaScript
+var postdata = {action: "version", params: {}}
+var response = "1" //current anki connect version
+```
+
+#### Retrieve deck name list:
+```JavaScript
+var postdata = {action: "deckNames", params: {}}
+var response = ["test deck 1","test deck 2"] //all decks name list
+```
+
+#### Retrieve model name list:
+```JavaScript
+var postdata = {action: "modelNames", params: {}}
+var response = ["basic","basic (and reversed card)"] //all models name list
+```
+
+#### Retrieve fields list for specified model:
+```JavaScript
+var postdata = {action: "modelFieldNames", params: {modelName: "basic"}}
+var response = ["front","back"] //fields name list
+```
+
+#### Check if can add note or not (empty or duplicated card )
+```JavaScript
+var postdata = {
+    action: "canAddNotes",
+    params: {
+        notes: [
+            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]},
+            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]},
+            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]} 
+            // for fields:{...}, please check below for detail.
+        ]
+    }
+}
+var response = [true, true, true] // a list of result, say if this note can be added or not.
+```
+
+#### Add note
+```JavaScript
+var postdata = {
+    action: "addNote",
+    params: {
+        deckName: "test deck 1", 
+        modelName: "basic", 
+        note: {
+            fields: {
+                front: "front content", 
+                back: "back content"
+            },
+            tags: ["tag1","tag2"]
+        }
+    }
+}
+var response = note id(success) or null(fail)
+```
+
 ## License ##
 
 GPL
