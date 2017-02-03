@@ -25,82 +25,208 @@ suspends graphical applications running in the background, thus preventing Anki 
 Until this problem is resolved, users of this Mac OS X will have to keep both the browser window and Anki on-screen.
 Sorry for the lameness; I am researching a fix for this issue.
 
-## API ##
+## Application Interface ##
 
-Ankiconnect accepts HTTP POST request with POST body in JSON format, and then return an id(version id/ note id) or a list(decks, models and fields) as response data.
+AnkiConnect exposes Anki features to external applications via an easy to use
+[RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) API. After it is installed, this plugin will
+initialize a minimal HTTP sever running on port 8765 every time Anki executes. Other applications (including browser
+extensions) can then communicate with it via HTTP POST requests.
 
-### Request URI:
+### Sample Invocation ###
+
+Every request consists of an *action*, and a set of contextual *parameters*. A simple example of a JavaScript
+application communicating with the extension is illustrated below:
+
 ```JavaScript
-var uri = http://127.0.0.1:8765
-```
+function ankiInvoke(action, params={}) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('loadend', () => {
+            if (xhr.responseText) {
+                resolve(JSON.parse(xhr.responseText));
+            } else {
+                reject('unable to connect to plugin');
+            }
+        });
 
-### Request Method:
-**HTTP POST**
-
-### JS call example:
-```JavaScript
-var xhr = $.post(uri, postdata, (response, status) => {});
-```
-
-### POST body & response
-#### Check Version:
-```JavaScript
-var postdata = {action: "version", params: {}}
-var response = "1" //current anki connect version
-```
-
-#### Retrieve deck name list:
-```JavaScript
-var postdata = {action: "deckNames", params: {}}
-var response = ["test deck 1","test deck 2"] //all decks name list
-```
-
-#### Retrieve model name list:
-```JavaScript
-var postdata = {action: "modelNames", params: {}}
-var response = ["basic","basic (and reversed card)"] //all models name list
-```
-
-#### Retrieve fields list for specified model:
-```JavaScript
-var postdata = {action: "modelFieldNames", params: {modelName: "basic"}}
-var response = ["front","back"] //fields name list
-```
-
-#### Check if can add note or not (empty or duplicated card )
-```JavaScript
-var postdata = {
-    action: "canAddNotes",
-    params: {
-        notes: [
-            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]},
-            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]},
-            {deckName: "test deck 1", modelName: "basic", fields: {...}, tags:[]} 
-            // for fields:{...}, please check below for detail.
-        ]
-    }
+        xhr.open('POST', 'http://127.0.0.1:8765');
+        xhr.send(JSON.stringify({action, params}));
+    });
 }
-var response = [true, true, true] // a list of result, say if this note can be added or not.
+
+ankiInvoke('version').then(response => {
+    window.alert(`detected API version: ${response}`);
+}).catch(error => {
+    window.alert(`could not get API version: ${error}`);
+});
 ```
 
-#### Add note
-```JavaScript
-var postdata = {
-    action: "addNote",
-    params: {
-        deckName: "test deck 1", 
-        modelName: "basic", 
-        note: {
-            fields: {
-                front: "front content", 
-                back: "back content"
-            },
-            tags: ["tag1","tag2"]
+### Supported Actions ###
+
+The following actions are currently supported:
+
+*   `version`
+
+    Gets the version of the API exposed by this plugin. Currently only version `1` is defined.
+
+    This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
+    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    which are available in the reported AnkiConnect version or earlier, everything should work fine.
+
+    **Sample request**:
+    ```
+    {
+        action: 'version',
+        params: {}
+    }
+    ```
+
+    **Sample response**:
+    ```
+    1
+    ```
+*   `deckNames`
+
+    Gets the complete list of deck names for the current user.
+
+    **Sample request**:
+    ```
+    {
+        action: 'deckNames',
+        params: {}
+    }
+    ```
+
+    **Sample response**:
+    ```
+    [
+        'Default',
+        /* ... */
+    ]
+    ```
+
+*   `modelNames`
+
+    Gets the complete list of model names for the current user.
+
+    **Sample request**:
+    ```
+    {
+        action: 'modelNames',
+        params: {}
+    }
+    ```
+
+    **Sample response**:
+    ```
+    [
+        'Basic',
+        'Basic (and reversed card)',
+        /* ... */
+    ]
+    ```
+
+*   `modelFieldNames`
+
+    Gets the complete list of field names for the provided model name.
+
+    **Sample request**:
+    ```
+    {
+        action: 'modelFieldNames',
+        params: {
+            modelName: 'Basic'
         }
     }
-}
-var response = note id(success) or null(fail)
-```
+    ```
+
+    **Sample response**:
+    ```
+    [
+        'Front',
+        'Back',
+        /* ... */
+    ]
+    ```
+
+*   `addNote`
+
+    Creates a note for the given deck and model, with the provided field values and tags. Returns the identifier of the
+    created note created on success, and `null` on failure.
+
+    AnkiConnect can download audio files and embed them in newly created notes. The corresponding *audio* note member is
+    optional and can be omitted. If you choose to include it, the *url* and *filename* fields must be also defined. The
+    *skipHash* field can be optionally provided to skip the inclusion of downloaded files with an MD5 hash that matches
+    the provided value. This is useful for avoiding the saving of error pages and stub files.
+
+    **Sample request**:
+    ```
+    {
+        action: 'addNote',
+        params: {
+            deckName: 'Default',
+            modelName: 'Basic',
+            note: {
+                fields: {
+                    Front: 'front content',
+                    Back: 'back content',
+                    /* ... */
+                },
+                tags: [
+                    'yomichan',
+                    /* ... */
+                ],
+                audio: /* optional */ {
+                    url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
+                    filename: 'yomichan_ねこ_猫.mp3',
+                    skipHash: '7e2c2f954ef6051373ba916f000168dc'
+                }
+            }
+        }
+    }
+    ```
+
+    **Sample response**:
+    ```
+    null
+    ```
+*   `canAddNotes`
+
+    Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
+    booleans indicating whether or not the parameters at the corresponding index could be used to create a new note.
+
+    **Sample request**:
+    ```
+    {
+        action: 'canAddNotes',
+        params: {
+            notes: [
+                deckName: 'Default',
+                modelName: 'Basic',
+                note: {
+                    fields: {
+                        Front: 'front content',
+                        Back: 'back content',
+                        /* ... */
+                    },
+                    tags: [
+                        'yomichan',
+                        /* ... */
+                    ]
+                }
+                /* ... */
+            ]
+        }
+    }
+    ```
+
+    **Sample response**:
+    ```
+    [
+        true,
+        /* ... */
+    ]
+    ```
 
 ## License ##
 
