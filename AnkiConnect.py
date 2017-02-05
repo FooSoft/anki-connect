@@ -28,7 +28,7 @@ import socket
 # Constants
 #
 
-API_VERSION = 1
+API_VERSION = 2
 URL_TIMEOUT = 10
 
 
@@ -415,6 +415,20 @@ class AnkiConnect:
             note['tags'],
             note.get('audio')
         )
+
+
+    def api_addNotes(self, notes):
+        results = []
+        for note in notes:
+            results.append(self.anki.addNote(
+                note['deckName'],
+                note['modelName'],
+                note['fields'],
+                note['tags'],
+                note.get('audio')
+            ))
+
+        return results
 
 
     def api_canAddNotes(self, notes):
