@@ -151,8 +151,8 @@ The following actions are currently supported:
 
 *   `addNote`
 
-    Creates a note for the given deck and model, with the provided field values and tags. Returns the identifier of the
-    created note created on success, and `null` on failure.
+    Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
+    the created note created on success, and `null` on failure.
 
     AnkiConnect can download audio files and embed them in newly created notes. The corresponding *audio* note member is
     optional and can be omitted. If you choose to include it, the *url* and *filename* fields must be also defined. The
@@ -166,21 +166,19 @@ The following actions are currently supported:
         params: {
             deckName: 'Default',
             modelName: 'Basic',
-            note: {
-                fields: {
-                    Front: 'front content',
-                    Back: 'back content',
-                    /* ... */
-                },
-                tags: [
-                    'yomichan',
-                    /* ... */
-                ],
-                audio: /* optional */ {
-                    url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
-                    filename: 'yomichan_ねこ_猫.mp3',
-                    skipHash: '7e2c2f954ef6051373ba916f000168dc'
-                }
+            fields: {
+                Front: 'front content',
+                Back: 'back content',
+                /* ... */
+            },
+            tags: [
+                'yomichan',
+                /* ... */
+            ],
+            audio: /* optional */ {
+                url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
+                filename: 'yomichan_ねこ_猫.mp3',
+                skipHash: '7e2c2f954ef6051373ba916f000168dc'
             }
         }
     }
@@ -190,6 +188,51 @@ The following actions are currently supported:
     ```
     null
     ```
+
+*   `addNotes`
+
+    Creates multiple notes using the given deck and model, with the provided field values and tags. Returns an array of
+    identifiers of the created notes (notes that could not be created will have a `null` identifier). Please see the
+    documentation for `addNote` for an explanation of objects in the `notes` array.
+
+    **Sample request**:
+    ```
+    {
+        action: 'addNotes',
+        params: {
+            notes: [
+                {
+                    deckName: 'Default',
+                    modelName: 'Basic',
+                    fields: {
+                        Front: 'front content',
+                        Back: 'back content',
+                        /* ... */
+                    },
+                    tags: [
+                        'yomichan',
+                        /* ... */
+                    ],
+                    audio: /* optional */ {
+                        url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
+                        filename: 'yomichan_ねこ_猫.mp3',
+                        skipHash: '7e2c2f954ef6051373ba916f000168dc'
+                    }
+                },
+                /* ... */
+            ]
+        }
+    }
+    ```
+
+    **Sample response**:
+    ```
+    [
+        null,
+        /* ... */
+    ]
+    ```
+
 *   `canAddNotes`
 
     Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
@@ -201,9 +244,9 @@ The following actions are currently supported:
         action: 'canAddNotes',
         params: {
             notes: [
-                deckName: 'Default',
-                modelName: 'Basic',
-                note: {
+                {
+                    deckName: 'Default',
+                    modelName: 'Basic',
                     fields: {
                         Front: 'front content',
                         Back: 'back content',
@@ -213,7 +256,7 @@ The following actions are currently supported:
                         'yomichan',
                         /* ... */
                     ]
-                }
+                },
                 /* ... */
             ]
         }
