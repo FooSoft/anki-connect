@@ -2,30 +2,38 @@
 
 The AnkiConnect plugin enables external applications such as [Yomichan for Chrome](https://foosoft.net/projects/yomichan-chrome/) to
 communicate with Anki over a remote API. This makes it possible to execute queries against the user's card deck,
-automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible with latest stable and
-alpha versions of Anki.
+automatically create new vocabulary and Kanji flash cards, and more.
 
 ## Requirements ##
 
-* [Anki](http://ankisrs.net/)
+* [Anki](http://ankisrs.net/) (versions 2.0.x and 2.1.x supported)
 
-## Installation ##
+## Installation (for most users) ##
 
-AnkiConnect can be downloaded from its [Anki shared addon page](https://ankiweb.net/shared/info/2055492159) or enabled
-through the [Yomichan](https://foosoft.net/projects/yomichan) plugin if you have it installed. Once AnkiConnect is installed it is ready
-for use; no further configuration is required. Windows users may have to take additional steps to make Windows Firewall
-allows AnkiConnect to listen for incoming connections on TCP port 8765.
+AnkiConnect can be downloaded from the [shared addon page](https://ankiweb.net/shared/info/2055492159) on AnkiWeb. Once
+installed, the extension is ready for immediate use.
 
-## Limitations on Mac OS X ##
+### Windows ###
 
-While it is possible to use this plugin on this operating system, there is a known issue in which it is required that
-the Anki application window to be on screen for card creation to work properly. The cause is apparently that Mac OS X
-suspends graphical applications running in the background, thus preventing Anki from responding to Yomichan queries.
+Windows users may see a firewall nag dialog on Anki startup because this plugins acts as sever. Anki must be unblocked
+for this plugin to function.
 
-Until this problem is resolved, users of this Mac OS X will have to keep both the browser window and Anki on-screen.
-Sorry for the lameness; I am researching a fix for this issue.
+### Mac OS X ###
 
-## Application Interface ##
+Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
+introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
+placed in a suspended state. As this behavior causes AnkiConnect to stop working while you have another windowjin the
+foreground, App Nap should be disabled for Anki:
+
+1.  Start the Terminal application.
+2.  Execute the following command in the terminal window:
+
+    ```
+    defaults write net.ichi2.anki NSAppSleepDisabled -bool true
+    ```
+3.  Restart Anki.
+
+## Application Interface (for developers) ##
 
 AnkiConnect exposes Anki features to external applications via an easy to use
 [RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) API. After it is installed, this plugin will
