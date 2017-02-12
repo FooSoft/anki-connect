@@ -22,7 +22,7 @@ for this plugin to function.
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
-placed in a suspended state. As this behavior causes AnkiConnect to stop working while you have another windowjin the
+placed in a suspended state. As this behavior causes AnkiConnect to stop working while you have another window in the
 foreground, App Nap should be disabled for Anki:
 
 1.  Start the Terminal application.
