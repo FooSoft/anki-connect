@@ -48,17 +48,60 @@ except ImportError:
     web = request
 
 try:
-    import PyQt4 as PyQt
+    from PyQt4.QtCore import QTimer
+    from PyQt4.QtGui import QMessageBox
 except ImportError:
-    import PyQt5 as PyQt
+    from PyQt5.QtCore import QTimer
+    from PyQt5.QtWidgets import QMessageBox
 
 try:
     unicode
 except:
     unicode = str
 
-makeBytes = lambda data: data.encode('utf-8')
-makeStr = lambda data: data.decode('utf-8')
+
+#
+# Helpers
+#
+
+def makeBytes(data):
+    return data.encode('utf-8')
+
+
+def makeStr(data):
+    return data.decode('utf-8')
+
+
+def audioDownload(url):
+    try:
+        resp = web.urlopen(url, timeout=URL_TIMEOUT)
+    except web.URLError:
+        return None
+
+    if resp.code != 200:
+        return None
+
+    return resp.read()
+
+
+def audioInject(note, fields, filename):
+    for field in fields:
+        if field in note:
+            note[field] += u'[sound:{}]'.format(filename)
+
+
+def verifyString(string):
+    t = type(string)
+    return t == str or t == unicode
+
+
+def verifyStringList(strings):
+    for s in strings:
+        if not verifyString(s):
+            return False
+
+    return True
+
 
 
 #
@@ -225,41 +268,6 @@ class AjaxServer:
 
 
 #
-# Helpers
-#
-
-def audioDownload(url):
-    try:
-        resp = web.urlopen(url, timeout=URL_TIMEOUT)
-    except web.URLError:
-        return None
-
-    if resp.code != 200:
-        return None
-
-    return resp.read()
-
-
-def audioInject(note, fields, filename):
-    for field in fields:
-        if field in note:
-            note[field] += u'[sound:{}]'.format(filename)
-
-
-def verifyString(string):
-    t = type(string)
-    return t == str or t == unicode
-
-
-def verifyStringList(strings):
-    for s in strings:
-        if not verifyString(s):
-            return False
-
-    return True
-
-
-#
 # AnkiNoteParams
 #
 
@@ -416,12 +424,19 @@ class AnkiConnect:
     def __init__(self):
         self.anki = AnkiBridge()
         self.server = AjaxServer(self.handler)
-        self.server.listen()
 
-        self.timer = PyQt.QtCore.QTimer()
-        self.timer.timeout.connect(self.advance)
-        self.timer.start(TICK_INTERVAL)
+        try:
+            self.server.listen()
 
+            self.timer = QTimer()
+            self.timer.timeout.connect(self.advance)
+            self.timer.start(TICK_INTERVAL)
+        except:
+            QMessageBox.critical(
+                self.anki.window(),
+                'AnkiConnect',
+                'Failed to listen on port {}...\nMake sure it is available and is not in use.'.format(NET_PORT)
+            )
 
     def advance(self):
         self.server.advance()
