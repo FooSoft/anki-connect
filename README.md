@@ -91,7 +91,7 @@ The following actions are currently supported:
 
     **Sample response**:
     ```
-    1
+    2
     ```
 *   `deckNames`
 
@@ -277,6 +277,25 @@ The following actions are currently supported:
         true,
         /* ... */
     ]
+    ```
+
+*   `upgrade`
+
+    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
+    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
+    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
+
+    **Sample request**:
+    ```
+    {
+        action: 'upgrade',
+        params: {}
+    }
+    ```
+
+    **Sample response**:
+    ```
+    true
     ```
 
 ## License ##
