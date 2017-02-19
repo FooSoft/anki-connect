@@ -507,8 +507,10 @@ class AnkiConnect:
                 path = os.path.splitext(__file__)[0] + '.py'
                 with open(path, 'w') as fp:
                     fp.write(makeStr(data))
-                QMessageBox.information(self.anki.window(), 'AnkiConnect', 'Upgraded to the latest version.')
+                QMessageBox.information(self.anki.window(), 'AnkiConnect', 'Upgraded to the latest version, please restart Anki.')
+                return True
 
+        return False
 
     def api_version(self):
         return API_VERSION
