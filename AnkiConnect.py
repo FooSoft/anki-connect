@@ -132,7 +132,7 @@ class AjaxClient:
             headers[pair[0]] = pair[1] if len(pair) > 1 else None
 
         headerLength = len(parts[0]) + 4
-        bodyLength = int(headers[makeBytes('Content-Length')])
+        bodyLength = int(headers.get(makeBytes('Content-Length'), 0))
         totalLength = headerLength + bodyLength
 
         if totalLength > len(data):
@@ -185,16 +185,23 @@ class AjaxServer:
 
 
     def handlerWrapper(self, req):
-        body = makeBytes(json.dumps(self.handler(json.loads(makeStr(req.body)))))
-        resp = bytes()
+        if len(req.body) == 0:
+            body = 'AnkiConnect v.{}'.format(API_VERSION)
+        else:
+            try:
+                params = json.loads(makeStr(req.body))
+                body = makeBytes(json.dumps(self.handler(params)))
+            except ValueError:
+                body = json.dumps(None);
 
+        resp = bytes()
         headers = [
             ['HTTP/1.1 200 OK', None],
             ['Content-Type', 'text/json'],
             ['Content-Length', str(len(body))]
         ]
 
-        for [key, value] in headers:
+        for key, value in headers:
             if value is None:
                 resp += makeBytes('{}\r\n'.format(key))
             else:
