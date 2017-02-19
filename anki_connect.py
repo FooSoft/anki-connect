@@ -31,6 +31,7 @@ import socket
 API_VERSION = 2
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
+URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/anki_connect.py'
 NET_ADDRESS = '127.0.0.1'
 NET_BACKLOG = 5
 NET_PORT = 8765
@@ -72,7 +73,7 @@ def makeStr(data):
     return data.decode('utf-8')
 
 
-def audioDownload(url):
+def download(url):
     try:
         resp = web.urlopen(url, timeout=URL_TIMEOUT)
     except web.URLError:
@@ -321,7 +322,7 @@ class AnkiBridge:
             return
 
         if params.audio is not None and len(params.audio.fields) > 0:
-            data = audioDownload(params.audio.url)
+            data = download(params.audio.url)
             if data is not None:
                 if params.audio.skipHash is None:
                     skip = False
@@ -435,7 +436,7 @@ class AnkiConnect:
             QMessageBox.critical(
                 self.anki.window(),
                 'AnkiConnect',
-                'Failed to listen on port {}...\nMake sure it is available and is not in use.'.format(NET_PORT)
+                'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(NET_PORT)
             )
 
     def advance(self):
@@ -488,6 +489,23 @@ class AnkiConnect:
             results.append(params.validate() and self.anki.canAddNote(params))
 
         return results
+
+
+    def api_upgrade(self):
+        response = QMessageBox.question(
+            self.anki.window(),
+            'AnkiConnect',
+            'Upgrade to the latest version?',
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if response == QMessageBox.Yes:
+            data = download(URL_UPGRADE)
+            if data is None:
+                QMessageBox.critical(self.anki.window, 'AnkiConnect', 'Failed to download latest version')
+            else:
+                with open(__file__, 'w') as fp:
+                    fp.write(data)
 
 
     def api_version(self):
