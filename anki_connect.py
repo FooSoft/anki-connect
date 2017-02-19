@@ -230,7 +230,7 @@ class AjaxServer:
 
     def handlerWrapper(self, req):
         if len(req.body) == 0:
-            body = 'AnkiConnect v.{}'.format(API_VERSION)
+            body = makeBytes('AnkiConnect v.{}'.format(API_VERSION))
         else:
             try:
                 params = json.loads(makeStr(req.body))
@@ -502,10 +502,12 @@ class AnkiConnect:
         if response == QMessageBox.Yes:
             data = download(URL_UPGRADE)
             if data is None:
-                QMessageBox.critical(self.anki.window, 'AnkiConnect', 'Failed to download latest version')
+                QMessageBox.critical(self.anki.window, 'AnkiConnect', 'Failed to download latest version.')
             else:
-                with open(__file__, 'w') as fp:
-                    fp.write(data)
+                path = os.path.splitext(__file__)[0] + '.py'
+                with open(path, 'w') as fp:
+                    fp.write(makeStr(data))
+                QMessageBox.information(self.anki.window(), 'AnkiConnect', 'Upgraded to the latest version.')
 
 
     def api_version(self):
