@@ -474,7 +474,7 @@ class AnkiConnect:
         results = []
         for note in notes:
             params = AnkiNoteParams(note)
-            if note.validate():
+            if params.validate():
                 results.append(self.anki.addNote(params))
             else:
                 results.append(None)
