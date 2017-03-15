@@ -10,8 +10,13 @@ vocabulary and Kanji flash cards, and more.
 
 ## Installation (for most users) ##
 
-AnkiConnect can be downloaded from the [shared addon page](https://ankiweb.net/shared/info/2055492159) on AnkiWeb. Once
-installed, the extension is ready for immediate use.
+The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
+
+1.  Open the *Install Add-on* dialog by selecting *Tools* &gt; *Add-ons* &gt; *Browse &amp; Install* in Anki.
+2.  Input *2055492159* into the text box labeled *Code* and press the *OK* button to proceed.
+3.  Restart Anki when prompted to do so in order to complete the installation of AnkiConnect.
+
+Anki must be kept running in the background in order for other applications to be able to use AnkiConnect.
 
 ### Windows ###
 
