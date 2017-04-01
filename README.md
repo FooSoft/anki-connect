@@ -1,29 +1,29 @@
 # AnkiConnect #
 
-The AnkiConnect plugin enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with Anki
-over a remote API. This makes it possible to execute queries against the user's card deck, automatically create new
-vocabulary and Kanji flash cards, and more.
+The AnkiConnect plugin enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
+[Anki](https://apps.ankiweb.net/) over a network interface. This software makes it possible to execute queries against
+the user's card deck, automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible
+with the latest stable (2.0.x) and alpha (2.1.x) releases of Anki and works on Linux, Windows, and Mac OS X.
 
-## Requirements ##
-
-* [Anki](http://ankisrs.net/) (versions 2.0.x and 2.1.x supported)
-
-## Installation (for most users) ##
+## Installation ##
 
 The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
 
 1.  Open the *Install Add-on* dialog by selecting *Tools* &gt; *Add-ons* &gt; *Browse &amp; Install* in Anki.
-2.  Input *2055492159* into the text box labeled *Code* and press the *OK* button to proceed.
+2.  Input *[2055492159](https://ankiweb.net/shared/info/2055492159)* into the text box labeled *Code* and press the *OK* button to proceed.
 3.  Restart Anki when prompted to do so in order to complete the installation of AnkiConnect.
 
-Anki must be kept running in the background in order for other applications to be able to use AnkiConnect.
+Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
+verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
+the server is running, you should see the message `AnkiConnect v.2` displayed in your browser window.
 
-### Windows ###
+### Notes for Windows ###
 
-Windows users may see a firewall nag dialog on Anki startup because this plugins acts as sever. Anki must be unblocked
-for this plugin to function.
+Windows users may see a firewall nag dialog box appear on Anki startup. This occurs because AnkiConnect hosts a local
+server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for this
+plugin to function correctly.
 
-### Mac OS X ###
+### Notes for Mac OS X ###
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
