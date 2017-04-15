@@ -80,7 +80,7 @@ The following actions are currently supported:
 
 *   `version`
 
-    Gets the version of the API exposed by this plugin. Currently only version `1` is defined.
+    Gets the version of the API exposed by this plugin. Currently only version `2` is defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
