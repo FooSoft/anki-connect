@@ -15,15 +15,15 @@ The installation process is similar to that of other Anki plugins and can be acc
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message `AnkiConnect v.2` displayed in your browser window.
+the server is running, you should see the message *AnkiConnect v.2* displayed in your browser window.
 
-### Notes for Windows ###
+### Notes for Windows Users ###
 
 Windows users may see a firewall nag dialog box appear on Anki startup. This occurs because AnkiConnect hosts a local
 server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for this
 plugin to function correctly.
 
-### Notes for Mac OS X ###
+### Notes for Mac OS X Users ###
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
@@ -38,7 +38,7 @@ foreground, App Nap should be disabled for Anki:
     ```
 3.  Restart Anki.
 
-## Application Interface (for developers) ##
+## Application Interface for Developers ##
 
 AnkiConnect exposes Anki features to external applications via an easy to use
 [RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) API. After it is installed, this plugin will
@@ -78,15 +78,15 @@ ankiInvoke('version').then(response => {
 
 The following actions are currently supported:
 
-*   `version`
+*   **version**
 
-    Gets the version of the API exposed by this plugin. Currently only version `2` is defined.
+    Gets the version of the API exposed by this plugin. Currently only versions `1` and `2` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'version',
@@ -94,15 +94,15 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     2
     ```
-*   `deckNames`
+*   **deckNames**
 
     Gets the complete list of deck names for the current user.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'deckNames',
@@ -110,7 +110,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     [
         'Default',
@@ -118,11 +118,11 @@ The following actions are currently supported:
     ]
     ```
 
-*   `modelNames`
+*   **modelNames**
 
     Gets the complete list of model names for the current user.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'modelNames',
@@ -130,7 +130,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     [
         'Basic',
@@ -139,11 +139,11 @@ The following actions are currently supported:
     ]
     ```
 
-*   `modelFieldNames`
+*   **modelFieldNames**
 
     Gets the complete list of field names for the provided model name.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'modelFieldNames',
@@ -153,7 +153,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     [
         'Front',
@@ -162,7 +162,7 @@ The following actions are currently supported:
     ]
     ```
 
-*   `addNote`
+*   **addNote**
 
     Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
     the created note created on success, and `null` on failure.
@@ -172,7 +172,7 @@ The following actions are currently supported:
     *skipHash* field can be optionally provided to skip the inclusion of downloaded files with an MD5 hash that matches
     the provided value. This is useful for avoiding the saving of error pages and stub files.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'addNote',
@@ -197,18 +197,18 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     null
     ```
 
-*   `addNotes`
+*   **addNotes**
 
     Creates multiple notes using the given deck and model, with the provided field values and tags. Returns an array of
     identifiers of the created notes (notes that could not be created will have a `null` identifier). Please see the
     documentation for `addNote` for an explanation of objects in the `notes` array.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'addNotes',
@@ -238,7 +238,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     [
         null,
@@ -246,12 +246,12 @@ The following actions are currently supported:
     ]
     ```
 
-*   `canAddNotes`
+*   **canAddNotes**
 
     Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
     booleans indicating whether or not the parameters at the corresponding index could be used to create a new note.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'canAddNotes',
@@ -276,7 +276,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     [
         true,
@@ -284,13 +284,13 @@ The following actions are currently supported:
     ]
     ```
 
-*   `upgrade`
+*   **upgrade**
 
     Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
     from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
     GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
 
-    **Sample request**:
+    *Sample request*:
     ```
     {
         action: 'upgrade',
@@ -298,7 +298,7 @@ The following actions are currently supported:
     }
     ```
 
-    **Sample response**:
+    *Sample response*:
     ```
     true
     ```
