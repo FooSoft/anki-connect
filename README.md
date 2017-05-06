@@ -47,8 +47,8 @@ extensions) can then communicate with it via HTTP POST requests.
 
 ### Sample Invocation ###
 
-Every request consists of a JSON-encoded object containing an *action*, and a set of contextual *parameters*.
-A simple example of a JavaScript application communicating with the extension is illustrated below:
+Every request consists of a JSON-encoded object containing an *action*, and a set of contextual *parameters*. A simple
+example of a JavaScript application communicating with the extension is illustrated below:
 
 ```JavaScript
 function ankiInvoke(action, params={}) {
@@ -82,10 +82,8 @@ curl localhost:8765 -X POST -d '{"action": "version", "params": {}}'
 
 ### Supported Actions ###
 
-The following actions are currently supported.
-
-Note that the sample requests are written here as Javascript objects rather than raw JSON.
-If you are writing raw requests be sure to send valid JSON (i.e. quote all keys and strings with 
+Below is a list of currently supported actions. Note that the sample requests are written here as JavaScript objects
+rather than raw JSON. If you are writing raw requests be sure to send valid JSON (i.e. quote all keys and strings with
 `"`, and remove any comments).
 
 *   **version**
