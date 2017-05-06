@@ -74,6 +74,12 @@ ankiInvoke('version').then(response => {
 });
 ```
 
+Or using [`curl`](https://curl.haxx.se):
+
+```
+curl localhost:8765 -X POST -d '{"action": "version", "params": {}}'
+```
+
 ### Supported Actions ###
 
 The following actions are currently supported.
