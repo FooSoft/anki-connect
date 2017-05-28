@@ -445,15 +445,9 @@ class AnkiConnect:
 
     def handler(self, request):
         action = 'api_' + request.get('action', '')
-        params = request.get('params')
-        api_func = getattr(self, action)
-
         if hasattr(self, action):
             try:
-                if not params:
-                    return api_func()
-
-                return api_func(params)
+                return getattr(self, action)(**(request.get('params') or {}))
             except TypeError:
                 return None
 
@@ -466,8 +460,9 @@ class AnkiConnect:
         return self.anki.modelNames()
 
 
-    def api_modelFieldNames(self, params):
-        return self.anki.modelFieldNames(params.get("modelName"))
+    def api_modelFieldNames(self, modelName):
+        return self.anki.modelFieldNames(modelName)
+
 
     def api_addNote(self, note):
         params = AnkiNoteParams(note)
