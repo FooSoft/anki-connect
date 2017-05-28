@@ -28,7 +28,7 @@ import socket
 # Constants
 #
 
-API_VERSION = 2
+API_VERSION = 3
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/anki_connect.py'
@@ -418,18 +418,20 @@ class AnkiBridge:
 
 
     def guiBrowse(self, query):
-        browser = aqt.dialogs.open("Browser", self.window())
+        browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
+
         if query:
             query = unicode('"{}"').format(query)
             browser.form.searchEdit.lineEdit().setText(query)
             browser.onSearch()
+
         return browser.model.cards
 
 
     def guiAddCards(self):
-        addcards = aqt.dialogs.open("AddCards", self.window())
-        addcards.activateWindow()
+        addCards = aqt.dialogs.open('AddCards', self.window())
+        addCards.activateWindow()
 
 
 #

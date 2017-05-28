@@ -15,7 +15,7 @@ The installation process is similar to that of other Anki plugins and can be acc
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message *AnkiConnect v.2* displayed in your browser window.
+the server is running, you should see the message *AnkiConnect v.3* displayed in your browser window.
 
 ### Notes for Windows Users ###
 
@@ -88,7 +88,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **version**
 
-    Gets the version of the API exposed by this plugin. Currently only versions `1` and `2` are defined.
+    Gets the version of the API exposed by this plugin. Currently versions `1` through `3` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
