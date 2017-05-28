@@ -292,6 +292,47 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     ]
     ```
 
+*   **guiBrowse**
+
+    Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
+
+    *Sample request*:
+    ```
+    {
+        action: 'guiBrowse',
+        params: {
+            query: 'deck:current'
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1494723142483,
+        1494703460437,
+        1494703479525,
+        /* ... */
+    ]
+    ```
+
+*   **guiAddCards**
+
+    Invokes the AddCards dialog.
+
+    *Sample request*:
+    ```
+    {
+        action: 'guiAddCards',
+        params: {}
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
 *   **upgrade**
 
     Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version

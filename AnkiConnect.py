@@ -417,6 +417,21 @@ class AnkiBridge:
             return collection.decks.allNames()
 
 
+    def guiBrowse(self, query):
+        browser = aqt.dialogs.open("Browser", self.window())
+        browser.activateWindow()
+        if query:
+            query = unicode('"{}"').format(query)
+            browser.form.searchEdit.lineEdit().setText(query)
+            browser.onSearch()
+        return browser.model.cards
+
+
+    def guiAddCards(self):
+        addcards = aqt.dialogs.open("AddCards", self.window())
+        addcards.activateWindow()
+
+
 #
 # AnkiConnect
 #
@@ -515,6 +530,13 @@ class AnkiConnect:
     def api_version(self):
         return API_VERSION
 
+
+    def api_guiBrowse(self, query):
+        return self.anki.guiBrowse(query)
+
+
+    def api_guiAddCards(self):
+        return self.anki.guiAddCards()
 
 #
 #   Entry
