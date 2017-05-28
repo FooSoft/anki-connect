@@ -421,7 +421,7 @@ class AnkiBridge:
         browser = aqt.dialogs.open("Browser", self.window())
         browser.activateWindow()
         if query:
-            query = unicode('"{}"'.format(query))
+            query = unicode('"{}"').format(query)
             browser.form.searchEdit.lineEdit().setText(query)
             browser.onSearch()
         return browser.model.cards

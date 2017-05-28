@@ -330,7 +330,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
     *Sample response*:
     ```
-    None
+    null
     ```
 
 *   **upgrade**
