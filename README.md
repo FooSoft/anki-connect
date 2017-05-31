@@ -104,7 +104,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
     *Sample response*:
     ```
-    2
+    3
     ```
 *   **deckNames**
 
@@ -185,21 +185,23 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     {
         action: 'addNote',
         params: {
-            deckName: 'Default',
-            modelName: 'Basic',
-            fields: {
-                Front: 'front content',
-                Back: 'back content',
-                /* ... */
-            },
-            tags: [
-                'yomichan',
-                /* ... */
-            ],
-            audio: /* optional */ {
-                url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
-                filename: 'yomichan_ねこ_猫.mp3',
-                skipHash: '7e2c2f954ef6051373ba916f000168dc'
+            note: {
+                deckName: 'Default',
+                modelName: 'Basic',
+                fields: {
+                    Front: 'front content',
+                    Back: 'back content',
+                    /* ... */
+                },
+                tags: [
+                    'yomichan',
+                    /* ... */
+                ],
+                audio: /* optional */ {
+                    url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
+                    filename: 'yomichan_ねこ_猫.mp3',
+                    skipHash: '7e2c2f954ef6051373ba916f000168dc'
+                }
             }
         }
     }
@@ -207,7 +209,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
     *Sample response*:
     ```
-    null
+    1496198395707
     ```
 
 *   **addNotes**
@@ -249,6 +251,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     [
+        1496198395707,
         null,
         /* ... */
     ]
