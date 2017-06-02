@@ -28,7 +28,7 @@ import socket
 # Constants
 #
 
-API_VERSION = 3
+API_VERSION = 4
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/anki_connect.py'
@@ -434,6 +434,59 @@ class AnkiBridge:
         addCards.activateWindow()
 
 
+    def getNextCard(self):
+        if (self.window().reviewer.card is None) or (self.window().state != "review"):
+            self.window().moveToState('review')
+
+        card = self.window().reviewer.card
+        nextCard = {}
+        nextCard['id'] = card.id
+        nextCard['question'] = card._getQA()['q']
+        nextCard['answer'] = card._getQA()['a']
+        nextCard['answerButtons'] = self.window().reviewer._answerButtonList()
+        nextCard['_model'] = json.dumps(card.note(reload)._model)
+        nextCard['ord'] = card.ord
+        nextCard['fields'] = json.dumps(card.note(reload).fields)
+        nextCard['_fmap'] = card.note(reload)._fmap
+        nextCard['success'] = 'true'
+        return json.dumps(nextCard)
+
+
+    def showQuestion(self):
+        self.window().reviewer._showQuestion()
+        return json.dumps({'success': 'true'})
+
+
+    def showAnswer(self):
+        if self.window().reviewer.mw.state != "review":
+            return json.dumps({'success': 'false', 'message': 'Window state is not review.'})
+        else:
+            self.window().reviewer._showAnswer()
+            return json.dumps({'success': 'true'})
+
+
+    def answerCard(self, id, ease):
+        if self.window().reviewer.mw.state != "review":
+            return json.dumps({'success': 'false', 'message': 'Window state is not review.'})
+        elif self.window().reviewer.state != "answer":
+            return json.dumps({'success': 'false', 'message': 'Reviewer state is not answer.'})
+        elif self.window().reviewer.card.id != id:
+            return json.dumps({'success': 'false', 'message': 'Given card does not match.'})
+        elif self.window().col.sched.answerButtons(self.window().reviewer.card) < ease:
+            return json.dumps({'success': 'false', 'message': 'Invalid ease provided.'})
+        else:
+            self.window().reviewer._answerCard(ease)
+            return json.dumps({'success': 'true'})
+
+
+    def checkState(self):
+        stateInfo = {}
+        stateInfo['success'] = 'true'
+        stateInfo['window_state'] = self.window().state
+        stateInfo['reviewer_state'] = self.window().reviewer.state
+        return json.dumps(stateInfo)
+
+
 #
 # AnkiConnect
 #
@@ -539,6 +592,25 @@ class AnkiConnect:
 
     def api_guiAddCards(self):
         return self.anki.guiAddCards()
+
+    def api_getNextCard(self):
+        return self.anki.getNextCard()
+
+
+    def api_answerCard(self, id, ease):
+        return self.anki.answerCard(id, ease)
+
+
+    def api_checkState(self):
+        return self.anki.checkState()
+
+
+    def api_showQuestion(self):
+        return self.anki.showQuestion()
+
+
+    def api_showAnswer(self):
+        return self.anki.showAnswer()
 
 #
 #   Entry
