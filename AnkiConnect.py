@@ -596,6 +596,7 @@ class AnkiConnect:
     def api_guiAddCards(self):
         return self.anki.guiAddCards()
 
+
     def api_getNextCard(self):
         return self.anki.getNextCard()
 
@@ -604,16 +605,16 @@ class AnkiConnect:
         return self.anki.answerCard(id, ease)
 
 
-    def api_checkState(self):
-        return self.anki.checkState()
-
-
     def api_showQuestion(self):
         return self.anki.showQuestion()
 
 
     def api_showAnswer(self):
         return self.anki.showAnswer()
+
+
+    def api_checkState(self):
+        return self.anki.checkState()
 
 #
 #   Entry
