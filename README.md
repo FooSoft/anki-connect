@@ -336,6 +336,158 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     null
     ```
 
+*   **getNextCard**
+
+    Returns next/current card, calling this multiple times will not skip unanswered cards.
+
+    *Sample request*:
+    ```
+    {
+        action: 'getNextCard',
+        params: {}
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        'success': 'true',
+        'question': 'Hello',
+        '_fmap': {
+            'Front': [
+                0,
+                {
+                    'name': 'Front',
+                    'media': [],
+                    'sticky': false,
+                    'rtl': false,
+                    'ord': 0,
+                    'font': 'Arial',
+                    'size': 20
+                }
+            ],
+            'Back': [
+                1,
+                {
+                    'name': 'Back',
+                    'media': [],
+                    'sticky': false,
+                    'rtl': false,
+                    'ord': 1,
+                    'font': 'Arial',
+                    'size': 20
+                }
+            ]
+        },
+        'answerButtons': [
+            [
+                1,
+                'Again'
+            ],
+            [
+                2,
+                'Good'
+            ],
+            [
+                3,
+                'Easy'
+            ]
+        ],
+        'model_name': 'Basic',
+        'fields': '[\"Hello\", \"Hola\"]',
+        'answer': 'Hello\n\n<hr id=answer>\n\nHola',
+        'ord': 0,
+        'id': 1496751176292
+    }
+    ```
+
+*   **showQuestion**
+
+    Move Anki to the state of showing a question (window state = 'review' and reviewer state = 'question'). This is required in order to show the answer and can also be used to move from the showAnswer state back to the showQuestion state.
+
+    *Sample request*:
+    ```
+    {
+        action: 'showQuestion',
+        params: {}
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {'success': 'true'}
+    ```
+
+*   **showAnswer**
+
+    Move Anki to the state of showing an answer (window state = 'review' and reviewer state = 'answer'). This is required in order to answer a card.
+
+    *Sample request*:
+    ```
+    {
+        action: 'showAnswer',
+        params: {}
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {'success': 'true'}
+    ```
+
+    *Sample error response*:
+    ```
+    {'success': 'false', 'message': 'Window state is not review.'}
+    ```
+
+*   **answerCard**
+
+    User to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
+
+    *Sample request*:
+    ```
+    {
+        action: 'answerCard',
+        params: {
+            id: 1496751176292,
+            ease: 1
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {'success': 'true'}
+    ```
+
+    *Sample error responses*:
+    ```
+    {'success': 'false', 'message': 'Window state is not review.'}
+    ```
+    ```
+    {'success': 'false', 'message': 'Reviewer state is not answer.'}
+    ```
+    ```
+    {'success': 'false', 'message': 'Given card does not match.'}
+    ```
+    ```
+    {'success': 'false', 'message': 'Invalid ease provided.'}
+    ```
+
+*   **checkState**
+
+    User to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
+
+    *Sample request*:
+    ```
+    {action: 'checkState'}
+    ```
+
+    *Sample response*:
+    ```
+    {'window_state': 'review', 'reviewer_state': 'answer', 'success': 'true'}
+    ```
+
 *   **upgrade**
 
     Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version

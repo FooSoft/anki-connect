@@ -444,7 +444,7 @@ class AnkiBridge:
         nextCard['question'] = card._getQA()['q']
         nextCard['answer'] = card._getQA()['a']
         nextCard['answerButtons'] = self.window().reviewer._answerButtonList()
-        nextCard['_model'] = json.dumps(card.note(reload)._model)
+        nextCard['model_name'] = card.note(reload)._model['name']
         nextCard['ord'] = card.ord
         nextCard['fields'] = json.dumps(card.note(reload).fields)
         nextCard['_fmap'] = card.note(reload)._fmap
@@ -453,6 +453,9 @@ class AnkiBridge:
 
 
     def showQuestion(self):
+        if (self.window().reviewer.card is None) or (self.window().state != "review"):
+            self.window().moveToState('review')
+
         self.window().reviewer._showQuestion()
         return json.dumps({'success': 'true'})
 
