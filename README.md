@@ -442,7 +442,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **answerCard**
 
-    User to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
+    Used to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
 
     *Sample request*:
     ```
@@ -476,7 +476,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **checkState**
 
-    User to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
+    Returns the window state and the reviewer state.
 
     *Sample request*:
     ```
