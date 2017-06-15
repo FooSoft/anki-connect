@@ -448,7 +448,7 @@ class AnkiBridge:
         nextCard['ord'] = card.ord
         nextCard['fields'] = json.dumps(card.note(reload).fields)
         nextCard['_fmap'] = card.note(reload)._fmap
-        nextCard['success'] = 'true'
+        nextCard['success'] = True
         return json.dumps(nextCard)
 
 
@@ -457,34 +457,34 @@ class AnkiBridge:
             self.window().moveToState('review')
 
         self.window().reviewer._showQuestion()
-        return json.dumps({'success': 'true'})
+        return json.dumps({'success': True})
 
 
     def showAnswer(self):
         if self.window().reviewer.mw.state != "review":
-            return json.dumps({'success': 'false', 'message': 'Window state is not review.'})
+            return json.dumps({'success': False, 'message': 'Window state is not review.'})
         else:
             self.window().reviewer._showAnswer()
-            return json.dumps({'success': 'true'})
+            return json.dumps({'success': True})
 
 
     def answerCard(self, id, ease):
         if self.window().reviewer.mw.state != "review":
-            return json.dumps({'success': 'false', 'message': 'Window state is not review.'})
+            return json.dumps({'success': False, 'message': 'Window state is not review.'})
         elif self.window().reviewer.state != "answer":
-            return json.dumps({'success': 'false', 'message': 'Reviewer state is not answer.'})
+            return json.dumps({'success': False, 'message': 'Reviewer state is not answer.'})
         elif self.window().reviewer.card.id != id:
-            return json.dumps({'success': 'false', 'message': 'Given card does not match.'})
+            return json.dumps({'success': False, 'message': 'Given card does not match.'})
         elif self.window().col.sched.answerButtons(self.window().reviewer.card) < ease:
-            return json.dumps({'success': 'false', 'message': 'Invalid ease provided.'})
+            return json.dumps({'success': False, 'message': 'Invalid ease provided.'})
         else:
             self.window().reviewer._answerCard(ease)
-            return json.dumps({'success': 'true'})
+            return json.dumps({'success': True})
 
 
     def checkState(self):
         stateInfo = {}
-        stateInfo['success'] = 'true'
+        stateInfo['success'] = True
         stateInfo['window_state'] = self.window().state
         stateInfo['reviewer_state'] = self.window().reviewer.state
         return json.dumps(stateInfo)
