@@ -336,7 +336,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     null
     ```
 
-*   **getNextCard**
+*   **guiGetNextCard**
 
     Returns next/current card, calling this multiple times will not skip unanswered cards.
 
@@ -353,7 +353,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     {
         'success': 'true',
         'question': 'Hello',
-        '_fmap': {
+        'fieldMap': {
             'Front': [
                 0,
                 {
@@ -393,15 +393,18 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
                 'Easy'
             ]
         ],
-        'model_name': 'Basic',
-        'fields': '[\"Hello\", \"Hola\"]',
+        'modelName': 'Basic',
+        "fields": [
+          "Hello",
+          "Hola"
+        ],
         'answer': 'Hello\n\n<hr id=answer>\n\nHola',
         'ord': 0,
         'id': 1496751176292
     }
     ```
 
-*   **showQuestion**
+*   **guiShowQuestion**
 
     Move Anki to the state of showing a question (window state = 'review' and reviewer state = 'question'). This is required in order to show the answer and can also be used to move from the showAnswer state back to the showQuestion state.
 
@@ -418,7 +421,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     {'success': 'true'}
     ```
 
-*   **showAnswer**
+*   **guiShowAnswer**
 
     Move Anki to the state of showing an answer (window state = 'review' and reviewer state = 'answer'). This is required in order to answer a card.
 
@@ -440,7 +443,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     {'success': 'false', 'message': 'Window state is not review.'}
     ```
 
-*   **answerCard**
+*   **guiAnswerCard**
 
     Used to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
 

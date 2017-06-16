@@ -434,7 +434,7 @@ class AnkiBridge:
         addCards.activateWindow()
 
 
-    def getNextCard(self):
+    def guiGetNextCard(self):
         if self.window().reviewer.card is None or self.window().state != 'review':
             self.window().moveToState('review')
 
@@ -452,7 +452,7 @@ class AnkiBridge:
         }
 
 
-    def showQuestion(self):
+    def guiShowQuestion(self):
         if self.window().reviewer.card is None or self.window().state != 'review':
             self.window().moveToState('review')
 
@@ -460,7 +460,7 @@ class AnkiBridge:
         return {'success': True}
 
 
-    def showAnswer(self):
+    def guiShowAnswer(self):
         if self.window().reviewer.mw.state != 'review':
             return {'success': False, 'message': 'Window state is not review.'}
         else:
@@ -468,7 +468,7 @@ class AnkiBridge:
             return {'success': True}
 
 
-    def answerCard(self, id, ease):
+    def guiAnswerCard(self, id, ease):
         if self.window().reviewer.mw.state != 'review':
             return {'success': False, 'message': 'Window state is not review.'}
         elif self.window().reviewer.state != 'answer':
@@ -597,20 +597,20 @@ class AnkiConnect:
         return self.anki.guiAddCards()
 
 
-    def api_getNextCard(self):
-        return self.anki.getNextCard()
+    def api_guiGetNextCard(self):
+        return self.anki.guiGetNextCard()
 
 
-    def api_answerCard(self, id, ease):
-        return self.anki.answerCard(id, ease)
+    def api_guiAnswerCard(self, id, ease):
+        return self.anki.guiAnswerCard(id, ease)
 
 
-    def api_showQuestion(self):
-        return self.anki.showQuestion()
+    def api_guiShowQuestion(self):
+        return self.anki.guiShowQuestion()
 
 
-    def api_showAnswer(self):
-        return self.anki.showAnswer()
+    def api_guiShowAnswer(self):
+        return self.anki.guiShowAnswer()
 
 
     def api_checkState(self):
