@@ -439,54 +439,57 @@ class AnkiBridge:
             self.window().moveToState('review')
 
         card = self.window().reviewer.card
-        return {
-            'success': True,
-            'id': card.id,
-            'question': card._getQA()['q'],
-            'answer': card._getQA()['a'],
-            'answerButtons': self.window().reviewer._answerButtonList(),
-            'modelName': card.note(reload)._model['name'],
-            'ord': card.ord,
-            'fields': card.note(reload).fields,
-            'fieldMap': card.note(reload)._fmap
-        }
 
+        if card:
+            return {
+                'success': True,
+                'id': card.id,
+                'question': card._getQA()['q'],
+                'answer': card._getQA()['a'],
+                'answerButtons': self.window().reviewer._answerButtonList(),
+                'modelName': card.note(reload)._model['name'],
+                'fieldOrder': card.ord,
+                'fields': card.note(reload).fields,
+                'fieldMap': card.note(reload)._fmap
+            }
+        else:
+            return 'There are no cards left to review.'
 
     def guiShowQuestion(self):
         if self.window().reviewer.card is None or self.window().state != 'review':
             self.window().moveToState('review')
 
         self.window().reviewer._showQuestion()
-        return {'success': True}
+        return True
 
 
     def guiShowAnswer(self):
         if self.window().reviewer.mw.state != 'review':
-            return {'success': False, 'message': 'Window state is not review.'}
+            return 'Window state is not review.'
         else:
             self.window().reviewer._showAnswer()
-            return {'success': True}
+            return True
 
 
     def guiAnswerCard(self, id, ease):
         if self.window().reviewer.mw.state != 'review':
-            return {'success': False, 'message': 'Window state is not review.'}
+            return 'Window state is not review.'
         elif self.window().reviewer.state != 'answer':
-            return {'success': False, 'message': 'Reviewer state is not answer.'}
+            return 'Reviewer state is not answer.'
         elif self.window().reviewer.card.id != id:
-            return {'success': False, 'message': 'Given card does not match.'}
+            return 'Given card does not match.'
         elif self.window().col.sched.answerButtons(self.window().reviewer.card) < ease:
-            return {'success': False, 'message': 'Invalid ease provided.'}
+            return 'Invalid ease provided.'
         else:
             self.window().reviewer._answerCard(ease)
-            return {'success': True}
+            return True
 
 
-    def checkState(self):
+    def guiCheckState(self):
         return {
             'success': True,
-            'window_state': self.window().state,
-            'reviewer_state': self.window().reviewer.state
+            'windowState': self.window().state,
+            'reviewerState': self.window().reviewer.state
         }
 
 
@@ -614,7 +617,7 @@ class AnkiConnect:
 
 
     def api_checkState(self):
-        return self.anki.checkState()
+        return self.anki.guiCheckState()
 
 #
 #   Entry

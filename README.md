@@ -338,12 +338,12 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **guiGetNextCard**
 
-    Returns next/current card, calling this multiple times will not skip unanswered cards.
+    Returns next/current card, calling this multiple times will not skip unanswered cards. The low level fields and card direction can be derived from the 'fieldOrder', 'fieldMap' and 'fields' keys in the response.
 
     *Sample request*:
     ```
     {
-        action: 'getNextCard',
+        action: 'guiGetNextCard',
         params: {}
     }
     ```
@@ -351,7 +351,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     {
-        'success': 'true',
+        'success': true,
         'question': 'Hello',
         'fieldMap': {
             'Front': [
@@ -399,9 +399,14 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
           "Hola"
         ],
         'answer': 'Hello\n\n<hr id=answer>\n\nHola',
-        'ord': 0,
+        'fieldOrder': 0,
         'id': 1496751176292
     }
+    ```
+
+    *Sample error response*:
+    ```
+    'There are no cards left to review.'
     ```
 
 *   **guiShowQuestion**
@@ -411,14 +416,14 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'showQuestion',
+        action: 'guiShowQuestion',
         params: {}
     }
     ```
 
     *Sample response*:
     ```
-    {'success': 'true'}
+    true
     ```
 
 *   **guiShowAnswer**
@@ -428,29 +433,29 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'showAnswer',
+        action: 'guiShowAnswer',
         params: {}
     }
     ```
 
     *Sample response*:
     ```
-    {'success': 'true'}
+    true
     ```
 
     *Sample error response*:
     ```
-    {'success': 'false', 'message': 'Window state is not review.'}
+    'Window state is not review.'
     ```
 
 *   **guiAnswerCard**
 
-    Used to answer a card that is in the showAnswer state. Valid answers for this card can be found in the getNextCard response.
+    Used to answer a card that is in the showAnswer state. Valid answers for this card can be found in the guiGetNextCard response.
 
     *Sample request*:
     ```
     {
-        action: 'answerCard',
+        action: 'guiAnswerCard',
         params: {
             id: 1496751176292,
             ease: 1
@@ -460,35 +465,35 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
     *Sample response*:
     ```
-    {'success': 'true'}
+    true
     ```
 
     *Sample error responses*:
     ```
-    {'success': 'false', 'message': 'Window state is not review.'}
+    'Window state is not review.'
     ```
     ```
-    {'success': 'false', 'message': 'Reviewer state is not answer.'}
+    'Reviewer state is not answer.'
     ```
     ```
-    {'success': 'false', 'message': 'Given card does not match.'}
+    'Given card does not match.'
     ```
     ```
-    {'success': 'false', 'message': 'Invalid ease provided.'}
+    'Invalid ease provided.'
     ```
 
-*   **checkState**
+*   **guiCheckState**
 
     Returns the window state and the reviewer state.
 
     *Sample request*:
     ```
-    {action: 'checkState'}
+    {action: 'guiCheckState'}
     ```
 
     *Sample response*:
     ```
-    {'window_state': 'review', 'reviewer_state': 'answer', 'success': 'true'}
+    {'windowState': 'review', 'reviewerState': 'answer', 'success': true}
     ```
 
 *   **upgrade**
