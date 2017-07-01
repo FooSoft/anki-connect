@@ -88,7 +88,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **version**
 
-    Gets the version of the API exposed by this plugin. Currently versions `1` through `3` are defined.
+    Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
@@ -336,14 +336,14 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     null
     ```
 
-*   **guiGetNextCard**
+*   **guiCurrentCard**
 
-    Returns next/current card, calling this multiple times will not skip unanswered cards. The low level fields and card direction can be derived from the 'fieldOrder', 'fieldMap' and 'fields' keys in the response.
+    Returns information about the current card or `null` if not in review mode.
 
     *Sample request*:
     ```
     {
-        action: 'guiGetNextCard',
+        action: 'guiCurrentCard',
         params: {}
     }
     ```
@@ -351,67 +351,18 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     {
-        'success': true,
-        'question': 'Hello',
-        'fieldMap': {
-            'Front': [
-                0,
-                {
-                    'name': 'Front',
-                    'media': [],
-                    'sticky': false,
-                    'rtl': false,
-                    'ord': 0,
-                    'font': 'Arial',
-                    'size': 20
-                }
-            ],
-            'Back': [
-                1,
-                {
-                    'name': 'Back',
-                    'media': [],
-                    'sticky': false,
-                    'rtl': false,
-                    'ord': 1,
-                    'font': 'Arial',
-                    'size': 20
-                }
-            ]
-        },
-        'answerButtons': [
-            [
-                1,
-                'Again'
-            ],
-            [
-                2,
-                'Good'
-            ],
-            [
-                3,
-                'Easy'
-            ]
-        ],
-        'modelName': 'Basic',
-        "fields": [
-          "Hello",
-          "Hola"
-        ],
-        'answer': 'Hello\n\n<hr id=answer>\n\nHola',
-        'fieldOrder': 0,
-        'id': 1496751176292
+        answer: "Back",
+        buttons: [1, 2, 3],
+        cardId: 1498938915662,
+        deckName: "Default",
+        modelName: "Basic",
+        question: "Front"
     }
-    ```
-
-    *Sample error response*:
-    ```
-    'There are no cards left to review.'
     ```
 
 *   **guiShowQuestion**
 
-    Move Anki to the state of showing a question (window state = 'review' and reviewer state = 'question'). This is required in order to show the answer and can also be used to move from the showAnswer state back to the showQuestion state.
+    Shows question text for the current card; returns `true` if in review mode or `false` otherwise.
 
     *Sample request*:
     ```
@@ -428,7 +379,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
 
 *   **guiShowAnswer**
 
-    Move Anki to the state of showing an answer (window state = 'review' and reviewer state = 'answer'). This is required in order to answer a card.
+    Shows answer text for the current card; returns `true` if in review mode or `false` otherwise.
 
     *Sample request*:
     ```
@@ -443,21 +394,16 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     true
     ```
 
-    *Sample error response*:
-    ```
-    'Window state is not review.'
-    ```
-
 *   **guiAnswerCard**
 
-    Used to answer a card that is in the showAnswer state. Valid answers for this card can be found in the guiGetNextCard response.
+    Answers the current card; returns `true` if succeeded or `false` otherwise. Note that the answer for the current
+    card must be displayed before before any answer can be accepted by Anki.
 
     *Sample request*:
     ```
     {
         action: 'guiAnswerCard',
         params: {
-            id: 1496751176292,
             ease: 1
         }
     }
@@ -466,34 +412,6 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     true
-    ```
-
-    *Sample error responses*:
-    ```
-    'Window state is not review.'
-    ```
-    ```
-    'Reviewer state is not answer.'
-    ```
-    ```
-    'Given card does not match.'
-    ```
-    ```
-    'Invalid ease provided.'
-    ```
-
-*   **guiCheckState**
-
-    Returns the window state and the reviewer state.
-
-    *Sample request*:
-    ```
-    {action: 'guiCheckState'}
-    ```
-
-    *Sample response*:
-    ```
-    {'windowState': 'review', 'reviewerState': 'answer', 'success': true}
     ```
 
 *   **upgrade**

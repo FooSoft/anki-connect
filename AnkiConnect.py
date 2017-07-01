@@ -494,17 +494,14 @@ class AnkiBridge:
             return False
 
 
-    def guiAnswerCard(self, cardId, ease):
+    def guiAnswerCard(self, ease):
         if not self.guiReviewActive():
             return False
 
         reviewer = self.reviewer()
-        card = reviewer.card
-        if card.id != cardId:
-            return False
         if reviewer.state != 'answer':
             return False
-        if ease <= 0 or ease > self.scheduler().answerButtons(card):
+        if ease <= 0 or ease > self.scheduler().answerButtons(reviewer.card):
             return False
 
         reviewer._answerCard(ease)
@@ -622,8 +619,8 @@ class AnkiConnect:
         return self.anki.guiCurrentCard()
 
 
-    def api_guiAnswerCard(self, cardId, ease):
-        return self.anki.guiAnswerCard(cardId, ease)
+    def api_guiAnswerCard(self, ease):
+        return self.anki.guiAnswerCard(ease)
 
 
     def api_guiShowQuestion(self):
