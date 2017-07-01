@@ -385,8 +385,16 @@ class AnkiBridge:
         return aqt.mw
 
 
+    def reviewer(self):
+        return self.window().reviewer
+
+
     def collection(self):
         return self.window().col
+
+
+    def scheduler(self):
+        return self.collection().sched
 
 
     def media(self):
@@ -401,20 +409,34 @@ class AnkiBridge:
             return collection.models.allNames()
 
 
+    def modelNameFromId(self, mid):
+        collection = self.collection()
+        if collection is not None:
+            model = collection.models.get(mid)
+            if model is not None:
+                return model['name']
+
+
     def modelFieldNames(self, modelName):
         collection = self.collection()
-        if collection is None:
-            return
-
-        model = collection.models.byName(modelName)
-        if model is not None:
-            return [field['name'] for field in model['flds']]
+        if collection is not None:
+            model = collection.models.byName(modelName)
+            if model is not None:
+                return [field['name'] for field in model['flds']]
 
 
     def deckNames(self):
         collection = self.collection()
         if collection is not None:
             return collection.decks.allNames()
+
+
+    def deckNameFromId(self, did):
+        collection = self.collection()
+        if collection is not None:
+            deck = collection.decks.get(did)
+            if deck is not None:
+                return deck['name']
 
 
     def guiBrowse(self, query):
@@ -434,59 +456,65 @@ class AnkiBridge:
         addCards.activateWindow()
 
 
-    def guiGetNextCard(self):
-        window = self.window()
-        if window.reviewer.card is None or window.state != 'review':
-            window.moveToState('review')
+    def guiReviewActive(self):
+        return self.reviewer().card is not None
 
-        card = window.reviewer.card
+
+    def guiReview(self):
+        window = self.window()
+        window.moveToState('review')
+        return self.guiReviewActive()
+
+
+    def guiCurrentCard(self):
+        if self.guiReviewActive():
+            return False
+
+        reviewer = self.reviewer()
+        card = reviewer.card
+
         if card is not None:
             return {
-                'id': card.id,
+                'cardId': card.id,
                 'question': card._getQA()['q'],
                 'answer': card._getQA()['a'],
-                'answerButtons': self.window().reviewer._answerButtonList(),
-                'modelName': card.note(reload)._model['name'],
-                'fieldOrder': card.ord,
-                'fields': card.note(reload).fields,
-                'fieldMap': card.note(reload)._fmap
+                'buttons': map(lambda b: b[0], self.window().reviewer._answerButtonList()),
+                'modelName': card.model()['name'],
+                'deckName': self.deckNameFromId(card.did)
             }
 
 
     def guiShowQuestion(self):
-        window = self.window()
-        if window.reviewer.card is None or window.state != 'review':
-            window.moveToState('review')
-
-        window.reviewer._showQuestion()
+        if self.guiReviewActive():
+            self.reviewer()._showQuestion()
+            return True
+        else:
+            return False
 
 
     def guiShowAnswer(self):
-        window = self.window()
-        if window.reviewer.mw.state == 'review':
+        if self.guiReviewActive():
             self.window().reviewer._showAnswer()
+            return True
+        else:
+            return False
 
 
     def guiAnswerCard(self, cardId, ease):
-        window = self.window()
-        if window.reviewer.mw.state != 'review':
+        if not self.guiReviewActive():
             return False
-        elif window.reviewer.state != 'answer':
-            return False
-        elif window.reviewer.card.id != cardId:
-            return False
-        elif window.col.sched.answerButtons(window.reviewer.card) < ease:
-            return False
-        else:
-            self.window().reviewer._answerCard(ease)
-            return True
 
+        reviewer = self.reviewer()
+        card = reviewer.card
+        if card.id != cardId:
+            return False
+        if reviewer.state != 'answer':
+            return False
+        if ease <= 0 or ease > self.scheduler().answerButtons(card):
+            return False
 
-    def guiCheckState(self):
-        return {
-            'windowState': self.window().state,
-            'reviewerState': self.window().reviewer.state
-        }
+        reviewer._answerCard(ease)
+        return True
 
 
 #
@@ -518,6 +546,7 @@ class AnkiConnect:
     def handler(self, request):
         action = 'api_' + request.get('action', '')
         if hasattr(self, action):
+            return getattr(self, action)(**(request.get('params') or {}))
             try:
                 return getattr(self, action)(**(request.get('params') or {}))
             except TypeError:
@@ -596,8 +625,12 @@ class AnkiConnect:
         return self.anki.guiAddCards()
 
 
-    def api_guiGetNextCard(self):
-        return self.anki.guiGetNextCard()
+    def api_guiReview(self):
+        return self.anki.guiReview()
+
+
+    def api_guiCurrentCard(self):
+        return self.anki.guiCurrentCard()
 
 
     def api_guiAnswerCard(self, id, ease):
@@ -611,9 +644,6 @@ class AnkiConnect:
     def api_guiShowAnswer(self):
         return self.anki.guiShowAnswer()
 
-
-    def api_checkState(self):
-        return self.anki.guiCheckState()
 
 #
 #   Entry
