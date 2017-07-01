@@ -409,10 +409,10 @@ class AnkiBridge:
             return collection.models.allNames()
 
 
-    def modelNameFromId(self, mid):
+    def modelNameFromId(self, modelId):
         collection = self.collection()
         if collection is not None:
-            model = collection.models.get(mid)
+            model = collection.models.get(modelId)
             if model is not None:
                 return model['name']
 
@@ -431,10 +431,10 @@ class AnkiBridge:
             return collection.decks.allNames()
 
 
-    def deckNameFromId(self, did):
+    def deckNameFromId(self, deckId):
         collection = self.collection()
         if collection is not None:
-            deck = collection.decks.get(did)
+            deck = collection.decks.get(deckId)
             if deck is not None:
                 return deck['name']
 
@@ -443,7 +443,7 @@ class AnkiBridge:
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
 
-        if query:
+        if len(query) > 0:
             query = unicode('"{}"').format(query)
             browser.form.searchEdit.lineEdit().setText(query)
             browser.onSearch()
@@ -460,14 +460,8 @@ class AnkiBridge:
         return self.reviewer().card is not None
 
 
-    def guiReview(self):
-        window = self.window()
-        window.moveToState('review')
-        return self.guiReviewActive()
-
-
     def guiCurrentCard(self):
-        if self.guiReviewActive():
+        if not self.guiReviewActive():
             return False
 
         reviewer = self.reviewer()
@@ -625,16 +619,12 @@ class AnkiConnect:
         return self.anki.guiAddCards()
 
 
-    def api_guiReview(self):
-        return self.anki.guiReview()
-
-
     def api_guiCurrentCard(self):
         return self.anki.guiCurrentCard()
 
 
-    def api_guiAnswerCard(self, id, ease):
-        return self.anki.guiAnswerCard(id, ease)
+    def api_guiAnswerCard(self, cardId, ease):
+        return self.anki.guiAnswerCard(cardId, ease)
 
 
     def api_guiShowQuestion(self):
