@@ -511,7 +511,7 @@ class AnkiBridge:
         collection = self.collection()
         if collection is not None:
             deck = collection.decks.byName(name)
-            if (deck is not None):
+            if deck is not None:
                 collection.decks.select(deck['id'])
                 self.window().onOverview()
                 return True
@@ -519,7 +519,6 @@ class AnkiBridge:
 
     def guiDeckBrowser(self):
         self.window().moveToState("deckBrowser")
-        return True
 
 #
 # AnkiConnect

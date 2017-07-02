@@ -392,7 +392,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
 *   **guiDeckOverview**
 
-    Opens the Deck Overview screen for the deck with the given name; returns `true` if succeeded or `False` otherwise.
+    Opens the Deck Overview screen for the deck with the given name; returns `true` if succeeded or `false` otherwise.
 
     *Sample request*:
     ```
@@ -411,7 +411,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **guiDeckBrowser**
 
-    Opens the Deck Browser screen; returns `true` if succeeded or `null` otherwise.
+    Opens the Deck Browser screen.
 
     *Sample request*:
     ```
@@ -422,7 +422,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    true
+    null
     ```
 
 *   **upgrade**
