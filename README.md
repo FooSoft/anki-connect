@@ -77,12 +77,12 @@ ankiInvoke('version').then(response => {
 Or using [`curl`](https://curl.haxx.se):
 
 ```
-curl localhost:8765 -X POST -d '{"action": "version", "params": {}}'
+curl localhost:8765 -X POST -d '{"action": "version"}'
 ```
 
 ### Supported Actions ###
 
-Below is a list of currently supported actions:
+Below is a list of currently supported actions. Requests with invalid actions or parameters will a return `null` result.
 
 *   **version**
 
@@ -95,14 +95,13 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "version",
-        "params": {}
+        "action": "version"
     }
     ```
 
     *Sample response*:
     ```
-    3
+    4
     ```
 *   **deckNames**
 
@@ -111,8 +110,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "deckNames",
-        "params": {}
+        "action": "deckNames"
     }
     ```
 
@@ -130,8 +128,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "modelNames",
-        "params": {}
+        "action": "modelNames"
     }
     ```
 
@@ -310,8 +307,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "guiAddCards",
-        "params": {}
+        "action": "guiAddCards"
     }
     ```
 
@@ -327,8 +323,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "guiCurrentCard",
-        "params": {}
+        "action": "guiCurrentCard"
     }
     ```
 
@@ -351,8 +346,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "guiShowQuestion",
-        "params": {}
+        "action": "guiShowQuestion"
     }
     ```
 
@@ -368,8 +362,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "guiShowAnswer",
-        "params": {}
+        "action": "guiShowAnswer"
     }
     ```
 
@@ -407,8 +400,7 @@ Below is a list of currently supported actions:
     *Sample request*:
     ```
     {
-        "action": "upgrade",
-        "params": {}
+        "action": "upgrade"
     }
     ```
 
