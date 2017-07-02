@@ -82,9 +82,7 @@ curl localhost:8765 -X POST -d '{"action": "version", "params": {}}'
 
 ### Supported Actions ###
 
-Below is a list of currently supported actions. Note that the sample requests are written here as JavaScript objects
-rather than raw JSON. If you are writing raw requests be sure to send valid JSON (i.e. quote all keys and strings with
-`"`, and remove any comments).
+Below is a list of currently supported actions:
 
 *   **version**
 
@@ -97,8 +95,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'version',
-        params: {}
+        "action": "version",
+        "params": {}
     }
     ```
 
@@ -113,16 +111,15 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'deckNames',
-        params: {}
+        "action": "deckNames",
+        "params": {}
     }
     ```
 
     *Sample response*:
     ```
     [
-        'Default',
-        /* ... */
+        "Default"
     ]
     ```
 
@@ -133,17 +130,16 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'modelNames',
-        params: {}
+        "action": "modelNames",
+        "params": {}
     }
     ```
 
     *Sample response*:
     ```
     [
-        'Basic',
-        'Basic (and reversed card)',
-        /* ... */
+        "Basic",
+        "Basic (and reversed card)"
     ]
     ```
 
@@ -154,9 +150,9 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'modelFieldNames',
-        params: {
-            modelName: 'Basic'
+        "action": "modelFieldNames",
+        "params": {
+            "modelName": "Basic"
         }
     }
     ```
@@ -164,9 +160,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     [
-        'Front',
-        'Back',
-        /* ... */
+        "Front",
+        "Back"
     ]
     ```
 
@@ -183,24 +178,22 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'addNote',
-        params: {
-            note: {
-                deckName: 'Default',
-                modelName: 'Basic',
-                fields: {
-                    Front: 'front content',
-                    Back: 'back content',
-                    /* ... */
+        "action": "addNote",
+        "params": {
+            "note": {
+                "deckName": "Default",
+                "modelName": "Basic",
+                "fields": {
+                    "Front": "front content",
+                    "Back": "back content",
                 },
-                tags: [
-                    'yomichan',
-                    /* ... */
+                "tags": [
+                    "yomichan",
                 ],
-                audio: /* optional */ {
-                    url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
-                    filename: 'yomichan_ねこ_猫.mp3',
-                    skipHash: '7e2c2f954ef6051373ba916f000168dc'
+                "audio": {
+                    "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
+                    "filename": "yomichan_ねこ_猫.mp3",
+                    "skipHash": "7e2c2f954ef6051373ba916f000168dc"
                 }
             }
         }
@@ -221,28 +214,25 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'addNotes',
-        params: {
-            notes: [
+        "action": "addNotes",
+        "params": {
+            "notes": [
                 {
-                    deckName: 'Default',
-                    modelName: 'Basic',
-                    fields: {
-                        Front: 'front content',
-                        Back: 'back content',
-                        /* ... */
+                    "deckName": "Default",
+                    "modelName": "Basic",
+                    "fields": {
+                        "Front": "front content",
+                        "Back": "back content"
                     },
-                    tags: [
-                        'yomichan',
-                        /* ... */
+                    "tags": [
+                        "yomichan"
                     ],
-                    audio: /* optional */ {
-                        url: 'https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ',
-                        filename: 'yomichan_ねこ_猫.mp3',
-                        skipHash: '7e2c2f954ef6051373ba916f000168dc'
+                    "audio": {
+                        "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
+                        "filename": "yomichan_ねこ_猫.mp3",
+                        "skipHash": "7e2c2f954ef6051373ba916f000168dc"
                     }
-                },
-                /* ... */
+                }
             ]
         }
     }
@@ -252,8 +242,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     ```
     [
         1496198395707,
-        null,
-        /* ... */
+        null
     ]
     ```
 
@@ -265,23 +254,20 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'canAddNotes',
-        params: {
-            notes: [
+        "action": "canAddNotes",
+        "params": {
+            "notes": [
                 {
-                    deckName: 'Default',
-                    modelName: 'Basic',
-                    fields: {
-                        Front: 'front content',
-                        Back: 'back content',
-                        /* ... */
+                    "deckName": "Default",
+                    "modelName": "Basic",
+                    "fields": {
+                        "Front": "front content",
+                        "Back": "back content"
                     },
-                    tags: [
-                        'yomichan',
-                        /* ... */
+                    "tags": [
+                        "yomichan"
                     ]
-                },
-                /* ... */
+                }
             ]
         }
     }
@@ -290,8 +276,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample response*:
     ```
     [
-        true,
-        /* ... */
+        true
     ]
     ```
 
@@ -302,9 +287,9 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiBrowse',
-        params: {
-            query: 'deck:current'
+        "action": "guiBrowse",
+        "params": {
+            "query": "deck:current"
         }
     }
     ```
@@ -314,8 +299,7 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     [
         1494723142483,
         1494703460437,
-        1494703479525,
-        /* ... */
+        1494703479525
     ]
     ```
 
@@ -326,8 +310,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiAddCards',
-        params: {}
+        "action": "guiAddCards",
+        "params": {}
     }
     ```
 
@@ -343,20 +327,20 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiCurrentCard',
-        params: {}
+        "action": "guiCurrentCard",
+        "params": {}
     }
     ```
 
     *Sample response*:
     ```
     {
-        answer: "Back",
-        buttons: [1, 2, 3],
-        cardId: 1498938915662,
-        deckName: "Default",
-        modelName: "Basic",
-        question: "Front"
+        "answer": "back content",
+        "question": "front content",
+        "deckName": "Default",
+        "modelName": "Basic",
+        "cardId": 1498938915662,
+        "buttons": [1, 2, 3]
     }
     ```
 
@@ -367,8 +351,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiShowQuestion',
-        params: {}
+        "action": "guiShowQuestion",
+        "params": {}
     }
     ```
 
@@ -384,8 +368,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiShowAnswer',
-        params: {}
+        "action": "guiShowAnswer",
+        "params": {}
     }
     ```
 
@@ -402,9 +386,9 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'guiAnswerCard',
-        params: {
-            ease: 1
+        "action": "guiAnswerCard",
+        "params": {
+            "ease": 1
         }
     }
     ```
@@ -423,8 +407,8 @@ rather than raw JSON. If you are writing raw requests be sure to send valid JSON
     *Sample request*:
     ```
     {
-        action: 'upgrade',
-        params: {}
+        "action": "upgrade",
+        "params": {}
     }
     ```
 

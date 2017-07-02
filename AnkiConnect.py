@@ -536,9 +536,10 @@ class AnkiConnect:
 
     def handler(self, request):
         action = 'api_' + request.get('action', '')
+        params = request.get('params', {})
         if hasattr(self, action):
             try:
-                return getattr(self, action)(**(request.get('params') or {}))
+                return getattr(self, action)(**params)
             except TypeError:
                 return None
 
