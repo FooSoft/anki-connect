@@ -390,6 +390,40 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     true
     ```
+*   **guiDeckOverview**
+
+    Opens the Deck Overview screen for the deck with the given name; returns `true` if succeeded or `false` otherwise.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiDeckOverview",
+		"params": {
+			"name": "Default"
+		}
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **guiDeckBrowser**
+
+    Opens the Deck Browser screen.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiDeckBrowser"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
 
 *   **upgrade**
 
