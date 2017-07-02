@@ -507,6 +507,19 @@ class AnkiBridge:
         reviewer._answerCard(ease)
         return True
 
+    def guiDeckOverview(self, name):
+        collection = self.collection()
+        if collection is not None:
+            deck = collection.decks.byName(name)
+            if (deck is not None):
+                collection.decks.select(deck['id'])
+                self.window().onOverview()
+                return True
+        return False
+
+    def guiDeckBrowser(self):
+        self.window().moveToState("deckBrowser")
+        return True
 
 #
 # AnkiConnect
@@ -630,6 +643,12 @@ class AnkiConnect:
 
     def api_guiShowAnswer(self):
         return self.anki.guiShowAnswer()
+    
+    def api_guiDeckOverview(self, name):
+        return self.anki.guiDeckOverview(name)
+
+    def api_guiDeckBrowser(self):
+        return self.anki.guiDeckBrowser()
 
 
 #
