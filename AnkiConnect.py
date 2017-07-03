@@ -457,12 +457,12 @@ class AnkiBridge:
 
 
     def guiReviewActive(self):
-        return self.reviewer().card is not None
+        return self.reviewer().card is not None and self.window().state == 'review'
 
 
     def guiCurrentCard(self):
         if not self.guiReviewActive():
-            return False
+            return
 
         reviewer = self.reviewer()
         card = reviewer.card
@@ -507,6 +507,7 @@ class AnkiBridge:
         reviewer._answerCard(ease)
         return True
 
+
     def guiDeckOverview(self, name):
         collection = self.collection()
         if collection is not None:
@@ -515,10 +516,21 @@ class AnkiBridge:
                 collection.decks.select(deck['id'])
                 self.window().onOverview()
                 return True
+
         return False
 
+
     def guiDeckBrowser(self):
-        self.window().moveToState("deckBrowser")
+        self.window().moveToState('deckBrowser')
+
+
+    def guiDeckReview(self, name):
+        if self.guiDeckOverview(name):
+            self.window().moveToState('review')
+            return True
+        else:
+            return False
+
 
 #
 # AnkiConnect
@@ -642,12 +654,18 @@ class AnkiConnect:
 
     def api_guiShowAnswer(self):
         return self.anki.guiShowAnswer()
-    
+
+
     def api_guiDeckOverview(self, name):
         return self.anki.guiDeckOverview(name)
 
+
     def api_guiDeckBrowser(self):
         return self.anki.guiDeckBrowser()
+
+
+    def api_guiDeckReview(self, name):
+        self.anki.guiDeckReview(name)
 
 
 #
