@@ -390,6 +390,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     true
     ```
+
 *   **guiDeckOverview**
 
     Opens the Deck Overview screen for the deck with the given name; returns `true` if succeeded or `false` otherwise.
@@ -417,6 +418,25 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     {
         "action": "guiDeckBrowser"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **guiDeckReview**
+
+    Starts review for the deck with the given name; returns `true` if succeeded or `false` otherwise.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiDeckReview",
+		"params": {
+			"name": "Default"
+		}
     }
     ```
 
