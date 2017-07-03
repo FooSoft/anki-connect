@@ -334,6 +334,10 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "question": "front content",
         "deckName": "Default",
         "modelName": "Basic",
+        "fields": {
+            "Front": "front content",
+            "Back": "back content"
+        },
         "cardId": 1498938915662,
         "buttons": [1, 2, 3]
     }

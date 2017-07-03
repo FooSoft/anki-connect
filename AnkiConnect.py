@@ -466,10 +466,17 @@ class AnkiBridge:
 
         reviewer = self.reviewer()
         card = reviewer.card
+        model = card.model()
+        note = card.note()
+
+        fields = {}
+        for info in model['flds']:
+            fields[info['name']] = note.fields[info['ord']]
 
         if card is not None:
             return {
                 'cardId': card.id,
+                'fields': fields,
                 'question': card._getQA()['q'],
                 'answer': card._getQA()['a'],
                 'buttons': map(lambda b: b[0], self.window().reviewer._answerButtonList()),
