@@ -61,6 +61,11 @@ except:
     unicode = str
 
 
+def webApi(func):
+    func.webApi = True
+    return func
+
+
 #
 # Helpers
 #
@@ -561,15 +566,16 @@ class AnkiConnect:
                 'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(NET_PORT)
             )
 
+
     def advance(self):
         self.server.advance()
 
 
     def handler(self, request):
-        action = 'api_' + request.get('action', '')
+        action = request.get('action', '')
         if hasattr(self, action):
             handler = getattr(self, action)
-            if callable(handler):
+            if hasattr(handler, 'webApi') and getattr(handler, 'webApi'):
                 argsAll = handler.__code__.co_varnames[1:]
                 argsReq = argsAll
 
@@ -588,25 +594,30 @@ class AnkiConnect:
                 handler(**params)
 
 
-    def api_deckNames(self):
+    @webApi
+    def deckNames(self):
         return self.anki.deckNames()
 
 
-    def api_modelNames(self):
+    @webApi
+    def modelNames(self):
         return self.anki.modelNames()
 
 
-    def api_modelFieldNames(self, modelName):
+    @webApi
+    def modelFieldNames(self, modelName):
         return self.anki.modelFieldNames(modelName)
 
 
-    def api_addNote(self, note):
+    @webApi
+    def addNote(self, note):
         params = AnkiNoteParams(note)
         if params.validate():
             return self.anki.addNote(params)
 
 
-    def api_addNotes(self, notes):
+    @webApi
+    def addNotes(self, notes):
         results = []
         for note in notes:
             params = AnkiNoteParams(note)
@@ -618,7 +629,8 @@ class AnkiConnect:
         return results
 
 
-    def api_canAddNotes(self, notes):
+    @webApi
+    def canAddNotes(self, notes):
         results = []
         for note in notes:
             params = AnkiNoteParams(note)
@@ -627,7 +639,8 @@ class AnkiConnect:
         return results
 
 
-    def api_upgrade(self):
+    @webApi
+    def upgrade(self):
         response = QMessageBox.question(
             self.anki.window(),
             'AnkiConnect',
@@ -648,43 +661,54 @@ class AnkiConnect:
 
         return False
 
-    def api_version(self):
+
+    @webApi
+    def version(self):
         return API_VERSION
 
 
-    def api_guiBrowse(self, query):
+    @webApi
+    def guiBrowse(self, query):
         return self.anki.guiBrowse(query)
 
 
-    def api_guiAddCards(self):
+    @webApi
+    def guiAddCards(self):
         return self.anki.guiAddCards()
 
 
-    def api_guiCurrentCard(self):
+    @webApi
+    def guiCurrentCard(self):
         return self.anki.guiCurrentCard()
 
 
-    def api_guiAnswerCard(self, ease):
+    @webApi
+    def guiAnswerCard(self, ease):
         return self.anki.guiAnswerCard(ease)
 
 
-    def api_guiShowQuestion(self):
+    @webApi
+    def guiShowQuestion(self):
         return self.anki.guiShowQuestion()
 
 
-    def api_guiShowAnswer(self):
+    @webApi
+    def guiShowAnswer(self):
         return self.anki.guiShowAnswer()
 
 
-    def api_guiDeckOverview(self, name):
+    @webApi
+    def guiDeckOverview(self, name):
         return self.anki.guiDeckOverview(name)
 
 
-    def api_guiDeckBrowser(self):
+    @webApi
+    def guiDeckBrowser(self):
         return self.anki.guiDeckBrowser()
 
 
-    def api_guiDeckReview(self, name):
+    @webApi
+    def guiDeckReview(self, name):
         self.anki.guiDeckReview(name)
 
 
