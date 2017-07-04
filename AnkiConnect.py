@@ -61,14 +61,14 @@ except:
     unicode = str
 
 
+#
+# Helpers
+#
+
 def webApi(func):
     func.webApi = True
     return func
 
-
-#
-# Helpers
-#
 
 def makeBytes(data):
     return data.encode('utf-8')
