@@ -18,6 +18,7 @@
 import anki
 import aqt
 import hashlib
+import inspect
 import json
 import os.path
 import select
@@ -444,14 +445,16 @@ class AnkiBridge:
                 return deck['name']
 
 
-    def guiBrowse(self, query):
+    def guiBrowse(self, query=None):
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
 
-        if len(query) > 0:
-            query = unicode('"{}"').format(query)
+        if query is not None:
             browser.form.searchEdit.lineEdit().setText(query)
-            browser.onSearch()
+            if hasattr(browser, 'onSearch'):
+                browser.onSearch()
+            else:
+                browser.onSearchActivated()
 
         return browser.model.cards
 
@@ -575,11 +578,12 @@ class AnkiConnect:
         action = request.get('action', '')
         if hasattr(self, action):
             handler = getattr(self, action)
-            if hasattr(handler, 'webApi') and getattr(handler, 'webApi'):
-                argsAll = handler.__code__.co_varnames[1:]
+            if callable(handler) and hasattr(handler, 'webApi') and getattr(handler, 'webApi'):
+                spec = inspect.getargspec(handler)
+                argsAll = spec.args[1:]
                 argsReq = argsAll
 
-                argsDef = handler.__defaults__
+                argsDef = spec.defaults
                 if argsDef is not None:
                     argsReq = argsAll[:-len(argsDef)]
 
@@ -591,7 +595,7 @@ class AnkiConnect:
                     if param not in argsAll:
                         return
 
-                handler(**params)
+                return handler(**params)
 
 
     @webApi
@@ -668,7 +672,7 @@ class AnkiConnect:
 
 
     @webApi
-    def guiBrowse(self, query):
+    def guiBrowse(self, query=None):
         return self.anki.guiBrowse(query)
 
 
