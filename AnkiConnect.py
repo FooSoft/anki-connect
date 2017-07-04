@@ -567,12 +567,25 @@ class AnkiConnect:
 
     def handler(self, request):
         action = 'api_' + request.get('action', '')
-        params = request.get('params', {})
         if hasattr(self, action):
-            try:
-                return getattr(self, action)(**params)
-            except TypeError:
-                return None
+            handler = getattr(self, action)
+            if callable(handler):
+                argsAll = handler.__code__.co_varnames[1:]
+                argsReq = argsAll
+
+                argsDef = handler.__defaults__
+                if argsDef is not None:
+                    argsReq = argsAll[:-len(argsDef)]
+
+                params = request.get('params', {})
+                for argReq in argsReq:
+                    if argReq not in params:
+                        return
+                for param in params:
+                    if param not in argsAll:
+                        return
+
+                handler(**params)
 
 
     def api_deckNames(self):
