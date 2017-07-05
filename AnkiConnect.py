@@ -479,16 +479,19 @@ class AnkiBridge:
 
         fields = {}
         for info in model['flds']:
-            fields[info['name']] = note.fields[info['ord']]
+            order = info['ord']
+            name = info['name']
+            fields[name] = {'value': note.fields[order], 'order': order}
 
         if card is not None:
             return {
                 'cardId': card.id,
                 'fields': fields,
+                'fieldOrder': card.ord,
                 'question': card._getQA()['q'],
                 'answer': card._getQA()['a'],
-                'buttons': map(lambda b: b[0], self.window().reviewer._answerButtonList()),
-                'modelName': card.model()['name'],
+                'buttons': map(lambda b: b[0], reviewer._answerButtonList()),
+                'modelName': model['name'],
                 'deckName': self.deckNameFromId(card.did)
             }
 
