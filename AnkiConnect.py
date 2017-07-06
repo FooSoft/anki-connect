@@ -23,6 +23,7 @@ import json
 import os.path
 import select
 import socket
+import sys
 
 
 #
@@ -42,24 +43,20 @@ NET_PORT = 8765
 # General helpers
 #
 
-try:
+if sys.version_info[0] < 3:
     import urllib2
     web = urllib2
-except ImportError:
+
+    from PyQt4.QtCore import QTimer
+    from PyQt4.QtGui import QMessageBox
+else:
+    unicode = str
+
     from urllib import request
     web = request
 
-try:
-    from PyQt4.QtCore import QTimer
-    from PyQt4.QtGui import QMessageBox
-except ImportError:
     from PyQt5.QtCore import QTimer
     from PyQt5.QtWidgets import QMessageBox
-
-try:
-    unicode
-except:
-    unicode = str
 
 
 #
