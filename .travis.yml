@@ -8,5 +8,6 @@ install:
   - docker build -f tests/Dockerfile -t txgio/anki-connect .
 script:
   - docker run -ti -d --rm -p 8765:8765 txgio/anki-connect
+  - sleep 5
   - >
     curl localhost:8765 -X POST -s -d '{"action": "version"}'
