@@ -1,10 +1,10 @@
 sudo: required
+language: python
 services:
   - docker
-language: python
 python:
   - "2.7"
 install:
   - docker build -f tests/Dockerfile -t txgio/anki-connect .
-script:
-  - curl localhost:8765 -X POST -s -d '{"action": "version"}'
+script: >
+  - `curl localhost:8765 -X POST -s -d '{"action": "version"}'`
