@@ -456,6 +456,13 @@ class AnkiBridge:
         return browser.model.cards
 
 
+    def browse(self, query=None):
+        if query is not None:
+            return aqt.mw.col.findCards(query)
+        else:
+            return []
+
+
     def guiAddCards(self):
         addCards = aqt.dialogs.open('AddCards', self.window())
         addCards.activateWindow()
@@ -674,6 +681,11 @@ class AnkiConnect:
     @webApi
     def guiBrowse(self, query=None):
         return self.anki.guiBrowse(query)
+
+
+    @webApi
+    def browse(self, query=None):
+        return self.anki.browse(query)
 
 
     @webApi

@@ -300,6 +300,29 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **browse**
+
+    Functionally identical to **guiBrowse**, but accesses the database without using the GUI for increased performance.
+
+    *Sample request*:
+    ```
+    {
+        "action": "browse",
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1494723142483,
+        1494703460437,
+        1494703479525
+    ]
+    ```
+
 *   **guiAddCards**
 
     Invokes the AddCards dialog.
