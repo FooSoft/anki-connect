@@ -428,6 +428,13 @@ class AnkiBridge:
                 return [field['name'] for field in model['flds']]
 
 
+    def multi(self, actions):
+        response = []
+        for item in actions:
+            response.append(AnkiConnect.handler(ac, item))
+        return response
+
+
     def deckNames(self):
         collection = self.collection()
         if collection is not None:
@@ -618,6 +625,11 @@ class AnkiConnect:
     @webApi
     def modelFieldNames(self, modelName):
         return self.anki.modelFieldNames(modelName)
+
+
+    @webApi
+    def multi(self, actions):
+        return self.anki.multi(actions)
 
 
     @webApi
