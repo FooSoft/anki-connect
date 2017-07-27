@@ -162,6 +162,34 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **multi**
+
+    Performs multiple actions in one request, returning an array with the response of each action (in the given order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "multi",
+        "params": {
+            "actions": [
+                {"action": "deckNames"},
+                {
+                    "action": "browse",
+                    "params": {"query": "deck:current"}
+                }
+            ]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        ["Default"],
+        [1494723142483, 1494703460437, 1494703479525]
+    ]
+    ```
+
 *   **addNote**
 
     Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
