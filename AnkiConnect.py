@@ -737,7 +737,7 @@ class AnkiConnect:
 
     @webApi
     def guiDeckReview(self, name):
-        self.anki.guiDeckReview(name)
+        return self.anki.guiDeckReview(name)
 
 
 #

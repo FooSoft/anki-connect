@@ -504,7 +504,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
 
 *   **upgrade**
