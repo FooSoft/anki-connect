@@ -305,6 +305,84 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **addTags**
+
+    Adds tags to notes matching a query (same syntax as **browse**/**guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "addTags",
+        "params": {
+            "query": "deck:French or deck:Spanish",
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **removeTags**
+
+    Remove tags from notes matching a query (same syntax as **browse**/**guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeTags",
+        "params": {
+            "query": "deck:Japanese or deck:Chinese",
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **suspend**
+
+    Suspend cards matching a query (same syntax as **browse**/**guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "suspend",
+        "params": {
+            "query": "tag:difficult"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **unsuspend**
+
+    Unsuspend cards matching a query (same syntax as **browse**/**guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "unsuspend",
+        "params": {
+            "query": "tag:easy"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
 *   **guiBrowse**
 
     Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.

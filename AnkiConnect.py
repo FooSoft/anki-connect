@@ -375,6 +375,20 @@ class AnkiBridge:
             return note
 
 
+    def addTags(self, query, tags, add=True):
+        notes = aqt.mw.col.findNotes(query)
+        aqt.mw.col.tags.bulkAdd(notes, tags, add)
+
+
+    def suspend(self, query, suspend=True):
+        cards = aqt.mw.col.findCards(query)
+        if suspend:
+            suspendFunction = aqt.mw.col.sched.suspendCards
+        else:
+            suspendFunction = aqt.mw.col.sched.unsuspendCards
+        suspendFunction(cards)
+
+
     def startEditing(self):
         self.window().requireReset()
 
@@ -660,6 +674,26 @@ class AnkiConnect:
             results.append(params.validate() and self.anki.canAddNote(params))
 
         return results
+
+
+    @webApi
+    def addTags(self, query, tags, add=True):
+        return self.anki.addTags(query, tags, add)
+
+
+    @webApi
+    def removeTags(self, query, tags):
+        return self.anki.addTags(query, tags, False)
+
+
+    @webApi
+    def suspend(self, query, suspend=True):
+        return self.anki.suspend(query, suspend)
+
+
+    @webApi
+    def unsuspend(self, query):
+        return self.anki.suspend(query, False)
 
 
     @webApi
