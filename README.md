@@ -307,14 +307,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **addTags**
 
-    Adds tags to notes matching a query (same syntax as **browse**/**guiBrowse**).
+    Adds tags to notes by note ID.
 
     *Sample request*:
     ```
     {
         "action": "addTags",
         "params": {
-            "query": "deck:French or deck:Spanish",
+            "notes": [1483959289817, 1483959291695],
             "tags": "european-languages"
         }
     }
@@ -327,14 +327,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **removeTags**
 
-    Remove tags from notes matching a query (same syntax as **browse**/**guiBrowse**).
+    Remove tags from notes by note ID.
 
     *Sample request*:
     ```
     {
         "action": "removeTags",
         "params": {
-            "query": "deck:Japanese or deck:Chinese",
+            "notes": [1483959289817, 1483959291695],
             "tags": "european-languages"
         }
     }
@@ -347,14 +347,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **suspend**
 
-    Suspend cards matching a query (same syntax as **browse**/**guiBrowse**).
+    Suspend cards by card ID.
 
     *Sample request*:
     ```
     {
         "action": "suspend",
         "params": {
-            "query": "tag:difficult"
+            "cards": [1483959291685, 1483959293217]
         }
     }
     ```
@@ -366,14 +366,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **unsuspend**
 
-    Unsuspend cards matching a query (same syntax as **browse**/**guiBrowse**).
+    Unsuspend cards by card ID.
 
     *Sample request*:
     ```
     {
         "action": "unsuspend",
         "params": {
-            "query": "tag:easy"
+            "cards": [1483959291685, 1483959293217]
         }
     }
     ```
