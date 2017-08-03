@@ -383,14 +383,37 @@ Below is a list of currently supported actions. Requests with invalid actions or
     null
     ```
 
-*   **guiBrowse**
+*   **findNotes**
 
-    Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
+    Returns an array of note IDs for a given query (same query syntax as **guiBrowse**).
 
     *Sample request*:
     ```
     {
-        "action": "guiBrowse",
+        "action": "findCards",
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1483959289817,
+        1483959291695
+    ]
+    ```
+
+*   **findCards**
+
+    Returns an array of card IDs for a given query (functionally identical to **guiBrowse** but doesn't use the GUI
+    for better performance).
+
+    *Sample request*:
+    ```
+    {
+        "action": "findCards",
         "params": {
             "query": "deck:current"
         }
@@ -406,14 +429,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **browse**
+*   **guiBrowse**
 
-    Functionally identical to **guiBrowse**, but accesses the database without using the GUI for increased performance.
+    Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
 
     *Sample request*:
     ```
     {
-        "action": "browse",
+        "action": "guiBrowse",
         "params": {
             "query": "deck:current"
         }

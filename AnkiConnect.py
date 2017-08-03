@@ -460,6 +460,20 @@ class AnkiBridge:
                 return deck['name']
 
 
+    def findNotes(self, query=None):
+        if query is not None:
+            return aqt.mw.col.findNotes(query)
+        else:
+            return []
+
+
+    def findCards(self, query=None):
+        if query is not None:
+            return aqt.mw.col.findCards(query)
+        else:
+            return []
+
+
     def guiBrowse(self, query=None):
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
@@ -472,13 +486,6 @@ class AnkiBridge:
                 browser.onSearchActivated()
 
         return browser.model.cards
-
-
-    def browse(self, query=None):
-        if query is not None:
-            return aqt.mw.col.findCards(query)
-        else:
-            return []
 
 
     def guiAddCards(self):
@@ -722,13 +729,18 @@ class AnkiConnect:
 
 
     @webApi
-    def guiBrowse(self, query=None):
-        return self.anki.guiBrowse(query)
+    def findNotes(self, query=None):
+        return self.anki.findNotes(query)
 
 
     @webApi
-    def browse(self, query=None):
-        return self.anki.browse(query)
+    def findCards(self, query=None):
+        return self.anki.findCards(query)
+
+
+    @webApi
+    def guiBrowse(self, query=None):
+        return self.anki.guiBrowse(query)
 
 
     @webApi
