@@ -305,14 +305,115 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **guiBrowse**
+*   **addTags**
 
-    Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
+    Adds tags to notes by note ID.
 
     *Sample request*:
     ```
     {
-        "action": "guiBrowse",
+        "action": "addTags",
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **removeTags**
+
+    Remove tags from notes by note ID.
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeTags",
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **suspend**
+
+    Suspend cards by card ID.
+
+    *Sample request*:
+    ```
+    {
+        "action": "suspend",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **unsuspend**
+
+    Unsuspend cards by card ID.
+
+    *Sample request*:
+    ```
+    {
+        "action": "unsuspend",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **findNotes**
+
+    Returns an array of note IDs for a given query (same query syntax as **guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "findCards",
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1483959289817,
+        1483959291695
+    ]
+    ```
+
+*   **findCards**
+
+    Returns an array of card IDs for a given query (functionally identical to **guiBrowse** but doesn't use the GUI
+    for better performance).
+
+    *Sample request*:
+    ```
+    {
+        "action": "findCards",
         "params": {
             "query": "deck:current"
         }
@@ -328,14 +429,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **browse**
+*   **guiBrowse**
 
-    Functionally identical to **guiBrowse**, but accesses the database without using the GUI for increased performance.
+    Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
 
     *Sample request*:
     ```
     {
-        "action": "browse",
+        "action": "guiBrowse",
         "params": {
             "query": "deck:current"
         }
