@@ -376,7 +376,9 @@ class AnkiBridge:
 
 
     def addTags(self, notes, tags, add=True):
+        self.startEditing()
         aqt.mw.col.tags.bulkAdd(notes, tags, add)
+        self.stopEditing()
 
 
     def suspend(self, cards, suspend=True):
