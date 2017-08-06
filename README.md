@@ -347,7 +347,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **suspend**
 
-    Suspend cards by card ID.
+    Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -361,12 +362,13 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
 
 *   **unsuspend**
 
-    Unsuspend cards by card ID.
+    Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -380,7 +382,26 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
+    ```
+
+*   **isSuspended**
+
+    Returns `true` if the given card is suspended or `false` otherwise.
+
+    *Sample request*:
+    ```
+    {
+        "action": "isSuspended",
+        "params": {
+            "card": 1483959291685
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    false
     ```
 
 *   **findNotes**
