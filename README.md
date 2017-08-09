@@ -451,7 +451,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "findCards",
+        "action": "findNotes",
         "params": {
             "query": "deck:current"
         }
