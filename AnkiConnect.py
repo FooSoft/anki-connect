@@ -507,6 +507,10 @@ class AnkiBridge:
             return []
 
 
+    def cardsToNotes(self, cards):
+        return self.window().col.db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
+
+
     def guiBrowse(self, query=None):
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
@@ -779,6 +783,11 @@ class AnkiConnect:
     @webApi
     def findCards(self, query=None):
         return self.anki.findCards(query)
+
+
+    @webApi
+    def cardsToNotes(self, cards):
+        return self.anki.cardsToNotes(cards)
 
 
     @webApi

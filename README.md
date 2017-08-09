@@ -490,6 +490,29 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **cardsToNotes**
+
+    Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
+    given once in the array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cardsToNotes",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1502098029797,
+        1502298025183
+    ]
+    ```
+
 *   **guiBrowse**
 
     Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
