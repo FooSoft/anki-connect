@@ -409,6 +409,16 @@ class AnkiBridge:
             return False
 
 
+    def getIntervals(self, cards, complete=False):
+        intervals = []
+        for card in cards:
+            interval = self.window().col.db.list('select ivl from revlog where cid = ?', card)
+            if not complete:
+                interval = interval[-1]
+            intervals.append(interval)
+        return intervals
+
+
     def startEditing(self):
         self.window().requireReset()
 
@@ -726,6 +736,11 @@ class AnkiConnect:
     @webApi
     def isSuspended(self, card):
         return self.anki.isSuspended(card)
+
+
+    @webApi
+    def getIntervals(self, cards, complete=False):
+        return self.anki.getIntervals(cards, complete)
 
 
     @webApi
