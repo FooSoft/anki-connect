@@ -404,6 +404,46 @@ Below is a list of currently supported actions. Requests with invalid actions or
     false
     ```
 
+*   **getIntervals**
+
+    Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
+    for each given card ID when `complete` is `true`. (Negative intervals are in seconds and positive intervals in days.)
+
+    *Sample request 1*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657]
+        }
+    }
+    ```
+
+    *Sample response 1*:
+    ```
+    [-14400, 3]
+    ```
+
+    *Sample request 2*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657],
+            "complete": true
+        }
+    }
+    ```
+
+    *Sample response 2*:
+    ```
+    [
+        [-120, -180, -240, -300, -360, -14400],
+        [-120, -180, -240, -300, -360, -14400, 1, 3]
+    ]
+    ```
+
+
 *   **findNotes**
 
     Returns an array of note IDs for a given query (same query syntax as **guiBrowse**).
@@ -411,7 +451,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "findCards",
+        "action": "findNotes",
         "params": {
             "query": "deck:current"
         }
@@ -447,6 +487,29 @@ Below is a list of currently supported actions. Requests with invalid actions or
         1494723142483,
         1494703460437,
         1494703479525
+    ]
+    ```
+
+*   **cardsToNotes**
+
+    Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
+    given once in the array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cardsToNotes",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1502098029797,
+        1502298025183
     ]
     ```
 

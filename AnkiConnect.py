@@ -409,6 +409,16 @@ class AnkiBridge:
             return False
 
 
+    def getIntervals(self, cards, complete=False):
+        intervals = []
+        for card in cards:
+            interval = self.window().col.db.list('select ivl from revlog where cid = ?', card)
+            if not complete:
+                interval = interval[-1]
+            intervals.append(interval)
+        return intervals
+
+
     def startEditing(self):
         self.window().requireReset()
 
@@ -495,6 +505,10 @@ class AnkiBridge:
             return self.collection().findCards(query)
         else:
             return []
+
+
+    def cardsToNotes(self, cards):
+        return self.window().col.db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
 
 
     def guiBrowse(self, query=None):
@@ -729,6 +743,11 @@ class AnkiConnect:
 
 
     @webApi
+    def getIntervals(self, cards, complete=False):
+        return self.anki.getIntervals(cards, complete)
+
+
+    @webApi
     def upgrade(self):
         response = QMessageBox.question(
             self.anki.window(),
@@ -764,6 +783,11 @@ class AnkiConnect:
     @webApi
     def findCards(self, query=None):
         return self.anki.findCards(query)
+
+
+    @webApi
+    def cardsToNotes(self, cards):
+        return self.anki.cardsToNotes(cards)
 
 
     @webApi
