@@ -490,6 +490,26 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **changeDeck**
+
+    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    *Sample request*:
+    ```
+    {
+        "action": "changeDeck",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753],
+            "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
 *   **cardsToNotes**
 
     Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
