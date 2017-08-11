@@ -507,6 +507,23 @@ class AnkiBridge:
             return []
 
 
+    def changeDeck(self, cards, deck):
+        self.startEditing()
+
+        did = self.window().col.decks.id(deck)
+        mod = anki.utils.intTime()
+        usn = self.window().col.usn()
+
+        # normal cards
+        scids = anki.utils.ids2str(cards)
+        # remove any cards from filtered deck first
+        self.window().col.sched.remFromDyn(cards)
+
+        # then move into new deck
+        self.window().col.db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
+        self.stopEditing()
+
+
     def cardsToNotes(self, cards):
         return self.window().col.db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
 
@@ -783,6 +800,11 @@ class AnkiConnect:
     @webApi
     def findCards(self, query=None):
         return self.anki.findCards(query)
+
+
+    @webApi
+    def changeDeck(self, cards, deck):
+        return self.anki.changeDeck(cards, deck)
 
 
     @webApi
