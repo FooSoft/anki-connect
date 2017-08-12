@@ -385,23 +385,44 @@ Below is a list of currently supported actions. Requests with invalid actions or
     true
     ```
 
-*   **isSuspended**
+*   **areSuspended**
 
-    Returns `true` if the given card is suspended or `false` otherwise.
+    Returns an array indicating whether each of the given cards is suspended (in the same order).
 
     *Sample request*:
     ```
     {
-        "action": "isSuspended",
+        "action": "areSuspended",
         "params": {
-            "card": 1483959291685
+            "cards": [1483959291685, 1483959293217]
         }
     }
     ```
 
     *Sample response*:
     ```
-    false
+    [false, true]
+    ```
+
+*   **areDue**
+
+    Returns an array indicating whether each of the given cards is due (in the same order). Note: cards in the learning
+    queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has passed, to
+    match the way Anki treats them when reviewing.
+
+    *Sample request*:
+    ```
+    {
+        "action": "areDue",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
     ```
 
 *   **getIntervals**
