@@ -387,8 +387,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **areSuspended**
 
-    Returns an array, where the value at an index is `true` if the card with the given ID at that index is suspended, or
-    `false` otherwise.
+    Returns an array indicating whether each of the given cards is suspended (in the same order).
 
     *Sample request*:
     ```
@@ -407,9 +406,9 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **areDue**
 
-    Returns an array, where the value at an index is `true` if the card with the ID given at that index is due, or
-    `false` otherwise. Note: cards in the learning queue with a large interval (over 20 minutes) are treated as not due
-    until the time of their interval has passed, to match the way Anki treats them.
+    Returns an array indicating whether each of the given cards is due (in the same order). Note: cards in the learning
+    queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has passed, to
+    match the way Anki treats them when reviewing.
 
     *Sample request*:
     ```
