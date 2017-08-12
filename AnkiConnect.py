@@ -416,12 +416,11 @@ class AnkiBridge:
     def areDue(self, cards):
         due = []
         for card in cards:
-            date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
-
             if self.findCards('cid:%s is:new' % card):
                 due.append(True)
                 continue
 
+            date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
             if (ivl >= -1200):
                 if self.findCards('cid:%s is:due' % card):
                     due.append(True)
@@ -439,6 +438,10 @@ class AnkiBridge:
     def getIntervals(self, cards, complete=False):
         intervals = []
         for card in cards:
+            if self.findCards('cid:%s is:new' % card):
+                intervals.append(0)
+                continue
+
             interval = self.collection().db.list('select ivl from revlog where cid = ?', card)
             if not complete:
                 interval = interval[-1]
