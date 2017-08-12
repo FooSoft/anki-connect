@@ -24,6 +24,7 @@ import os.path
 import select
 import socket
 import sys
+from time import time
 
 
 #
@@ -401,18 +402,44 @@ class AnkiBridge:
         return False
 
 
-    def isSuspended(self, card):
-        card = self.collection().getCard(card)
-        if card.queue == -1:
-            return True
-        else:
-            return False
+    def areSuspended(self, cards):
+        suspended = []
+        for card in cards:
+            card = self.collection().getCard(card)
+            if card.queue == -1:
+                suspended.append(True)
+            else:
+                suspended.append(False)
+        return suspended
+
+
+    def areDue(self, cards):
+        due = []
+        for card in cards:
+            date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
+
+            if self.findCards('cid:%s is:new' % card):
+                due.append(True)
+                continue
+
+            if (ivl >= -1200):
+                if self.findCards('cid:%s is:due' % card):
+                    due.append(True)
+                else:
+                    due.append(False)
+            else:
+                if date - ivl <= time():
+                    due.append(True)
+                else:
+                    due.append(False)
+
+        return due
 
 
     def getIntervals(self, cards, complete=False):
         intervals = []
         for card in cards:
-            interval = self.window().col.db.list('select ivl from revlog where cid = ?', card)
+            interval = self.collection().db.list('select ivl from revlog where cid = ?', card)
             if not complete:
                 interval = interval[-1]
             intervals.append(interval)
@@ -510,22 +537,22 @@ class AnkiBridge:
     def changeDeck(self, cards, deck):
         self.startEditing()
 
-        did = self.window().col.decks.id(deck)
+        did = self.collection().decks.id(deck)
         mod = anki.utils.intTime()
-        usn = self.window().col.usn()
+        usn = self.collection().usn()
 
         # normal cards
         scids = anki.utils.ids2str(cards)
         # remove any cards from filtered deck first
-        self.window().col.sched.remFromDyn(cards)
+        self.collection().sched.remFromDyn(cards)
 
         # then move into new deck
-        self.window().col.db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
+        self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
         self.stopEditing()
 
 
     def cardsToNotes(self, cards):
-        return self.window().col.db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
+        return self.collection().db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
 
 
     def guiBrowse(self, query=None):
@@ -755,8 +782,13 @@ class AnkiConnect:
 
 
     @webApi
-    def isSuspended(self, card):
-        return self.anki.isSuspended(card)
+    def areSuspended(self, cards):
+        return self.anki.areSuspended(cards)
+
+
+    @webApi
+    def areDue(self, cards):
+        return self.anki.areDue(cards)
 
 
     @webApi
