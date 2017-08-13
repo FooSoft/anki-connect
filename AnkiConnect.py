@@ -537,6 +537,20 @@ class AnkiBridge:
             return []
 
 
+    def getDecks(self, cards):
+        decks = {}
+        for card in cards:
+            did = self.collection().db.scalar('select did from cards where id = ?', card)
+            deck = self.collection().decks.get(did)['name']
+
+            if deck in decks:
+                decks[deck].append(card)
+            else:
+                decks[deck] = [card]
+
+        return decks
+
+
     def changeDeck(self, cards, deck):
         self.startEditing()
 
@@ -835,6 +849,11 @@ class AnkiConnect:
     @webApi
     def findCards(self, query=None):
         return self.anki.findCards(query)
+
+
+    @webApi
+    def getDecks(self, cards):
+        return self.anki.getDecks(cards)
 
 
     @webApi

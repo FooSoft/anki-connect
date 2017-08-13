@@ -511,6 +511,30 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **getDecks**
+
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getDecks",
+        "params": {
+            "cards": [1502298036657, 1502298033753, 1502032366472]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
+    }
+    ```
+    
+
 *   **changeDeck**
 
     Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
