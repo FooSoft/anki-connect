@@ -511,6 +511,30 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **getDecks**
+
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getDecks",
+        "params": {
+            "cards": [1502298036657, 1502298033753, 1502032366472]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
+    }
+    ```
+    
+
 *   **changeDeck**
 
     Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
@@ -522,6 +546,27 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "params": {
             "cards": [1502098034045, 1502098034048, 1502298033753],
             "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+    
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
         }
     }
     ```

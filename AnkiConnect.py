@@ -537,6 +537,20 @@ class AnkiBridge:
             return []
 
 
+    def getDecks(self, cards):
+        decks = {}
+        for card in cards:
+            did = self.collection().db.scalar('select did from cards where id = ?', card)
+            deck = self.collection().decks.get(did)['name']
+
+            if deck in decks:
+                decks[deck].append(card)
+            else:
+                decks[deck] = [card]
+
+        return decks
+
+
     def changeDeck(self, cards, deck):
         self.startEditing()
 
@@ -551,6 +565,14 @@ class AnkiBridge:
 
         # then move into new deck
         self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
+        self.stopEditing()
+
+
+    def deleteDecks(self, decks, cardsToo=False):
+        self.startEditing()
+        for deck in decks:
+            id = self.collection().decks.id(deck)
+            self.collection().decks.rem(id, cardsToo)
         self.stopEditing()
 
 
@@ -838,8 +860,18 @@ class AnkiConnect:
 
 
     @webApi
+    def getDecks(self, cards):
+        return self.anki.getDecks(cards)
+
+
+    @webApi
     def changeDeck(self, cards, deck):
         return self.anki.changeDeck(cards, deck)
+
+
+    @webApi
+    def deleteDecks(self, decks, cardsToo=False):
+        return self.anki.deleteDecks(decks, cardsToo)
 
 
     @webApi
