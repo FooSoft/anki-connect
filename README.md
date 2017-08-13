@@ -554,6 +554,27 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     null
     ```
+    
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
 
 *   **cardsToNotes**
 
