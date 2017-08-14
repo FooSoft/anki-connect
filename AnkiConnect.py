@@ -25,6 +25,7 @@ import select
 import socket
 import sys
 from time import time
+from threading import Timer
 
 
 #
@@ -685,6 +686,26 @@ class AnkiBridge:
             return False
 
 
+    def setLock(self, timeout=0):
+        if hasattr(self, 'lockTimer'):
+            self.lockTimer.cancel()
+
+        self.lock = {'locked': True, 'timeout': timeout}
+        if timeout:
+            self.lockTimer = Timer(timeout, self.removeLock)
+            self.lockTimer.start()
+
+
+    def removeLock(self):
+        self.lock = {'locked': False}
+
+
+    def getLock(self):
+        if not hasattr(self, 'lock'):
+            self.removeLock()
+        return self.lock
+
+
 #
 # AnkiConnect
 #
@@ -922,6 +943,21 @@ class AnkiConnect:
     @webApi
     def guiDeckReview(self, name):
         return self.anki.guiDeckReview(name)
+
+
+    @webApi
+    def setLock(self, timeout=0):
+        return self.anki.setLock(timeout)
+
+
+    @webApi
+    def removeLock(self):
+        return self.anki.removeLock()
+
+
+    @webApi
+    def getLock(self):
+        return self.anki.getLock()
 
 
 #
