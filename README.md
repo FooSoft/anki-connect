@@ -533,7 +533,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "Japanese::JLPT N3": [1502298036657, 1502298033753]
     }
     ```
-    
+
 
 *   **changeDeck**
 
@@ -554,7 +554,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     null
     ```
-    
+
 *   **deleteDecks**
 
     Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
@@ -776,6 +776,66 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample response*:
     ```
     true
+    ```
+
+*   **setLock**
+
+    Sets a lock, allowing applications to prevent multiple instances of an themselves accessing Anki at the same time.
+    By specifying the `timeout` parameter, the lock can be set indefinitely or for a number of seconds - the latter of
+    which is intended for apps which cannot automatically call `removeLock` after being closed (e.g. webapps). If it is
+    `0` or unset, the lock will be set indefinitely.
+
+    Note: a lock does not prevent access to AnkiConnect by itself - it's up to application developers to implement a
+    system which detects if there is a lock, if this is suitable for the application.
+
+    *Sample request*:
+    ```
+    {
+        "action": "setLock",
+        "params": {
+            "timeout": 2
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **removeLock**
+
+    Removes the lock.
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeLock"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **getLock**
+
+    Returns an object indicating whether a lock is set, and for how long (in seconds) if it is set.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getLock"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "locked": true,
+        "timeout": 2
+    }
     ```
 
 *   **upgrade**
