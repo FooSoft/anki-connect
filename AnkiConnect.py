@@ -34,7 +34,7 @@ from time import time
 API_VERSION = 4
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
-URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/anki_connect.py'
+URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
 NET_ADDRESS = '127.0.0.1'
 NET_BACKLOG = 5
 NET_PORT = 8765
@@ -833,7 +833,7 @@ class AnkiConnect:
         if response == QMessageBox.Yes:
             data = download(URL_UPGRADE)
             if data is None:
-                QMessageBox.critical(self.anki.window, 'AnkiConnect', 'Failed to download latest version.')
+                QMessageBox.critical(self.anki.window(), 'AnkiConnect', 'Failed to download latest version.')
             else:
                 path = os.path.splitext(__file__)[0] + '.py'
                 with open(path, 'w') as fp:
