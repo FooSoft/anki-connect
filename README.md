@@ -89,7 +89,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
-    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
@@ -103,6 +103,64 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     4
     ```
+
+*   **supportedActions**
+
+    Returns an object containing all supported actions and the revision number of each action. A revision number of 1
+    means the API for that action hasn't changed since it was first added to AnkiConnect, or since August 14, 2017
+    (whichever is later).
+
+    For applications using recently-added features, such as **setLock**, it's recommended you call this first to check
+    that the required actions are supported in the version of AnkiConnect the user has installed.
+
+    *Sample request*:
+    ```
+    {
+        "action": "supportedActions"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        addNote: 1,
+        addNotes: 1,
+        addTags: 1,
+        areDue: 1,
+        areSuspended: 1,
+        canAddNotes: 1,
+        cardsToNotes: 1,
+        changeDeck: 1,
+        deckNames: 1,
+        deleteDecks: 1,
+        findCards: 1,
+        findNotes: 1,
+        getDecks: 1,
+        getIntervals: 1,
+        getLock: 1,
+        guiAddCards: 1,
+        guiAnswerCard: 1,
+        guiBrowse: 1,
+        guiCurrentCard: 1,
+        guiDeckBrowser: 1,
+        guiDeckOverview: 1,
+        guiDeckReview: 1,
+        guiShowAnswer: 1,
+        guiShowQuestion: 1,
+        modelFieldNames: 1,
+        modelNames: 1,
+        multi: 1,
+        removeLock: 1,
+        removeTags: 1,
+        setLock: 1,
+        supportedActions: 1,
+        suspend: 1,
+        unsuspend: 1,
+        upgrade: 1,
+        version: 1
+    }
+    ```
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
@@ -533,7 +591,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "Japanese::JLPT N3": [1502298036657, 1502298033753]
     }
     ```
-    
+
 
 *   **changeDeck**
 
@@ -554,7 +612,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     null
     ```
-    
+
 *   **deleteDecks**
 
     Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within

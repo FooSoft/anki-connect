@@ -850,6 +850,21 @@ class AnkiConnect:
 
 
     @webApi
+    def supportedActions(self):
+        actions = {}
+        for action in dir(AnkiConnect):
+            handler = getattr(AnkiConnect, action)
+
+            if hasattr(handler, 'webApi'):
+                if (hasattr(handler, 'revision')):
+                    actions[action] = handler.revision
+                else:
+                    actions[action] = 1
+
+        return actions
+
+
+    @webApi
     def findNotes(self, query=None):
         return self.anki.findNotes(query)
 
