@@ -576,6 +576,14 @@ class AnkiBridge:
         self.stopEditing()
 
 
+    def deckNamesToIds(self, decks):
+        deckIds = []
+        for deck in decks:
+            id = self.collection().decks.id(deck)
+            deckIds.append(id)
+        return deckIds
+
+
     def cardsToNotes(self, cards):
         return self.collection().db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
 
@@ -872,6 +880,11 @@ class AnkiConnect:
     @webApi
     def deleteDecks(self, decks, cardsToo=False):
         return self.anki.deleteDecks(decks, cardsToo)
+
+
+    @webApi
+    def deckNamesToIds(self, decks):
+        return self.anki.deckNamesToIds(decks)
 
 
     @webApi

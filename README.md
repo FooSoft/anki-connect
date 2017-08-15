@@ -576,6 +576,25 @@ Below is a list of currently supported actions. Requests with invalid actions or
     null
     ```
 
+*   **deckNamesToIds**
+
+    Returns an array of deck IDs for the given deck names, in order given.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckNamesToIds",
+        "params": {
+            "decks": ["Default", "Japanese", "Chinese"]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [1, 1500600287679, 1500604741367]
+    ```
+
 *   **cardsToNotes**
 
     Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
