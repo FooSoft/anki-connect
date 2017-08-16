@@ -640,7 +640,8 @@ class AnkiBridge:
         if card is not None:
             card.startTimer()
             return True
-
+        else:
+            return False
 
     def guiShowQuestion(self):
         if self.guiReviewActive():
