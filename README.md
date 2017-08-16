@@ -103,6 +103,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     4
     ```
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
@@ -119,6 +120,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
     [
         "Default"
     ]
+    ```
+
+*   **deckIds**
+
+    Gets the complete list of deck IDs for the current user, in the same order as **deckNames**.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckIDs"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [1]
     ```
 
 *   **modelNames**
@@ -574,6 +591,25 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample response*:
     ```
     null
+    ```
+
+*   **deckNamesToIds**
+
+    Returns an array of deck IDs for the given deck names, in order given.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckNamesToIds",
+        "params": {
+            "decks": ["Default", "Japanese", "Chinese"]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [1, 1500600287679, 1500604741367]
     ```
 
 *   **cardsToNotes**

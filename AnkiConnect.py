@@ -515,6 +515,11 @@ class AnkiBridge:
             return collection.decks.allNames()
 
 
+    def deckIds(self):
+        deckNames = self.deckNames()
+        return self.deckNamesToIds(deckNames)
+
+
     def deckNameFromId(self, deckId):
         collection = self.collection()
         if collection is not None:
@@ -574,6 +579,14 @@ class AnkiBridge:
             id = self.collection().decks.id(deck)
             self.collection().decks.rem(id, cardsToo)
         self.stopEditing()
+
+
+    def deckNamesToIds(self, decks):
+        deckIds = []
+        for deck in decks:
+            id = self.collection().decks.id(deck)
+            deckIds.append(id)
+        return deckIds
 
 
     def cardsToNotes(self, cards):
@@ -754,6 +767,11 @@ class AnkiConnect:
 
 
     @webApi
+    def deckIds(self):
+        return self.anki.deckIds()
+
+
+    @webApi
     def modelNames(self):
         return self.anki.modelNames()
 
@@ -884,6 +902,11 @@ class AnkiConnect:
     @webApi
     def deleteDecks(self, decks, cardsToo=False):
         return self.anki.deleteDecks(decks, cardsToo)
+
+
+    @webApi
+    def deckNamesToIds(self, decks):
+        return self.anki.deckNamesToIds(decks)
 
 
     @webApi
