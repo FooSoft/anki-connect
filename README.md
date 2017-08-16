@@ -121,6 +121,24 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **deckNamesAndIds**
+
+    Gets the complete list of deck names and their respective IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": 1
+    }
+    ```
+
 *   **modelNames**
 
     Gets the complete list of model names for the current user.
