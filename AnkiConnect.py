@@ -631,6 +631,17 @@ class AnkiBridge:
             }
 
 
+    def guiStartCardTimer(self):
+        if not self.guiReviewActive():
+            return False
+
+        card = self.reviewer().card
+
+        if card is not None:
+            card.startTimer()
+            return True
+
+
     def guiShowQuestion(self):
         if self.guiReviewActive():
             self.reviewer()._showQuestion()
@@ -892,6 +903,11 @@ class AnkiConnect:
     @webApi
     def guiCurrentCard(self):
         return self.anki.guiCurrentCard()
+
+
+    @webApi
+    def guiStartCardTimer(self):
+        return self.anki.guiStartCardTimer()
 
 
     @webApi

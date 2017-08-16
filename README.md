@@ -533,7 +533,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "Japanese::JLPT N3": [1502298036657, 1502298033753]
     }
     ```
-    
+
 
 *   **changeDeck**
 
@@ -554,7 +554,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     null
     ```
-    
+
 *   **deleteDecks**
 
     Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
@@ -670,6 +670,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "cardId": 1498938915662,
         "buttons": [1, 2, 3]
     }
+    ```
+
+*   **guiStartCardTimer**
+
+    Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiStartCardTimer"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **guiShowQuestion**
