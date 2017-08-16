@@ -89,7 +89,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
-    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
