@@ -672,6 +672,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
     }
     ```
 
+*   **guiStartCardTimer**
+
+    Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiStartCardTimer"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
 *   **guiShowQuestion**
 
     Shows question text for the current card; returns `true` if in review mode or `false` otherwise.
