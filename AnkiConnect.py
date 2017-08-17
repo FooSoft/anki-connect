@@ -515,6 +515,17 @@ class AnkiBridge:
             return collection.decks.allNames()
 
 
+    def deckNamesAndIds(self):
+        decks = {}
+
+        deckNames = self.deckNames()
+        for deck in deckNames:
+            id = self.collection().decks.id(deck)
+            decks[deck] = id
+
+        return decks
+
+
     def deckNameFromId(self, deckId):
         collection = self.collection()
         if collection is not None:
@@ -751,6 +762,11 @@ class AnkiConnect:
     @webApi
     def deckNames(self):
         return self.anki.deckNames()
+
+
+    @webApi
+    def deckNamesAndIds(self):
+        return self.anki.deckNamesAndIds()
 
 
     @webApi
