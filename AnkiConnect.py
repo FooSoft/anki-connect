@@ -474,6 +474,13 @@ class AnkiBridge:
         return self.collection().sched
 
 
+    def multi(self, actions):
+        response = []
+        for item in actions:
+            response.append(AnkiConnect.handler(ac, item))
+        return response
+
+
     def media(self):
         collection = self.collection()
         if collection is not None:
@@ -502,11 +509,59 @@ class AnkiBridge:
                 return [field['name'] for field in model['flds']]
 
 
-    def multi(self, actions):
-        response = []
-        for item in actions:
-            response.append(AnkiConnect.handler(ac, item))
-        return response
+    def confForDeck(self, deck):
+        if not deck in self.deckNames():
+            return False
+
+        id = self.collection().decks.id(deck)
+        return self.collection().decks.confForDid(id)
+
+
+    def saveConf(self, conf):
+        id = str(conf['id'])
+        if not id in self.collection().decks.dconf:
+            return False
+
+        mod = anki.utils.intTime()
+        usn = self.collection().usn()
+
+        conf['mod'] = mod
+        conf['usn'] = usn
+
+        self.collection().decks.dconf[id] = conf
+        self.collection().decks.changed = True
+        return True
+
+
+    def changeConf(self, decks, confId):
+        for deck in decks:
+            if not deck in self.deckNames():
+                return False
+
+        if not str(confId) in self.collection().decks.dconf:
+            return False
+
+        for deck in decks:
+            did = str(self.collection().decks.id(deck))
+            aqt.mw.col.decks.decks[did]['conf'] = confId
+
+        return True
+
+
+    def addConf(self, name, cloneFrom=1):
+        if not str(cloneFrom) in self.collection().decks.dconf:
+            return False
+
+        cloneFrom = self.collection().decks.getConf(cloneFrom)
+        return self.collection().decks.confId(name, cloneFrom)
+
+
+    def remConf(self, id):
+        if id == 1 or not str(id) in self.collection().decks.dconf:
+            return False
+
+        self.collection().decks.remConf(id)
+        return True
 
 
     def deckNames(self):
@@ -760,6 +815,11 @@ class AnkiConnect:
 
 
     @webApi
+    def multi(self, actions):
+        return self.anki.multi(actions)
+
+
+    @webApi
     def deckNames(self):
         return self.anki.deckNames()
 
@@ -780,8 +840,28 @@ class AnkiConnect:
 
 
     @webApi
-    def multi(self, actions):
-        return self.anki.multi(actions)
+    def confForDeck(self, deck):
+        return self.anki.confForDeck(deck)
+
+
+    @webApi
+    def saveConf(self, conf):
+        return self.anki.saveConf(conf)
+
+
+    @webApi
+    def changeConf(self, decks, confId):
+        return self.anki.changeConf(decks, confId)
+
+
+    @webApi
+    def addConf(self, name, cloneFrom=1):
+        return self.anki.addConf(name, cloneFrom)
+
+
+    @webApi
+    def remConf(self, id):
+        return self.anki.remConf(id)
 
 
     @webApi
