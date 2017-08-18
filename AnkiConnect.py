@@ -513,13 +513,13 @@ class AnkiBridge:
         if not deck in self.deckNames():
             return False
 
-        id = self.collection().decks.id(deck)
-        return self.collection().decks.confForDid(id)
+        did = self.collection().decks.id(deck)
+        return self.collection().decks.confForDid(did)
 
 
     def saveConf(self, conf):
-        id = str(conf['id'])
-        if not id in self.collection().decks.dconf:
+        confId = str(conf['id'])
+        if not confId in self.collection().decks.dconf:
             return False
 
         mod = anki.utils.intTime()
@@ -528,7 +528,7 @@ class AnkiBridge:
         conf['mod'] = mod
         conf['usn'] = usn
 
-        self.collection().decks.dconf[id] = conf
+        self.collection().decks.dconf[confId] = conf
         self.collection().decks.changed = True
         return True
 
@@ -556,11 +556,11 @@ class AnkiBridge:
         return self.collection().decks.confId(name, cloneFrom)
 
 
-    def remConf(self, id):
-        if id == 1 or not str(id) in self.collection().decks.dconf:
+    def remConf(self, configId):
+        if configId == 1 or not str(configId) in self.collection().decks.dconf:
             return False
 
-        self.collection().decks.remConf(id)
+        self.collection().decks.remConf(configId)
         return True
 
 
@@ -575,8 +575,8 @@ class AnkiBridge:
 
         deckNames = self.deckNames()
         for deck in deckNames:
-            id = self.collection().decks.id(deck)
-            decks[deck] = id
+            did = self.collection().decks.id(deck)
+            decks[deck] = did
 
         return decks
 
@@ -637,8 +637,8 @@ class AnkiBridge:
     def deleteDecks(self, decks, cardsToo=False):
         self.startEditing()
         for deck in decks:
-            id = self.collection().decks.id(deck)
-            self.collection().decks.rem(id, cardsToo)
+            did = self.collection().decks.id(deck)
+            self.collection().decks.rem(did, cardsToo)
         self.stopEditing()
 
 
@@ -860,8 +860,8 @@ class AnkiConnect:
 
 
     @webApi
-    def remConf(self, id):
-        return self.anki.remConf(id)
+    def remConf(self, configId):
+        return self.anki.remConf(configId)
 
 
     @webApi
