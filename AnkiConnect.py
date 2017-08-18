@@ -518,8 +518,8 @@ class AnkiBridge:
 
 
     def saveDeckConfig(self, conf):
-        confId = str(conf['id'])
-        if not confId in self.collection().decks.dconf:
+        configId = str(conf['id'])
+        if not configId in self.collection().decks.dconf:
             return False
 
         mod = anki.utils.intTime()
@@ -528,22 +528,22 @@ class AnkiBridge:
         conf['mod'] = mod
         conf['usn'] = usn
 
-        self.collection().decks.dconf[confId] = conf
+        self.collection().decks.dconf[configId] = conf
         self.collection().decks.changed = True
         return True
 
 
-    def setDeckConfigId(self, decks, confId):
+    def setDeckConfigId(self, decks, configId):
         for deck in decks:
             if not deck in self.deckNames():
                 return False
 
-        if not str(confId) in self.collection().decks.dconf:
+        if not str(configId) in self.collection().decks.dconf:
             return False
 
         for deck in decks:
             did = str(self.collection().decks.id(deck))
-            aqt.mw.col.decks.decks[did]['conf'] = confId
+            aqt.mw.col.decks.decks[did]['conf'] = configId
 
         return True
 
@@ -850,8 +850,8 @@ class AnkiConnect:
 
 
     @webApi
-    def setDeckConfigId(self, decks, confId):
-        return self.anki.setDeckConfigId(decks, confId)
+    def setDeckConfigId(self, decks, configId):
+        return self.anki.setDeckConfigId(decks, configId)
 
 
     @webApi
