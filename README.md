@@ -89,7 +89,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
-    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
@@ -119,6 +119,24 @@ Below is a list of currently supported actions. Requests with invalid actions or
     [
         "Default"
     ]
+    ```
+
+*   **deckNamesAndIds**
+
+    Gets the complete list of deck names and their respective IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": 1
+    }
     ```
 
 *   **modelNames**
@@ -347,7 +365,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
 *   **suspend**
 
-    Suspend cards by card ID.
+    Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -361,12 +380,13 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
 
 *   **unsuspend**
 
-    Unsuspend cards by card ID.
+    Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -380,8 +400,88 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
+
+*   **areSuspended**
+
+    Returns an array indicating whether each of the given cards is suspended (in the same order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "areSuspended",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+*   **areDue**
+
+    Returns an array indicating whether each of the given cards is due (in the same order). Note: cards in the learning
+    queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has passed, to
+    match the way Anki treats them when reviewing.
+
+    *Sample request*:
+    ```
+    {
+        "action": "areDue",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+*   **getIntervals**
+
+    Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
+    for each given card ID when `complete` is `true`. (Negative intervals are in seconds and positive intervals in days.)
+
+    *Sample request 1*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657]
+        }
+    }
+    ```
+
+    *Sample response 1*:
+    ```
+    [-14400, 3]
+    ```
+
+    *Sample request 2*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657],
+            "complete": true
+        }
+    }
+    ```
+
+    *Sample response 2*:
+    ```
+    [
+        [-120, -180, -240, -300, -360, -14400],
+        [-120, -180, -240, -300, -360, -14400, 1, 3]
+    ]
+    ```
+
 
 *   **findNotes**
 
@@ -390,7 +490,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "findCards",
+        "action": "findNotes",
         "params": {
             "query": "deck:current"
         }
@@ -426,6 +526,94 @@ Below is a list of currently supported actions. Requests with invalid actions or
         1494723142483,
         1494703460437,
         1494703479525
+    ]
+    ```
+
+*   **getDecks**
+
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getDecks",
+        "params": {
+            "cards": [1502298036657, 1502298033753, 1502032366472]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
+    }
+    ```
+
+
+*   **changeDeck**
+
+    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    *Sample request*:
+    ```
+    {
+        "action": "changeDeck",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753],
+            "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **cardsToNotes**
+
+    Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
+    given once in the array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cardsToNotes",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1502098029797,
+        1502298025183
     ]
     ```
 
@@ -500,6 +688,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "cardId": 1498938915662,
         "buttons": [1, 2, 3]
     }
+    ```
+
+*   **guiStartCardTimer**
+
+    Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiStartCardTimer"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **guiShowQuestion**
