@@ -636,7 +636,7 @@ class AnkiBridge:
                 'fieldOrder': card.ord,
                 'question': card._getQA()['q'],
                 'answer': card._getQA()['a'],
-                'buttons': map(lambda b: b[0], reviewer._answerButtonList()),
+                'buttons': [b[0] for b in reviewer._answerButtonList()],
                 'modelName': model['name'],
                 'deckName': self.deckNameFromId(card.did)
             }
