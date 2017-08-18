@@ -273,7 +273,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     {
         "action": "saveDeckConfig",
         "params": {
-            "conf": (config group object)
+            "config": (config group object)
         }
     }
     ```
