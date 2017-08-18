@@ -209,14 +209,14 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **confForDeck**
+*   **getDeckConfig**
 
     Gets the config group object for the given deck.
 
     *Sample request*:
     ```
     {
-        "action": "confForDeck",
+        "action": "getDeckConfig",
         "params": {
             "deck": "Default"
         }
@@ -263,7 +263,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     }
     ```
 
-*   **saveConf**
+*   **saveDeckConfig**
 
     Saves the given config group, returning `true` on success or `false` if the ID of the config group is invalid (i.e.
     it does not exist).
@@ -271,7 +271,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "saveConf",
+        "action": "saveDeckConfig",
         "params": {
             "conf": (config group object)
         }
@@ -283,7 +283,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     true
     ```
 
-*   **changeConf**
+*   **setDeckConfigId**
 
     Changes the configuration group for the given decks to the one with the given ID. Returns `true` on success or
     `false` if the given configuration group or any of the given decks do not exist.
@@ -291,7 +291,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "changeConf",
+        "action": "setDeckConfigId",
         "params": {
             "decks": ["Default"],
             "confId": 1
@@ -304,7 +304,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     true
     ```
 
-*   **addConf**
+*   **cloneDeckConfigId**
 
     Creates a new config group with the given name, cloning from the group with the given ID, or from the default group
     if this is unspecified. Returns the ID of the new config group, or `false` if the specified group to clone from does
@@ -313,7 +313,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "addConf",
+        "action": "cloneDeckConfigId",
         "params": {
             "name": "Copy of Default",
             "cloneFrom": 1
@@ -326,7 +326,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     1502972374573
     ```
 
-*   **remConf**
+*   **removeDeckConfigId**
 
     Removes the config group with the given ID, returning `true` if successful, or `false` if attempting to remove
     either the default config group (ID = 1) or a config group that does not exist.
@@ -334,7 +334,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "remConf",
+        "action": "removeDeckConfigId",
         "params": {
             "id": 1502972374573
         }
