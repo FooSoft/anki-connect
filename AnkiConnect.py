@@ -509,7 +509,7 @@ class AnkiBridge:
                 return [field['name'] for field in model['flds']]
 
 
-    def confForDeck(self, deck):
+    def getDeckConfig(self, deck):
         if not deck in self.deckNames():
             return False
 
@@ -517,7 +517,7 @@ class AnkiBridge:
         return self.collection().decks.confForDid(did)
 
 
-    def saveConf(self, conf):
+    def saveDeckConfig(self, conf):
         confId = str(conf['id'])
         if not confId in self.collection().decks.dconf:
             return False
@@ -533,7 +533,7 @@ class AnkiBridge:
         return True
 
 
-    def changeConf(self, decks, confId):
+    def setDeckConfigId(self, decks, confId):
         for deck in decks:
             if not deck in self.deckNames():
                 return False
@@ -548,7 +548,7 @@ class AnkiBridge:
         return True
 
 
-    def addConf(self, name, cloneFrom=1):
+    def cloneDeckConfigId(self, name, cloneFrom=1):
         if not str(cloneFrom) in self.collection().decks.dconf:
             return False
 
@@ -556,7 +556,7 @@ class AnkiBridge:
         return self.collection().decks.confId(name, cloneFrom)
 
 
-    def remConf(self, configId):
+    def removeDeckConfigId(self, configId):
         if configId == 1 or not str(configId) in self.collection().decks.dconf:
             return False
 
@@ -840,28 +840,28 @@ class AnkiConnect:
 
 
     @webApi
-    def confForDeck(self, deck):
-        return self.anki.confForDeck(deck)
+    def getDeckConfig(self, deck):
+        return self.anki.getDeckConfig(deck)
 
 
     @webApi
-    def saveConf(self, conf):
-        return self.anki.saveConf(conf)
+    def saveDeckConfig(self, conf):
+        return self.anki.saveDeckConfig(conf)
 
 
     @webApi
-    def changeConf(self, decks, confId):
-        return self.anki.changeConf(decks, confId)
+    def setDeckConfigId(self, decks, confId):
+        return self.anki.setDeckConfigId(decks, confId)
 
 
     @webApi
-    def addConf(self, name, cloneFrom=1):
-        return self.anki.addConf(name, cloneFrom)
+    def cloneDeckConfigId(self, name, cloneFrom=1):
+        return self.anki.cloneDeckConfigId(name, cloneFrom)
 
 
     @webApi
-    def remConf(self, configId):
-        return self.anki.remConf(configId)
+    def removeDeckConfigId(self, configId):
+        return self.anki.removeDeckConfigId(configId)
 
 
     @webApi
