@@ -474,6 +474,13 @@ class AnkiBridge:
         return self.collection().sched
 
 
+    def multi(self, actions):
+        response = []
+        for item in actions:
+            response.append(AnkiConnect.handler(ac, item))
+        return response
+
+
     def media(self):
         collection = self.collection()
         if collection is not None:
@@ -502,11 +509,59 @@ class AnkiBridge:
                 return [field['name'] for field in model['flds']]
 
 
-    def multi(self, actions):
-        response = []
-        for item in actions:
-            response.append(AnkiConnect.handler(ac, item))
-        return response
+    def getDeckConfig(self, deck):
+        if not deck in self.deckNames():
+            return False
+
+        did = self.collection().decks.id(deck)
+        return self.collection().decks.confForDid(did)
+
+
+    def saveDeckConfig(self, config):
+        configId = str(config['id'])
+        if not configId in self.collection().decks.dconf:
+            return False
+
+        mod = anki.utils.intTime()
+        usn = self.collection().usn()
+
+        config['mod'] = mod
+        config['usn'] = usn
+
+        self.collection().decks.dconf[configId] = config
+        self.collection().decks.changed = True
+        return True
+
+
+    def setDeckConfigId(self, decks, configId):
+        for deck in decks:
+            if not deck in self.deckNames():
+                return False
+
+        if not str(configId) in self.collection().decks.dconf:
+            return False
+
+        for deck in decks:
+            did = str(self.collection().decks.id(deck))
+            aqt.mw.col.decks.decks[did]['conf'] = configId
+
+        return True
+
+
+    def cloneDeckConfigId(self, name, cloneFrom=1):
+        if not str(cloneFrom) in self.collection().decks.dconf:
+            return False
+
+        cloneFrom = self.collection().decks.getConf(cloneFrom)
+        return self.collection().decks.confId(name, cloneFrom)
+
+
+    def removeDeckConfigId(self, configId):
+        if configId == 1 or not str(configId) in self.collection().decks.dconf:
+            return False
+
+        self.collection().decks.remConf(configId)
+        return True
 
 
     def deckNames(self):
@@ -520,8 +575,8 @@ class AnkiBridge:
 
         deckNames = self.deckNames()
         for deck in deckNames:
-            id = self.collection().decks.id(deck)
-            decks[deck] = id
+            did = self.collection().decks.id(deck)
+            decks[deck] = did
 
         return decks
 
@@ -582,8 +637,8 @@ class AnkiBridge:
     def deleteDecks(self, decks, cardsToo=False):
         self.startEditing()
         for deck in decks:
-            id = self.collection().decks.id(deck)
-            self.collection().decks.rem(id, cardsToo)
+            did = self.collection().decks.id(deck)
+            self.collection().decks.rem(did, cardsToo)
         self.stopEditing()
 
 
@@ -760,6 +815,11 @@ class AnkiConnect:
 
 
     @webApi
+    def multi(self, actions):
+        return self.anki.multi(actions)
+
+
+    @webApi
     def deckNames(self):
         return self.anki.deckNames()
 
@@ -780,8 +840,28 @@ class AnkiConnect:
 
 
     @webApi
-    def multi(self, actions):
-        return self.anki.multi(actions)
+    def getDeckConfig(self, deck):
+        return self.anki.getDeckConfig(deck)
+
+
+    @webApi
+    def saveDeckConfig(self, config):
+        return self.anki.saveDeckConfig(config)
+
+
+    @webApi
+    def setDeckConfigId(self, decks, configId):
+        return self.anki.setDeckConfigId(decks, configId)
+
+
+    @webApi
+    def cloneDeckConfigId(self, name, cloneFrom=1):
+        return self.anki.cloneDeckConfigId(name, cloneFrom)
+
+
+    @webApi
+    def removeDeckConfigId(self, configId):
+        return self.anki.removeDeckConfigId(configId)
 
 
     @webApi
