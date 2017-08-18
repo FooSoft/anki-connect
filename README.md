@@ -294,7 +294,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "action": "setDeckConfigId",
         "params": {
             "decks": ["Default"],
-            "confId": 1
+            "configId": 1
         }
     }
     ```
@@ -336,7 +336,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     {
         "action": "removeDeckConfigId",
         "params": {
-            "id": 1502972374573
+            "configId": 1502972374573
         }
     }
     ```
