@@ -215,9 +215,9 @@ class AjaxServer:
 
 
     def getHeaders(self):
-        headers = self.headers
+        headers = self.headers[:]
         for name in self.extraHeaders:
-            headers.append([name, self.headers[name]])
+            headers.append([name, self.extraHeaders[name]])
         return headers
 
 
