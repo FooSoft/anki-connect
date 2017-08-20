@@ -203,19 +203,20 @@ class AjaxServer:
 
 
     def setHeader(self, name, value):
-        self.headers[name] = value
+        self.extraHeaders[name] = value
 
 
     def resetHeaders(self):
-        self.headers = {
-            'HTTP/1.1 200 OK': None,
-            'Content-Type': 'text/json'
-        }
+        self.headers = [
+            ['HTTP/1.1 200 OK', None],
+            ['Content-Type', 'text/json']
+        ]
+        self.extraHeaders = {}
 
 
     def getHeaders(self):
-        headers = []
-        for name in self.headers:
+        headers = self.headers
+        for name in self.extraHeaders:
             headers.append([name, self.headers[name]])
         return headers
 
