@@ -202,16 +202,22 @@ class AjaxServer:
         self.resetHeaders()
 
 
-    def addHeader(self, name, value):
-        self.headers.append([name, value])
-    
-    
+    def setHeader(self, name, value):
+        self.headers[name] = value
+
+
     def resetHeaders(self):
-        self.headers = [
-            ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json'],
-            ['Content-Length', '']
-        ]
+        self.headers = {
+            'HTTP/1.1 200 OK': None,
+            'Content-Type': 'text/json'
+        }
+
+
+    def getHeaders(self):
+        headers = []
+        for name in self.headers:
+            headers.append([name, self.headers[name]])
+        return headers
 
 
     def advance(self):
@@ -256,9 +262,9 @@ class AjaxServer:
                 body = json.dumps(None);
 
         resp = bytes()
-        
-        headers = self.headers
-        headers[2][1] = str(len(body))
+
+        self.setHeader('Content-Length', str(len(body)))
+        headers = self.getHeaders()
 
         for key, value in headers:
             if value is None:
