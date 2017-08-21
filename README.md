@@ -187,6 +187,27 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **modelNamesAndIds**
+
+    Gets the complete list of model names and their corresponding IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Basic": 1483883011648
+        "Basic (and reversed card)": 1483883011644
+        "Basic (optional reversed card)": 1483883011631
+        "Cloze": 1483883011630
+    }
+    ```
+
 *   **modelFieldNames**
 
     Gets the complete list of field names for the provided model name.

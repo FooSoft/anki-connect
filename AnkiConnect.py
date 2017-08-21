@@ -512,6 +512,18 @@ class AnkiBridge:
             return collection.models.allNames()
 
 
+    def modelNamesAndIds(self):
+        models = {}
+
+        modelNames = self.modelNames()
+        for model in modelNames:
+            mid = self.collection().models.byName(model)['id']
+            mid = int(mid)  # sometimes Anki stores the ID as a string
+            models[model] = mid
+
+        return models
+
+
     def modelNameFromId(self, modelId):
         collection = self.collection()
         if collection is not None:
@@ -882,6 +894,11 @@ class AnkiConnect:
     @webApi
     def modelNames(self):
         return self.anki.modelNames()
+
+
+    @webApi
+    def modelNamesAndIds(self):
+        return self.anki.modelNamesAndIds()
 
 
     @webApi
