@@ -21,6 +21,7 @@ import hashlib
 import inspect
 import json
 import os.path
+import re
 import select
 import socket
 import sys
@@ -527,6 +528,37 @@ class AnkiBridge:
                 return [field['name'] for field in model['flds']]
 
 
+    def modelFieldsOnTemplates(self, modelName):
+        model = self.collection().models.byName(modelName)
+
+        if model is not None:
+            templates = {}
+            for template in model['tmpls']:
+                fields = []
+
+                for side in ['qfmt', 'afmt']:
+                    fieldsForSide = []
+
+                    # based on _fieldsOnTemplate from aqt/clayout.py
+                    matches = re.findall('{{[^#/}]+?}}', template[side])
+                    for match in matches:
+                        # remove braces and modifiers
+                        match = re.sub(r'[{}]', '', match)
+                        match = match.split(":")[-1]
+
+                        # for the answer side, ignore fields present on the question side + the FrontSide field
+                        if match == 'FrontSide' or side == 'afmt' and match in fields[0]:
+                            continue
+                        fieldsForSide.append(match)
+
+
+                    fields.append(fieldsForSide)
+
+                templates[template['name']] = fields
+
+            return templates
+
+
     def getDeckConfig(self, deck):
         if not deck in self.deckNames():
             return False
@@ -855,6 +887,11 @@ class AnkiConnect:
     @webApi
     def modelFieldNames(self, modelName):
         return self.anki.modelFieldNames(modelName)
+
+
+    @webApi
+    def modelFieldsOnTemplates(self, modelName):
+        return self.anki.modelFieldsOnTemplates(modelName)
 
 
     @webApi

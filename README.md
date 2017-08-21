@@ -209,6 +209,35 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **modelFieldsOnTemplates**
+
+    Returns an object indicating the fields on the question and answer side of each card template for the given model
+    name. The question side is given first in each array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldsOnTemplates",
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Card 1": [
+            ["Front"],
+            ["Back"]
+        ],
+        "Card 2": [
+            ["Back"],
+            ["Front"]
+        ]
+    }
+    ```
+
 *   **getDeckConfig**
 
     Gets the config group object for the given deck.
