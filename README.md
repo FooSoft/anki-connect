@@ -103,6 +103,35 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     4
     ```
+
+*   **multi**
+
+    Performs multiple actions in one request, returning an array with the response of each action (in the given order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "multi",
+        "params": {
+            "actions": [
+                {"action": "deckNames"},
+                {
+                    "action": "browse",
+                    "params": {"query": "deck:current"}
+                }
+            ]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        ["Default"],
+        [1494723142483, 1494703460437, 1494703479525]
+    ]
+    ```
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
@@ -162,32 +191,141 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **multi**
+*   **getDeckConfig**
 
-    Performs multiple actions in one request, returning an array with the response of each action (in the given order).
+    Gets the config group object for the given deck.
 
     *Sample request*:
     ```
     {
-        "action": "multi",
+        "action": "getDeckConfig",
         "params": {
-            "actions": [
-                {"action": "deckNames"},
-                {
-                    "action": "browse",
-                    "params": {"query": "deck:current"}
-                }
-            ]
+            "deck": "Default"
         }
     }
     ```
 
     *Sample response*:
     ```
-    [
-        ["Default"],
-        [1494723142483, 1494703460437, 1494703479525]
-    ]
+    {
+        "lapse": {
+            "leechFails": 8,
+            "delays": [10],
+            "minInt": 1,
+            "leechAction": 0,
+            "mult": 0
+        },
+        "dyn": false,
+        "autoplay": true,
+        "mod": 1502970872,
+        "id": 1,
+        "maxTaken": 60,
+        "new": {
+            "bury": true,
+            "order": 1,
+            "initialFactor": 2500,
+            "perDay": 20,
+            "delays": [1, 10],
+            "separate": true,
+            "ints": [1, 4, 7]
+        },
+        "name": "Default",
+        "rev": {
+            "bury": true,
+            "ivlFct": 1,
+            "ease4": 1.3,
+            "maxIvl": 36500,
+            "perDay": 100,
+            "minSpace": 1,
+            "fuzz": 0.05
+        },
+        "timer": 0,
+        "replayq": true,
+        "usn": -1
+    }
+    ```
+
+*   **saveDeckConfig**
+
+    Saves the given config group, returning `true` on success or `false` if the ID of the config group is invalid (i.e.
+    it does not exist).
+
+    *Sample request*:
+    ```
+    {
+        "action": "saveDeckConfig",
+        "params": {
+            "config": (config group object)
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **setDeckConfigId**
+
+    Changes the configuration group for the given decks to the one with the given ID. Returns `true` on success or
+    `false` if the given configuration group or any of the given decks do not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "setDeckConfigId",
+        "params": {
+            "decks": ["Default"],
+            "configId": 1
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **cloneDeckConfigId**
+
+    Creates a new config group with the given name, cloning from the group with the given ID, or from the default group
+    if this is unspecified. Returns the ID of the new config group, or `false` if the specified group to clone from does
+    not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cloneDeckConfigId",
+        "params": {
+            "name": "Copy of Default",
+            "cloneFrom": 1
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    1502972374573
+    ```
+
+*   **removeDeckConfigId**
+
+    Removes the config group with the given ID, returning `true` if successful, or `false` if attempting to remove
+    either the default config group (ID = 1) or a config group that does not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeDeckConfigId",
+        "params": {
+            "configId": 1502972374573
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **addNote**
