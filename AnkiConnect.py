@@ -27,6 +27,7 @@ import select
 import socket
 import sys
 from time import time
+from unicodedata import normalize
 
 
 #
@@ -336,43 +337,27 @@ class AnkiNoteParams:
 #
 
 class AnkiBridge:
-    def getFilePath(self, filename):
-        mediaFolder = self.collection().media.dir()
-        filePath = os.path.normpath(os.path.join(mediaFolder, filename))
-        # catch attempts to write outside the media folder
-        if os.path.commonprefix([mediaFolder, filePath]) != mediaFolder:
-            return False
-
-        return filePath
+    def storeMediaFile(self, filename, data):
+        self.deleteMediaFile(filename)
+        self.media().writeData(filename, base64.b64decode(data))
 
 
-    def storeFile(self, filename, data):
-        filePath = self.getFilePath(filename)
-        if filePath:
-            with open(filePath, 'wb') as file:
-                file.write(base64.b64decode(data))
-            return True
+    def retrieveMediaFile(self, filename):
+        # based on writeData from anki/media.py
+        filename = os.path.basename(filename)
+        filename = normalize("NFC", filename)
+        filename = self.media().stripIllegal(filename)
 
-        return False
-
-
-    def retrieveFile(self, filename):
-        filePath = self.getFilePath(filename)
-        if filePath and os.path.isfile(filePath):
-            with open(filePath, 'rb') as file:
-                data = base64.b64encode(file.read())
-            return data.decode('ascii')
+        path = os.path.join(self.media().dir(), filename)
+        if os.path.exists(path):
+            with open(path, 'rb') as file:
+                return base64.b64encode(file.read()).decode('ascii')
 
         return False
 
 
-    def deleteFile(self, filename):
-        filePath = self.getFilePath(filename)
-        if filePath and os.path.isfile(filePath):
-            os.remove(filePath)
-            return True
-
-        return False
+    def deleteMediaFile(self, filename):
+        self.media().syncDelete(filename)
 
 
     def addNote(self, params):
@@ -922,18 +907,18 @@ class AnkiConnect:
 
 
     @webApi
-    def storeFile(self, filename, data):
-        return self.anki.storeFile(filename, data)
+    def storeMediaFile(self, filename, data):
+        return self.anki.storeMediaFile(filename, data)
 
 
     @webApi
-    def retrieveFile(self, filename):
-        return self.anki.retrieveFile(filename)
+    def retrieveMediaFile(self, filename):
+        return self.anki.retrieveMediaFile(filename)
 
 
     @webApi
-    def deleteFile(self, filename):
-        return self.anki.deleteFile(filename)
+    def deleteMediaFile(self, filename):
+        return self.anki.deleteMediaFile(filename)
 
 
     @webApi

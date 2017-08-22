@@ -95,7 +95,7 @@ Categories:
 * [Card Suspension](#card-suspension)
 * [Card Intervals](#card-intervals)
 * [Finding Notes and Cards](#finding-notes-and-cards)
-* [File Storage](#file-storage)
+* [Media File Storage](#media-file-storage)
 * [Graphical](#graphical)
 
 ### Miscellaneous ###
@@ -853,12 +853,11 @@ Categories:
     ]
     ```
 
-### File Storage ###
+### Media File Storage ###
 
-*   **storeFile**
+*   **storeMediaFile**
 
-    Stores a file with the specified base64-encoded contents inside the media folder. Returns `true` upon success or
-    `false` if attempting to write a file outside the media folder.
+    Stores a file with the specified base64-encoded contents inside the media folder.
 
     Note: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
     with an underscore. These files are still synchronized to AnkiWeb.
@@ -866,7 +865,7 @@ Categories:
     *Sample request*:
     ```
     {
-        "action": "storeFile",
+        "action": "storeMediaFile",
         "params": {
             "filename": "_hello.txt",
             "data": "SGVsbG8sIHdvcmxkIQ=="
@@ -876,7 +875,7 @@ Categories:
 
     *Sample response*:
     ```
-    true
+    null
     ```
 
     *Content of `_hello.txt`*:
@@ -884,15 +883,14 @@ Categories:
     Hello world!
     ```
 
-*   **retrieveFile**
+*   **retrieveMediaFile**
 
-    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist or if
-    attempting to read a file outside the media folder.
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
 
     *Sample request*:
     ```
     {
-        "action": "retrieveFile",
+        "action": "retrieveMediaFile",
         "params": {
             "filename": "_hello.txt"
         }
@@ -904,15 +902,14 @@ Categories:
     "SGVsbG8sIHdvcmxkIQ=="
     ```
 
-*   **deleteFile**
+*   **deleteMediaFile**
 
-    Deletes the specified file inside the media folder, returning `true` if successful, or `false` if the file does not
-    exist or if attempting to delete a file outside the media folder.
+    Deletes the specified file inside the media folder.
 
     *Sample request*:
     ```
     {
-        "action": "deleteFile",
+        "action": "deleteMediaFile",
         "params": {
             "filename": "_hello.txt"
         }
@@ -921,7 +918,7 @@ Categories:
 
     *Sample response*:
     ```
-    true
+    null
     ```
 
 ### Graphical ###
