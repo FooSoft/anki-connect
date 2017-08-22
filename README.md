@@ -428,6 +428,27 @@ Categories:
     ]
     ```
 
+*   **modelNamesAndIds**
+
+    Gets the complete list of model names and their corresponding IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Basic": 1483883011648
+        "Basic (and reversed card)": 1483883011644
+        "Basic (optional reversed card)": 1483883011631
+        "Cloze": 1483883011630
+    }
+    ```
+
 *   **modelFieldNames**
 
     Gets the complete list of field names for the provided model name.
@@ -448,6 +469,35 @@ Categories:
         "Front",
         "Back"
     ]
+    ```
+
+*   **modelFieldsOnTemplates**
+
+    Returns an object indicating the fields on the question and answer side of each card template for the given model
+    name. The question side is given first in each array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldsOnTemplates",
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Card 1": [
+            ["Front"],
+            ["Back"]
+        ],
+        "Card 2": [
+            ["Back"],
+            ["Front"]
+        ]
+    }
     ```
 
 ### Note Creation ###
