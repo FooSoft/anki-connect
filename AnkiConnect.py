@@ -17,6 +17,7 @@
 
 import anki
 import aqt
+import base64
 import hashlib
 import inspect
 import json
@@ -334,6 +335,45 @@ class AnkiNoteParams:
 #
 
 class AnkiBridge:
+    def getFilePath(self, filename):
+        mediaFolder = self.collection().media.dir()
+        filePath = os.path.normpath(os.path.join(mediaFolder, filename))
+        # catch attempts to write outside the media folder
+        if os.path.commonprefix([mediaFolder, filePath]) != mediaFolder:
+            return False
+
+        return filePath
+
+
+    def storeFile(self, filename, data):
+        filePath = self.getFilePath(filename)
+        if filePath:
+            with open(filePath, 'wb') as file:
+                file.write(base64.b64decode(data))
+            return True
+
+        return False
+
+
+    def retrieveFile(self, filename):
+        filePath = self.getFilePath(filename)
+        if filePath and os.path.isfile(filePath):
+            with open(filePath, 'rb') as file:
+                data = base64.b64encode(file.read())
+            return data.decode('ascii')
+
+        return False
+
+
+    def deleteFile(self, filename):
+        filePath = self.getFilePath(filename)
+        if filePath and os.path.isfile(filePath):
+            os.remove(filePath)
+            return True
+
+        return False
+
+
     def addNote(self, params):
         collection = self.collection()
         if collection is None:
@@ -835,6 +875,21 @@ class AnkiConnect:
     @webApi
     def multi(self, actions):
         return self.anki.multi(actions)
+
+
+    @webApi
+    def storeFile(self, filename, data):
+        return self.anki.storeFile(filename, data)
+
+
+    @webApi
+    def retrieveFile(self, filename):
+        return self.anki.retrieveFile(filename)
+
+
+    @webApi
+    def deleteFile(self, filename):
+        return self.anki.deleteFile(filename)
 
 
     @webApi
