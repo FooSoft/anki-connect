@@ -84,6 +84,22 @@ curl localhost:8765 -X POST -d '{"action": "version"}'
 
 Below is a list of currently supported actions. Requests with invalid actions or parameters will a return `null` result.
 
+Categories:
+
+* [Miscellaneous](#miscellaneous)
+* [Decks](#decks)
+* [Deck Configurations](#deck-configurations)
+* [Models](#models)
+* [Note Creation](#note-creation)
+* [Note Tags](#note-tags)
+* [Card Suspension](#card-suspension)
+* [Card Intervals](#card-intervals)
+* [Finding Notes and Cards](#finding-notes-and-cards)
+* [Media File Storage](#media-file-storage)
+* [Graphical](#graphical)
+
+### Miscellaneous ###
+
 *   **version**
 
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
@@ -102,6 +118,24 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample response*:
     ```
     4
+    ```
+
+*   **upgrade**
+
+    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
+    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
+    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
+
+    *Sample request*:
+    ```
+    {
+        "action": "upgrade"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **multi**
@@ -131,6 +165,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
         [1494723142483, 1494703460437, 1494703479525]
     ]
     ```
+
+### Decks ###
 
 *   **deckNames**
 
@@ -168,79 +204,17 @@ Below is a list of currently supported actions. Requests with invalid actions or
     }
     ```
 
-*   **modelNames**
+*   **getDecks**
 
-    Gets the complete list of model names for the current user.
-
-    *Sample request*:
-    ```
-    {
-        "action": "modelNames"
-    }
-    ```
-
-    *Sample response*:
-    ```
-    [
-        "Basic",
-        "Basic (and reversed card)"
-    ]
-    ```
-
-*   **modelNamesAndIds**
-
-    Gets the complete list of model names and their corresponding IDs for the current user.
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
 
     *Sample request*:
     ```
     {
-        "action": "modelNamesAndIds"
-    }
-    ```
-
-    *Sample response*:
-    ```
-    {
-        "Basic": 1483883011648
-        "Basic (and reversed card)": 1483883011644
-        "Basic (optional reversed card)": 1483883011631
-        "Cloze": 1483883011630
-    }
-    ```
-
-*   **modelFieldNames**
-
-    Gets the complete list of field names for the provided model name.
-
-    *Sample request*:
-    ```
-    {
-        "action": "modelFieldNames",
+        "action": "getDecks",
         "params": {
-            "modelName": "Basic"
-        }
-    }
-    ```
-
-    *Sample response*:
-    ```
-    [
-        "Front",
-        "Back"
-    ]
-    ```
-
-*   **modelFieldsOnTemplates**
-
-    Returns an object indicating the fields on the question and answer side of each card template for the given model
-    name. The question side is given first in each array.
-
-    *Sample request*:
-    ```
-    {
-        "action": "modelFieldsOnTemplates",
-        "params": {
-            "modelName": "Basic (and reversed card)"
+            "cards": [1502298036657, 1502298033753, 1502032366472]
         }
     }
     ```
@@ -248,16 +222,53 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample response*:
     ```
     {
-        "Card 1": [
-            ["Front"],
-            ["Back"]
-        ],
-        "Card 2": [
-            ["Back"],
-            ["Front"]
-        ]
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
     }
     ```
+
+*   **changeDeck**
+
+    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    *Sample request*:
+    ```
+    {
+        "action": "changeDeck",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753],
+            "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Deck Configurations ###
 
 *   **getDeckConfig**
 
@@ -396,6 +407,101 @@ Below is a list of currently supported actions. Requests with invalid actions or
     true
     ```
 
+### Models ###
+
+*   **modelNames**
+
+    Gets the complete list of model names for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNames"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        "Basic",
+        "Basic (and reversed card)"
+    ]
+    ```
+
+*   **modelNamesAndIds**
+
+    Gets the complete list of model names and their corresponding IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Basic": 1483883011648
+        "Basic (and reversed card)": 1483883011644
+        "Basic (optional reversed card)": 1483883011631
+        "Cloze": 1483883011630
+    }
+    ```
+
+*   **modelFieldNames**
+
+    Gets the complete list of field names for the provided model name.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldNames",
+        "params": {
+            "modelName": "Basic"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        "Front",
+        "Back"
+    ]
+    ```
+
+*   **modelFieldsOnTemplates**
+
+    Returns an object indicating the fields on the question and answer side of each card template for the given model
+    name. The question side is given first in each array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldsOnTemplates",
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Card 1": [
+            ["Front"],
+            ["Back"]
+        ],
+        "Card 2": [
+            ["Back"],
+            ["Front"]
+        ]
+    }
+    ```
+
+### Note Creation ###
+
 *   **addNote**
 
     Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
@@ -511,6 +617,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+### Note Tags ###
+
 *   **addTags**
 
     Adds tags to notes by note ID.
@@ -550,6 +658,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     null
     ```
+
+### Card Suspension ###
 
 *   **suspend**
 
@@ -609,6 +719,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     [false, true]
     ```
+
+### Card Intervals ###
 
 *   **areDue**
 
@@ -670,6 +782,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+### Finding Notes and Cards ###
 
 *   **findNotes**
 
@@ -717,71 +830,6 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **getDecks**
-
-    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
-    cards which belong to it.
-
-    *Sample request*:
-    ```
-    {
-        "action": "getDecks",
-        "params": {
-            "cards": [1502298036657, 1502298033753, 1502032366472]
-        }
-    }
-    ```
-
-    *Sample response*:
-    ```
-    {
-        "Default": [1502032366472],
-        "Japanese::JLPT N3": [1502298036657, 1502298033753]
-    }
-    ```
-
-
-*   **changeDeck**
-
-    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
-
-    *Sample request*:
-    ```
-    {
-        "action": "changeDeck",
-        "params": {
-            "cards": [1502098034045, 1502098034048, 1502298033753],
-            "deck": "Japanese::JLPT N3"
-        }
-    }
-    ```
-
-    *Sample response*:
-    ```
-    null
-    ```
-
-*   **deleteDecks**
-
-    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
-    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
-
-    *Sample request*:
-    ```
-    {
-        "action": "deleteDecks",
-        "params": {
-            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
-            "cardsToo": true
-        }
-    }
-    ```
-
-    *Sample response*:
-    ```
-    null
-    ```
-
 *   **cardsToNotes**
 
     Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
@@ -804,6 +852,76 @@ Below is a list of currently supported actions. Requests with invalid actions or
         1502298025183
     ]
     ```
+
+### Media File Storage ###
+
+*   **storeMediaFile**
+
+    Stores a file with the specified base64-encoded contents inside the media folder.
+
+    Note: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
+    with an underscore. These files are still synchronized to AnkiWeb.
+
+    *Sample request*:
+    ```
+    {
+        "action": "storeMediaFile",
+        "params": {
+            "filename": "_hello.txt",
+            "data": "SGVsbG8sIHdvcmxkIQ=="
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+    *Content of `_hello.txt`*:
+    ```
+    Hello world!
+    ```
+
+*   **retrieveMediaFile**
+
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "retrieveMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    "SGVsbG8sIHdvcmxkIQ=="
+    ```
+
+*   **deleteMediaFile**
+
+    Deletes the specified file inside the media folder.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Graphical ###
 
 *   **guiBrowse**
 
@@ -992,24 +1110,6 @@ Below is a list of currently supported actions. Requests with invalid actions or
 		"params": {
 			"name": "Default"
 		}
-    }
-    ```
-
-    *Sample response*:
-    ```
-    true
-    ```
-
-*   **upgrade**
-
-    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
-    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
-    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
-
-    *Sample request*:
-    ```
-    {
-        "action": "upgrade"
     }
     ```
 

@@ -17,6 +17,7 @@
 
 import anki
 import aqt
+import base64
 import hashlib
 import inspect
 import json
@@ -26,6 +27,7 @@ import select
 import socket
 import sys
 from time import time
+from unicodedata import normalize
 
 
 #
@@ -335,6 +337,29 @@ class AnkiNoteParams:
 #
 
 class AnkiBridge:
+    def storeMediaFile(self, filename, data):
+        self.deleteMediaFile(filename)
+        self.media().writeData(filename, base64.b64decode(data))
+
+
+    def retrieveMediaFile(self, filename):
+        # based on writeData from anki/media.py
+        filename = os.path.basename(filename)
+        filename = normalize("NFC", filename)
+        filename = self.media().stripIllegal(filename)
+
+        path = os.path.join(self.media().dir(), filename)
+        if os.path.exists(path):
+            with open(path, 'rb') as file:
+                return base64.b64encode(file.read()).decode('ascii')
+
+        return False
+
+
+    def deleteMediaFile(self, filename):
+        self.media().syncDelete(filename)
+
+
     def addNote(self, params):
         collection = self.collection()
         if collection is None:
@@ -879,6 +904,21 @@ class AnkiConnect:
     @webApi
     def multi(self, actions):
         return self.anki.multi(actions)
+
+
+    @webApi
+    def storeMediaFile(self, filename, data):
+        return self.anki.storeMediaFile(filename, data)
+
+
+    @webApi
+    def retrieveMediaFile(self, filename):
+        return self.anki.retrieveMediaFile(filename)
+
+
+    @webApi
+    def deleteMediaFile(self, filename):
+        return self.anki.deleteMediaFile(filename)
 
 
     @webApi
