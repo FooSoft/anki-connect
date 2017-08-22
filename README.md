@@ -132,6 +132,75 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **storeFile**
+
+    Stores a file with the specified base64-encoded contents inside the media folder. Returns `true` upon success or
+    `false` if attempting to write a file outside the media folder.
+
+    Note: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
+    with an underscore. These files are still synchronized to AnkiWeb.
+
+    *Sample request*:
+    ```
+    {
+        "action": "storeFile",
+        "params": {
+            "filename": "_hello.txt",
+            "data": "SGVsbG8sIHdvcmxkIQ=="
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+    *Content of `_hello.txt`*:
+    ```
+    Hello world!
+    ```
+
+*   **retrieveFile**
+
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist or if
+    attempting to read a file outside the media folder.
+
+    *Sample request*:
+    ```
+    {
+        "action": "retrieveFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    "SGVsbG8sIHdvcmxkIQ=="
+    ```
+
+*   **deleteFile**
+
+    Deletes the specified file inside the media folder, returning `true` if successful, or `false` if the file does not
+    exist or if attempting to delete a file outside the media folder.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
