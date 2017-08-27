@@ -84,12 +84,28 @@ curl localhost:8765 -X POST -d '{"action": "version"}'
 
 Below is a list of currently supported actions. Requests with invalid actions or parameters will a return `null` result.
 
+Categories:
+
+* [Miscellaneous](#miscellaneous)
+* [Decks](#decks)
+* [Deck Configurations](#deck-configurations)
+* [Models](#models)
+* [Note Creation](#note-creation)
+* [Note Tags](#note-tags)
+* [Card Suspension](#card-suspension)
+* [Card Intervals](#card-intervals)
+* [Finding Notes and Cards](#finding-notes-and-cards)
+* [Media File Storage](#media-file-storage)
+* [Graphical](#graphical)
+
+### Miscellaneous ###
+
 *   **version**
 
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
-    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
@@ -102,6 +118,24 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample response*:
     ```
     4
+    ```
+
+*   **upgrade**
+
+    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
+    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
+    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
+
+    *Sample request*:
+    ```
+    {
+        "action": "upgrade"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **multi**
@@ -132,6 +166,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+### Decks ###
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
@@ -150,46 +186,89 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
-*   **modelNames**
+*   **deckNamesAndIds**
 
-    Gets the complete list of model names for the current user.
+    Gets the complete list of deck names and their respective IDs for the current user.
 
     *Sample request*:
     ```
     {
-        "action": "modelNames"
+        "action": "deckNamesAndIds"
     }
     ```
 
     *Sample response*:
     ```
-    [
-        "Basic",
-        "Basic (and reversed card)"
-    ]
+    {
+        "Default": 1
+    }
     ```
 
-*   **modelFieldNames**
+*   **getDecks**
 
-    Gets the complete list of field names for the provided model name.
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
 
     *Sample request*:
     ```
     {
-        "action": "modelFieldNames",
+        "action": "getDecks",
         "params": {
-            "modelName": "Basic"
+            "cards": [1502298036657, 1502298033753, 1502032366472]
         }
     }
     ```
 
     *Sample response*:
     ```
-    [
-        "Front",
-        "Back"
-    ]
+    {
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
+    }
     ```
+
+*   **changeDeck**
+
+    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    *Sample request*:
+    ```
+    {
+        "action": "changeDeck",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753],
+            "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Deck Configurations ###
 
 *   **getDeckConfig**
 
@@ -328,6 +407,101 @@ Below is a list of currently supported actions. Requests with invalid actions or
     true
     ```
 
+### Models ###
+
+*   **modelNames**
+
+    Gets the complete list of model names for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNames"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        "Basic",
+        "Basic (and reversed card)"
+    ]
+    ```
+
+*   **modelNamesAndIds**
+
+    Gets the complete list of model names and their corresponding IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Basic": 1483883011648
+        "Basic (and reversed card)": 1483883011644
+        "Basic (optional reversed card)": 1483883011631
+        "Cloze": 1483883011630
+    }
+    ```
+
+*   **modelFieldNames**
+
+    Gets the complete list of field names for the provided model name.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldNames",
+        "params": {
+            "modelName": "Basic"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        "Front",
+        "Back"
+    ]
+    ```
+
+*   **modelFieldsOnTemplates**
+
+    Returns an object indicating the fields on the question and answer side of each card template for the given model
+    name. The question side is given first in each array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldsOnTemplates",
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Card 1": [
+            ["Front"],
+            ["Back"]
+        ],
+        "Card 2": [
+            ["Back"],
+            ["Front"]
+        ]
+    }
+    ```
+
+### Note Creation ###
+
 *   **addNote**
 
     Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
@@ -443,6 +617,8 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+### Note Tags ###
+
 *   **addTags**
 
     Adds tags to notes by note ID.
@@ -483,9 +659,12 @@ Below is a list of currently supported actions. Requests with invalid actions or
     null
     ```
 
+### Card Suspension ###
+
 *   **suspend**
 
-    Suspend cards by card ID.
+    Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -499,12 +678,13 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
 
 *   **unsuspend**
 
-    Unsuspend cards by card ID.
+    Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+    otherwise.
 
     *Sample request*:
     ```
@@ -518,8 +698,91 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
+
+*   **areSuspended**
+
+    Returns an array indicating whether each of the given cards is suspended (in the same order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "areSuspended",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+### Card Intervals ###
+
+*   **areDue**
+
+    Returns an array indicating whether each of the given cards is due (in the same order). Note: cards in the learning
+    queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has passed, to
+    match the way Anki treats them when reviewing.
+
+    *Sample request*:
+    ```
+    {
+        "action": "areDue",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+*   **getIntervals**
+
+    Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
+    for each given card ID when `complete` is `true`. (Negative intervals are in seconds and positive intervals in days.)
+
+    *Sample request 1*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657]
+        }
+    }
+    ```
+
+    *Sample response 1*:
+    ```
+    [-14400, 3]
+    ```
+
+    *Sample request 2*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657],
+            "complete": true
+        }
+    }
+    ```
+
+    *Sample response 2*:
+    ```
+    [
+        [-120, -180, -240, -300, -360, -14400],
+        [-120, -180, -240, -300, -360, -14400, 1, 3]
+    ]
+    ```
+
+### Finding Notes and Cards ###
 
 *   **findNotes**
 
@@ -528,7 +791,7 @@ Below is a list of currently supported actions. Requests with invalid actions or
     *Sample request*:
     ```
     {
-        "action": "findCards",
+        "action": "findNotes",
         "params": {
             "query": "deck:current"
         }
@@ -566,6 +829,99 @@ Below is a list of currently supported actions. Requests with invalid actions or
         1494703479525
     ]
     ```
+
+*   **cardsToNotes**
+
+    Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
+    given once in the array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cardsToNotes",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1502098029797,
+        1502298025183
+    ]
+    ```
+
+### Media File Storage ###
+
+*   **storeMediaFile**
+
+    Stores a file with the specified base64-encoded contents inside the media folder.
+
+    Note: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
+    with an underscore. These files are still synchronized to AnkiWeb.
+
+    *Sample request*:
+    ```
+    {
+        "action": "storeMediaFile",
+        "params": {
+            "filename": "_hello.txt",
+            "data": "SGVsbG8sIHdvcmxkIQ=="
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+    *Content of `_hello.txt`*:
+    ```
+    Hello world!
+    ```
+
+*   **retrieveMediaFile**
+
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "retrieveMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    "SGVsbG8sIHdvcmxkIQ=="
+    ```
+
+*   **deleteMediaFile**
+
+    Deletes the specified file inside the media folder.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Graphical ###
 
 *   **guiBrowse**
 
@@ -638,6 +994,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "cardId": 1498938915662,
         "buttons": [1, 2, 3]
     }
+    ```
+
+*   **guiStartCardTimer**
+
+    Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiStartCardTimer"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **guiShowQuestion**
@@ -738,24 +1110,6 @@ Below is a list of currently supported actions. Requests with invalid actions or
 		"params": {
 			"name": "Default"
 		}
-    }
-    ```
-
-    *Sample response*:
-    ```
-    true
-    ```
-
-*   **upgrade**
-
-    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
-    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
-    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
-
-    *Sample request*:
-    ```
-    {
-        "action": "upgrade"
     }
     ```
 

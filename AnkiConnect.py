@@ -17,14 +17,17 @@
 
 import anki
 import aqt
+import base64
 import hashlib
 import inspect
 import json
 import os.path
+import re
 import select
 import socket
 import sys
 from time import time
+from unicodedata import normalize
 
 
 #
@@ -334,6 +337,29 @@ class AnkiNoteParams:
 #
 
 class AnkiBridge:
+    def storeMediaFile(self, filename, data):
+        self.deleteMediaFile(filename)
+        self.media().writeData(filename, base64.b64decode(data))
+
+
+    def retrieveMediaFile(self, filename):
+        # based on writeData from anki/media.py
+        filename = os.path.basename(filename)
+        filename = normalize("NFC", filename)
+        filename = self.media().stripIllegal(filename)
+
+        path = os.path.join(self.media().dir(), filename)
+        if os.path.exists(path):
+            with open(path, 'rb') as file:
+                return base64.b64encode(file.read()).decode('ascii')
+
+        return False
+
+
+    def deleteMediaFile(self, filename):
+        self.media().syncDelete(filename)
+
+
     def addNote(self, params):
         collection = self.collection()
         if collection is None:
@@ -511,6 +537,18 @@ class AnkiBridge:
             return collection.models.allNames()
 
 
+    def modelNamesAndIds(self):
+        models = {}
+
+        modelNames = self.modelNames()
+        for model in modelNames:
+            mid = self.collection().models.byName(model)['id']
+            mid = int(mid)  # sometimes Anki stores the ID as a string
+            models[model] = mid
+
+        return models
+
+
     def modelNameFromId(self, modelId):
         collection = self.collection()
         if collection is not None:
@@ -525,6 +563,37 @@ class AnkiBridge:
             model = collection.models.byName(modelName)
             if model is not None:
                 return [field['name'] for field in model['flds']]
+
+
+    def modelFieldsOnTemplates(self, modelName):
+        model = self.collection().models.byName(modelName)
+
+        if model is not None:
+            templates = {}
+            for template in model['tmpls']:
+                fields = []
+
+                for side in ['qfmt', 'afmt']:
+                    fieldsForSide = []
+
+                    # based on _fieldsOnTemplate from aqt/clayout.py
+                    matches = re.findall('{{[^#/}]+?}}', template[side])
+                    for match in matches:
+                        # remove braces and modifiers
+                        match = re.sub(r'[{}]', '', match)
+                        match = match.split(":")[-1]
+
+                        # for the answer side, ignore fields present on the question side + the FrontSide field
+                        if match == 'FrontSide' or side == 'afmt' and match in fields[0]:
+                            continue
+                        fieldsForSide.append(match)
+
+
+                    fields.append(fieldsForSide)
+
+                templates[template['name']] = fields
+
+            return templates
 
 
     def getDeckConfig(self, deck):
@@ -838,6 +907,21 @@ class AnkiConnect:
 
 
     @webApi
+    def storeMediaFile(self, filename, data):
+        return self.anki.storeMediaFile(filename, data)
+
+
+    @webApi
+    def retrieveMediaFile(self, filename):
+        return self.anki.retrieveMediaFile(filename)
+
+
+    @webApi
+    def deleteMediaFile(self, filename):
+        return self.anki.deleteMediaFile(filename)
+
+
+    @webApi
     def deckNames(self):
         return self.anki.deckNames()
 
@@ -853,8 +937,18 @@ class AnkiConnect:
 
 
     @webApi
+    def modelNamesAndIds(self):
+        return self.anki.modelNamesAndIds()
+
+
+    @webApi
     def modelFieldNames(self, modelName):
         return self.anki.modelFieldNames(modelName)
+
+
+    @webApi
+    def modelFieldsOnTemplates(self, modelName):
+        return self.anki.modelFieldsOnTemplates(modelName)
 
 
     @webApi
