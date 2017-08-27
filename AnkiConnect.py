@@ -68,6 +68,16 @@ else:
 # Helpers
 #
 
+def webapi(*versions):
+    def decorator(func):
+        def method(*args, **kwargs):
+            return func(*args, **kwargs)
+        setattr(method, 'versions', versions)
+        setattr(method, 'api', True)
+        return method
+    return decorator
+
+
 def webApi(func):
     func.webApi = True
     return func
@@ -907,6 +917,24 @@ class AnkiConnect:
                         return
 
                 return handler(**params)
+
+
+    def invoke(self, version, name, *args, **kwargs):
+        for method_name, method_body in inspect.getmembers(self, predicate=inspect.ismethod):
+            api_version_last = 0
+            api_name_last = None
+
+            if getattr(method_body, 'api', False):
+                for api_version, api_name in getattr(method_body, 'versions', []):
+                    if api_version_last < api_version <= version:
+                        api_version_last = api_version
+                        api_name_last = api_name
+
+                if api_name_last is None and api_version_last == 0:
+                    api_name_last = method_name
+
+                if api_name_last is not None and api_name_last == name:
+                    method_body(*args, **kwargs)
 
 
     @webApi
