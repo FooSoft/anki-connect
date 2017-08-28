@@ -180,10 +180,10 @@ class AjaxClient:
         headers = {}
         for line in parts[0].split(makeBytes('\r\n')):
             pair = line.split(makeBytes(': '))
-            headers[pair[0]] = pair[1] if len(pair) > 1 else None
+            headers[pair[0].lower()] = pair[1] if len(pair) > 1 else None
 
         headerLength = len(parts[0]) + 4
-        bodyLength = int(headers.get(makeBytes('Content-Length'), 0))
+        bodyLength = int(headers.get(makeBytes('content-length'), 0))
         totalLength = headerLength + bodyLength
 
         if totalLength > len(data):
