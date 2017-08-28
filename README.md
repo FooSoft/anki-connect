@@ -45,6 +45,8 @@ AnkiConnect exposes Anki features to external applications via an easy to use
 initialize a minimal HTTP sever running on port 8765 every time Anki executes. Other applications (including browser
 extensions) can then communicate with it via HTTP POST requests.
 
+By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1.` IP Address, so you will only be able to access it from the same host on which it is running. If you need to access it over a network, you can set the environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0` to bind it to all network interfaces on your host. 
+
 ### Sample Invocation ###
 
 Every request consists of a JSON-encoded object containing an *action*, and a set of contextual *parameters*. A simple

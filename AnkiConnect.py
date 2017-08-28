@@ -21,6 +21,7 @@ import base64
 import hashlib
 import inspect
 import json
+import os
 import os.path
 import re
 import select
@@ -38,7 +39,7 @@ API_VERSION = 4
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
-NET_ADDRESS = '127.0.0.1'
+NET_ADDRESS = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
 NET_BACKLOG = 5
 NET_PORT = 8765
 
