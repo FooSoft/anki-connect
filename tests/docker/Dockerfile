@@ -9,12 +9,11 @@ RUN mkdir -p /home/anki-user/Documents/Anki/addons
 
 COPY AnkiConnect.py /home/anki-user/Documents/Anki/addons
 
-# Required if you want to access it from another IP address.
-RUN sed -i 's/127.0.0.1/0.0.0.0/' /home/anki-user/Documents/Anki/addons/AnkiConnect.py
+ENV ANKICONNECT_BIND_ADDRESS 0.0.0.0
 
-COPY tests/prefs.db /home/anki-user/Documents/Anki/prefs.db
+COPY tests/docker/prefs.db /home/anki-user/Documents/Anki/prefs.db
 
-ADD tests/entrypoint.sh /entrypoint.sh
+ADD tests/docker/entrypoint.sh /entrypoint.sh
 
 USER root
 RUN chmod +x /entrypoint.sh

@@ -5,7 +5,7 @@ services:
 python:
   - "2.7"
 install:
-  - docker build -f tests/Dockerfile -t txgio/anki-connect .
+  - docker build -f tests/docker/Dockerfile -t txgio/anki-connect .
 script:
   - docker run -ti -d --rm -p 8765:8765 txgio/anki-connect
   - sleep 5
