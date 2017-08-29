@@ -1121,7 +1121,7 @@ Categories:
     ```
 *   **guiExitAnki**
 
-    Schedules a request to close Anki after 1s. This operation is asynchronous, so it will return immediately.
+    Schedules a request to close Anki after 1s. This operation is asynchronous, so it will return immediately and won't wait until Anki actually exits.
 
     *Sample request*:
     ```
