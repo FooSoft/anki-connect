@@ -45,6 +45,8 @@ AnkiConnect exposes Anki features to external applications via an easy to use
 initialize a minimal HTTP sever running on port 8765 every time Anki executes. Other applications (including browser
 extensions) can then communicate with it via HTTP POST requests.
 
+By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1.` IP Address, so you will only be able to access it from the same host on which it is running. If you need to access it over a network, you can set the environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0` to bind it to all network interfaces on your host. 
+
 ### Sample Invocation ###
 
 Every request consists of a JSON-encoded object containing an *action*, and a set of contextual *parameters*. A simple
@@ -84,12 +86,28 @@ curl localhost:8765 -X POST -d '{"action": "version"}'
 
 Below is a list of currently supported actions. Requests with invalid actions or parameters will a return `null` result.
 
+Categories:
+
+* [Miscellaneous](#miscellaneous)
+* [Decks](#decks)
+* [Deck Configurations](#deck-configurations)
+* [Models](#models)
+* [Note Creation](#note-creation)
+* [Note Tags](#note-tags)
+* [Card Suspension](#card-suspension)
+* [Card Intervals](#card-intervals)
+* [Finding Notes and Cards](#finding-notes-and-cards)
+* [Media File Storage](#media-file-storage)
+* [Graphical](#graphical)
+
+### Miscellaneous ###
+
 *   **version**
 
     Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
-    properly with each other. New versions of AnkiConnect will backwards compatible; as long as you are using actions
+    properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
@@ -103,6 +121,55 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ```
     4
     ```
+
+*   **upgrade**
+
+    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
+    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
+    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
+
+    *Sample request*:
+    ```
+    {
+        "action": "upgrade"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **multi**
+
+    Performs multiple actions in one request, returning an array with the response of each action (in the given order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "multi",
+        "params": {
+            "actions": [
+                {"action": "deckNames"},
+                {
+                    "action": "browse",
+                    "params": {"query": "deck:current"}
+                }
+            ]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        ["Default"],
+        [1494723142483, 1494703460437, 1494703479525]
+    ]
+    ```
+
+### Decks ###
+
 *   **deckNames**
 
     Gets the complete list of deck names for the current user.
@@ -121,6 +188,229 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+*   **deckNamesAndIds**
+
+    Gets the complete list of deck names and their respective IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deckNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": 1
+    }
+    ```
+
+*   **getDecks**
+
+    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+    cards which belong to it.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getDecks",
+        "params": {
+            "cards": [1502298036657, 1502298033753, 1502032366472]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Default": [1502032366472],
+        "Japanese::JLPT N3": [1502298036657, 1502298033753]
+    }
+    ```
+
+*   **changeDeck**
+
+    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    *Sample request*:
+    ```
+    {
+        "action": "changeDeck",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753],
+            "deck": "Japanese::JLPT N3"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **deleteDecks**
+
+    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
+    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteDecks",
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"],
+            "cardsToo": true
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Deck Configurations ###
+
+*   **getDeckConfig**
+
+    Gets the config group object for the given deck.
+
+    *Sample request*:
+    ```
+    {
+        "action": "getDeckConfig",
+        "params": {
+            "deck": "Default"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "lapse": {
+            "leechFails": 8,
+            "delays": [10],
+            "minInt": 1,
+            "leechAction": 0,
+            "mult": 0
+        },
+        "dyn": false,
+        "autoplay": true,
+        "mod": 1502970872,
+        "id": 1,
+        "maxTaken": 60,
+        "new": {
+            "bury": true,
+            "order": 1,
+            "initialFactor": 2500,
+            "perDay": 20,
+            "delays": [1, 10],
+            "separate": true,
+            "ints": [1, 4, 7]
+        },
+        "name": "Default",
+        "rev": {
+            "bury": true,
+            "ivlFct": 1,
+            "ease4": 1.3,
+            "maxIvl": 36500,
+            "perDay": 100,
+            "minSpace": 1,
+            "fuzz": 0.05
+        },
+        "timer": 0,
+        "replayq": true,
+        "usn": -1
+    }
+    ```
+
+*   **saveDeckConfig**
+
+    Saves the given config group, returning `true` on success or `false` if the ID of the config group is invalid (i.e.
+    it does not exist).
+
+    *Sample request*:
+    ```
+    {
+        "action": "saveDeckConfig",
+        "params": {
+            "config": (config group object)
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **setDeckConfigId**
+
+    Changes the configuration group for the given decks to the one with the given ID. Returns `true` on success or
+    `false` if the given configuration group or any of the given decks do not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "setDeckConfigId",
+        "params": {
+            "decks": ["Default"],
+            "configId": 1
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **cloneDeckConfigId**
+
+    Creates a new config group with the given name, cloning from the group with the given ID, or from the default group
+    if this is unspecified. Returns the ID of the new config group, or `false` if the specified group to clone from does
+    not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cloneDeckConfigId",
+        "params": {
+            "name": "Copy of Default",
+            "cloneFrom": 1
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    1502972374573
+    ```
+
+*   **removeDeckConfigId**
+
+    Removes the config group with the given ID, returning `true` if successful, or `false` if attempting to remove
+    either the default config group (ID = 1) or a config group that does not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeDeckConfigId",
+        "params": {
+            "configId": 1502972374573
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+### Models ###
+
 *   **modelNames**
 
     Gets the complete list of model names for the current user.
@@ -138,6 +428,27 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "Basic",
         "Basic (and reversed card)"
     ]
+    ```
+
+*   **modelNamesAndIds**
+
+    Gets the complete list of model names and their corresponding IDs for the current user.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelNamesAndIds"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Basic": 1483883011648
+        "Basic (and reversed card)": 1483883011644
+        "Basic (optional reversed card)": 1483883011631
+        "Cloze": 1483883011630
+    }
     ```
 
 *   **modelFieldNames**
@@ -161,6 +472,37 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "Back"
     ]
     ```
+
+*   **modelFieldsOnTemplates**
+
+    Returns an object indicating the fields on the question and answer side of each card template for the given model
+    name. The question side is given first in each array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "modelFieldsOnTemplates",
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    {
+        "Card 1": [
+            ["Front"],
+            ["Back"]
+        ],
+        "Card 2": [
+            ["Back"],
+            ["Front"]
+        ]
+    }
+    ```
+
+### Note Creation ###
 
 *   **addNote**
 
@@ -277,6 +619,312 @@ Below is a list of currently supported actions. Requests with invalid actions or
     ]
     ```
 
+### Note Tags ###
+
+*   **addTags**
+
+    Adds tags to notes by note ID.
+
+    *Sample request*:
+    ```
+    {
+        "action": "addTags",
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+*   **removeTags**
+
+    Remove tags from notes by note ID.
+
+    *Sample request*:
+    ```
+    {
+        "action": "removeTags",
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tags": "european-languages"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Card Suspension ###
+
+*   **suspend**
+
+    Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+    otherwise.
+
+    *Sample request*:
+    ```
+    {
+        "action": "suspend",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **unsuspend**
+
+    Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+    otherwise.
+
+    *Sample request*:
+    ```
+    {
+        "action": "unsuspend",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
+    ```
+
+*   **areSuspended**
+
+    Returns an array indicating whether each of the given cards is suspended (in the same order).
+
+    *Sample request*:
+    ```
+    {
+        "action": "areSuspended",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+### Card Intervals ###
+
+*   **areDue**
+
+    Returns an array indicating whether each of the given cards is due (in the same order). Note: cards in the learning
+    queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has passed, to
+    match the way Anki treats them when reviewing.
+
+    *Sample request*:
+    ```
+    {
+        "action": "areDue",
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [false, true]
+    ```
+
+*   **getIntervals**
+
+    Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
+    for each given card ID when `complete` is `true`. (Negative intervals are in seconds and positive intervals in days.)
+
+    *Sample request 1*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657]
+        }
+    }
+    ```
+
+    *Sample response 1*:
+    ```
+    [-14400, 3]
+    ```
+
+    *Sample request 2*:
+    ```
+    {
+        "action": "getIntervals",
+        "params": {
+            "cards": [1502298033753, 1502298036657],
+            "complete": true
+        }
+    }
+    ```
+
+    *Sample response 2*:
+    ```
+    [
+        [-120, -180, -240, -300, -360, -14400],
+        [-120, -180, -240, -300, -360, -14400, 1, 3]
+    ]
+    ```
+
+### Finding Notes and Cards ###
+
+*   **findNotes**
+
+    Returns an array of note IDs for a given query (same query syntax as **guiBrowse**).
+
+    *Sample request*:
+    ```
+    {
+        "action": "findNotes",
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1483959289817,
+        1483959291695
+    ]
+    ```
+
+*   **findCards**
+
+    Returns an array of card IDs for a given query (functionally identical to **guiBrowse** but doesn't use the GUI
+    for better performance).
+
+    *Sample request*:
+    ```
+    {
+        "action": "findCards",
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1494723142483,
+        1494703460437,
+        1494703479525
+    ]
+    ```
+
+*   **cardsToNotes**
+
+    Returns an (unordered) array of note IDs for the given card IDs. For cards with the same note, the ID is only
+    given once in the array.
+
+    *Sample request*:
+    ```
+    {
+        "action": "cardsToNotes",
+        "params": {
+            "cards": [1502098034045, 1502098034048, 1502298033753]
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    [
+        1502098029797,
+        1502298025183
+    ]
+    ```
+
+### Media File Storage ###
+
+*   **storeMediaFile**
+
+    Stores a file with the specified base64-encoded contents inside the media folder.
+
+    Note: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
+    with an underscore. These files are still synchronized to AnkiWeb.
+
+    *Sample request*:
+    ```
+    {
+        "action": "storeMediaFile",
+        "params": {
+            "filename": "_hello.txt",
+            "data": "SGVsbG8sIHdvcmxkIQ=="
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+    *Content of `_hello.txt`*:
+    ```
+    Hello world!
+    ```
+
+*   **retrieveMediaFile**
+
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
+
+    *Sample request*:
+    ```
+    {
+        "action": "retrieveMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    "SGVsbG8sIHdvcmxkIQ=="
+    ```
+
+*   **deleteMediaFile**
+
+    Deletes the specified file inside the media folder.
+
+    *Sample request*:
+    ```
+    {
+        "action": "deleteMediaFile",
+        "params": {
+            "filename": "_hello.txt"
+        }
+    }
+    ```
+
+    *Sample response*:
+    ```
+    null
+    ```
+
+### Graphical ###
+
 *   **guiBrowse**
 
     Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
@@ -348,6 +996,22 @@ Below is a list of currently supported actions. Requests with invalid actions or
         "cardId": 1498938915662,
         "buttons": [1, 2, 3]
     }
+    ```
+
+*   **guiStartCardTimer**
+
+    Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
+
+    *Sample request*:
+    ```
+    {
+        "action": "guiStartCardTimer"
+    }
+    ```
+
+    *Sample response*:
+    ```
+    true
     ```
 
 *   **guiShowQuestion**
@@ -453,27 +1117,35 @@ Below is a list of currently supported actions. Requests with invalid actions or
 
     *Sample response*:
     ```
-    null
+    true
     ```
+*   **guiExitAnki**
 
-*   **upgrade**
-
-    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
-    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
-    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
+    Schedules a request to close Anki after 1s. This operation is asynchronous, so it will return immediately and won't wait until Anki actually exits.
 
     *Sample request*:
     ```
     {
-        "action": "upgrade"
+        "action": "guiExitAnki"
     }
     ```
 
     *Sample response*:
     ```
-    true
+    null
     ```
 
 ## License ##
 
-GPL
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
