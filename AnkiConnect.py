@@ -850,6 +850,13 @@ class AnkiBridge:
         else:
             return False
 
+    def guiExitAnki(self):
+        timer = QTimer()
+        def exitAnki():
+            timer.stop()
+            self.window().close()
+        timer.timeout.connect(exitAnki)
+        timer.start(1000) # 1s should be enough to allow the response to be sent.
 
 #
 # AnkiConnect
@@ -1148,6 +1155,10 @@ class AnkiConnect:
     @webApi
     def guiDeckReview(self, name):
         return self.anki.guiDeckReview(name)
+
+    @webApi
+    def guiExitAnki(self):
+        return self.anki.guiExitAnki()
 
 
 #
