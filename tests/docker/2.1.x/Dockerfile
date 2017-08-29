@@ -5,9 +5,9 @@ RUN apt-get update && \
 
 COPY AnkiConnect.py /data/addons21/AnkiConnect.py
 
-COPY tests/docker/prefs21.db /data/prefs21.db
+COPY tests/docker/2.1.x/prefs21.db /data/prefs21.db
 
-ADD tests/docker/entrypoint.sh /entrypoint.sh
+ADD tests/docker/2.1.x/entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 
