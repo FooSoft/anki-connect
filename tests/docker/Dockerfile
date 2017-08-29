@@ -1,24 +1,14 @@
-FROM txgio/anki
+FROM txgio/anki:2.0.45
 
-USER root
-RUN apt-get update
-RUN apt-get install -y xvfb
-USER anki-user
+RUN apt-get update && \
+    apt-get install -y xvfb
 
-RUN mkdir -p /home/anki-user/Documents/Anki/addons
+COPY AnkiConnect.py /data/addons/AnkiConnect.py
 
-COPY AnkiConnect.py /home/anki-user/Documents/Anki/addons
-
-ENV ANKICONNECT_BIND_ADDRESS 0.0.0.0
-
-COPY tests/docker/prefs.db /home/anki-user/Documents/Anki/prefs.db
+COPY tests/docker/prefs.db /data/prefs.db
 
 ADD tests/docker/entrypoint.sh /entrypoint.sh
 
-USER root
-RUN chmod +x /entrypoint.sh
-USER anki-user
-
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD /bin/bash -c "(/usr/bin/ibus-daemon -xd; /usr/bin/anki;)"
+CMD ["anki", "-b", "/data"]
