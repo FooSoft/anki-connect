@@ -1,5 +1,8 @@
 sudo: required
 language: python
+addons:
+  hosts:
+    - docker
 services:
   - docker
 python:
