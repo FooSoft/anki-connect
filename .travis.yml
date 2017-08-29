@@ -8,8 +8,12 @@ services:
 python:
   - "2.7"
 install:
-  - docker build -f tests/docker/Dockerfile -t txgio/anki-connect .
+  - docker build -f tests/docker/$ANKI_VERSION/Dockerfile -t txgio/anki-connect:$ANKI_VERSION .
 script:
-  - docker run -ti -d --rm -p 8888:8765 -e ANKICONNECT_BIND_ADDRESS=0.0.0.0 txgio/anki-connect
+  - docker run -ti -d --rm -p 8888:8765 -e ANKICONNECT_BIND_ADDRESS=0.0.0.0 txgio/anki-connect:$ANKI_VERSION
   - ./tests/scripts/wait-up.sh http://docker:8888
   - python -m unittest discover -s tests -v
+
+env:
+  - ANKI_VERSION=2.0.x
+  - ANKI_VERSION=2.1.x
