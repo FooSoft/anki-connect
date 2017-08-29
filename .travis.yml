@@ -9,4 +9,4 @@ install:
 script:
   - docker run -ti -d --rm -p 8888:8765 -e ANKICONNECT_BIND_ADDRESS=0.0.0.0 txgio/anki-connect
   - sleep 5
-  - python -m unittest discover -v
+  - python -m unittest discover -s tests
