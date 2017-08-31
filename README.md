@@ -15,7 +15,7 @@ The installation process is similar to that of other Anki plugins and can be acc
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message *AnkiConnect v.3* displayed in your browser window.
+the server is running, you should see the message *AnkiConnect v.5* displayed in your browser window.
 
 ### Notes for Windows Users ###
 
@@ -45,15 +45,18 @@ AnkiConnect exposes Anki features to external applications via an easy to use
 initialize a minimal HTTP sever running on port 8765 every time Anki executes. Other applications (including browser
 extensions) can then communicate with it via HTTP POST requests.
 
-By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1.` IP Address, so you will only be able to access it from the same host on which it is running. If you need to access it over a network, you can set the environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0` to bind it to all network interfaces on your host. 
+By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1` IP address, so that you will only be able to
+access it from the same host on which it is running. If you need to access it over a network, you can set the
+environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0`
+in order to bind it to all network interfaces on your host.
 
 ### Sample Invocation ###
 
-Every request consists of a JSON-encoded object containing an *action*, and a set of contextual *parameters*. A simple
-example of a JavaScript application communicating with the extension is illustrated below:
+Every request consists of a JSON-encoded object containing an `action`, a `version`, and a set of contextual `params`. A
+simple example of a modern JavaScript application communicating with the extension is illustrated below:
 
 ```JavaScript
-function ankiInvoke(action, params={}) {
+function ankiInvoke(action, version, params={}) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.addEventListener('loadend', () => {
@@ -65,42 +68,52 @@ function ankiInvoke(action, params={}) {
         });
 
         xhr.open('POST', 'http://127.0.0.1:8765');
-        xhr.send(JSON.stringify({action, params}));
+        xhr.send(JSON.stringify({action, version, params}));
     });
 }
 
-ankiInvoke('version').then(response => {
-    window.alert(`detected API version: ${response}`);
-}).catch(error => {
-    window.alert(`could not get API version: ${error}`);
-});
+try {
+    const response = await ankiInvoke('deckNames', 5);
+    window.alert(`detected decks: ${response.result}`);
+} catch (e) {
+    window.alert(`error getting decks: ${response.error}`);
+}
 ```
 
-Or using [`curl`](https://curl.haxx.se):
+Or using [`curl`](https://curl.haxx.se) from the command line:
 
 ```
-curl localhost:8765 -X POST -d '{"action": "version"}'
+curl localhost:8765 -X POST -d '{"action": "deckNames", "version": 5}'
 ```
+
+AnkiConnect will respond with an object containing two fields: `result` and `error`. The `result` field contains the
+return value of the executed API, and the `error` field is a description of any exception thrown during API execution
+(the value `null` is used if execution completed successfully).
+
+*Sample successful response*:
+```
+{"result": ["Default", "Filtered Deck 1"], "error": null}
+```
+
+*Samples of failed responses*:
+```
+{"result": null, "error": "unsupported action"}
+```
+```
+{"result": null, "error": "guiBrowse() got an unexpected keyword argument 'foobar'"}
+```
+
+For compatibility with clients designed to work with older versions of AnkiConnect, failing to provide a `version` field
+in the request will make the version default to 4. Furthermore, when the provided version is level 4 or below, the API
+response will only contain the value of the `result`; no `error` field is available for error handling.
 
 ### Supported Actions ###
 
-Below is a list of currently supported actions. Requests with invalid actions or parameters will a return `null` result.
+Below is a comprehensive list of currently supported actions. Note that deprecated APIs will continue to function
+despite not being listed on this page as long as your request is labeled with a version number corresponding to when the
+API was available for use.
 
-Categories:
-
-* [Miscellaneous](#miscellaneous)
-* [Decks](#decks)
-* [Deck Configurations](#deck-configurations)
-* [Models](#models)
-* [Note Creation](#note-creation)
-* [Note Tags](#note-tags)
-* [Card Suspension](#card-suspension)
-* [Card Intervals](#card-intervals)
-* [Finding Notes and Cards](#finding-notes-and-cards)
-* [Media File Storage](#media-file-storage)
-* [Graphical](#graphical)
-
-### Miscellaneous ###
+#### Miscellaneous ####
 
 *   **version**
 
@@ -117,7 +130,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     4
     ```
@@ -135,7 +148,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -160,7 +173,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         ["Default"],
@@ -168,7 +181,7 @@ Categories:
     ]
     ```
 
-### Decks ###
+#### Decks ####
 
 *   **deckNames**
 
@@ -181,7 +194,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         "Default"
@@ -199,7 +212,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "Default": 1
@@ -221,7 +234,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "Default": [1502032366472],
@@ -244,7 +257,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
@@ -265,12 +278,12 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
 
-### Deck Configurations ###
+#### Deck Configurations ####
 
 *   **getDeckConfig**
 
@@ -286,7 +299,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "lapse": {
@@ -341,7 +354,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -362,7 +375,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -384,7 +397,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     1502972374573
     ```
@@ -404,12 +417,12 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
 
-### Models ###
+#### Models ####
 
 *   **modelNames**
 
@@ -422,7 +435,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         "Basic",
@@ -441,7 +454,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "Basic": 1483883011648
@@ -465,7 +478,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         "Front",
@@ -488,7 +501,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "Card 1": [
@@ -502,7 +515,7 @@ Categories:
     }
     ```
 
-### Note Creation ###
+#### Note Creation ####
 
 *   **addNote**
 
@@ -539,7 +552,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     1496198395707
     ```
@@ -577,7 +590,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         1496198395707,
@@ -612,14 +625,14 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         true
     ]
     ```
 
-### Note Tags ###
+#### Note Tags ####
 
 *   **addTags**
 
@@ -636,7 +649,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
@@ -656,12 +669,12 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
 
-### Card Suspension ###
+#### Card Suspension ####
 
 *   **suspend**
 
@@ -678,7 +691,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -698,7 +711,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -717,12 +730,12 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [false, true]
     ```
 
-### Card Intervals ###
+#### Card Intervals ####
 
 *   **areDue**
 
@@ -740,7 +753,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [false, true]
     ```
@@ -760,7 +773,7 @@ Categories:
     }
     ```
 
-    *Sample response 1*:
+    *Sample result 1*:
     ```
     [-14400, 3]
     ```
@@ -776,7 +789,7 @@ Categories:
     }
     ```
 
-    *Sample response 2*:
+    *Sample result 2*:
     ```
     [
         [-120, -180, -240, -300, -360, -14400],
@@ -784,7 +797,7 @@ Categories:
     ]
     ```
 
-### Finding Notes and Cards ###
+#### Finding Notes and Cards ####
 
 *   **findNotes**
 
@@ -800,7 +813,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         1483959289817,
@@ -823,7 +836,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         1494723142483,
@@ -847,7 +860,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         1502098029797,
@@ -855,7 +868,7 @@ Categories:
     ]
     ```
 
-### Media File Storage ###
+#### Media File Storage ####
 
 *   **storeMediaFile**
 
@@ -875,7 +888,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
@@ -899,7 +912,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     "SGVsbG8sIHdvcmxkIQ=="
     ```
@@ -918,12 +931,12 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
 
-### Graphical ###
+#### Graphical ####
 
 *   **guiBrowse**
 
@@ -939,7 +952,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     [
         1494723142483,
@@ -959,7 +972,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
@@ -975,7 +988,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     {
         "answer": "back content",
@@ -1009,7 +1022,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -1025,7 +1038,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -1041,7 +1054,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -1061,7 +1074,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -1080,7 +1093,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
@@ -1096,7 +1109,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
@@ -1115,10 +1128,11 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     true
     ```
+
 *   **guiExitAnki**
 
     Schedules a request to close Anki after 1s. This operation is asynchronous, so it will return immediately and won't wait until Anki actually exits.
@@ -1130,7 +1144,7 @@ Categories:
     }
     ```
 
-    *Sample response*:
+    *Sample result*:
     ```
     null
     ```
