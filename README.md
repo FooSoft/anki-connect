@@ -113,11 +113,14 @@ Below is a comprehensive list of currently supported actions. Note that deprecat
 despite not being listed on this page as long as your request is labeled with a version number corresponding to when the
 API was available for use.
 
+This page currently documents **version 5** of the API. Make sure to include this version number in your requests to
+guarantee that your application continues to function properly in the future.
+
 #### Miscellaneous ####
 
 *   **version**
 
-    Gets the version of the API exposed by this plugin. Currently versions `1` through `4` are defined.
+    Gets the version of the API exposed by this plugin. Currently versions `1` through `5` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
@@ -132,7 +135,7 @@ API was available for use.
 
     *Sample result*:
     ```
-    4
+    5
     ```
 
 *   **upgrade**
