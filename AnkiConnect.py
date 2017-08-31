@@ -35,7 +35,7 @@ from unicodedata import normalize
 # Constants
 #
 
-API_VERSION = 4
+API_VERSION = 5
 TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
@@ -68,19 +68,13 @@ else:
 # Helpers
 #
 
-def webapi(*versions):
+def webApi(*versions):
     def decorator(func):
-        def method(*args, **kwargs):
-            return func(*args, **kwargs)
+        method = lambda *args, **kwargs: func(*args, **kwargs)
         setattr(method, 'versions', versions)
         setattr(method, 'api', True)
         return method
     return decorator
-
-
-def webApi(func):
-    func.webApi = True
-    return func
 
 
 def makeBytes(data):
@@ -896,130 +890,127 @@ class AnkiConnect:
 
 
     def handler(self, request):
-        action = request.get('action', '')
-        if hasattr(self, action):
-            handler = getattr(self, action)
-            if callable(handler) and hasattr(handler, 'webApi') and getattr(handler, 'webApi'):
-                spec = inspect.getargspec(handler)
-                argsAll = spec.args[1:]
-                argsReq = argsAll
+        name = request.get('action', '')
+        version = request.get('version', 4)
+        params = request.get('params', {})
+        reply = {'result': None, 'error': None}
 
-                argsDef = spec.defaults
-                if argsDef is not None:
-                    argsReq = argsAll[:-len(argsDef)]
+        try:
+            method = None
 
-                params = request.get('params', {})
-                for argReq in argsReq:
-                    if argReq not in params:
-                        return
-                for param in params:
-                    if param not in argsAll:
-                        return
+            for methodName, methodInst in inspect.getmembers(self, predicate=inspect.ismethod):
+                apiVersionLast = 0
+                apiNameLast = None
 
-                return handler(**params)
+                if getattr(methodInst, 'api', False):
+                    for apiVersion, apiName in getattr(methodInst, 'versions', []):
+                        if apiVersionLast < apiVersion <= version:
+                            apiVersionLast = apiVersion
+                            apiNameLast = apiName
 
+                    if apiNameLast is None and apiVersionLast == 0:
+                        apiNameLast = methodName
 
-    def invoke(self, version, name, *args, **kwargs):
-        for method_name, method_body in inspect.getmembers(self, predicate=inspect.ismethod):
-            api_version_last = 0
-            api_name_last = None
+                    if apiNameLast is not None and apiNameLast == name:
+                        method = methodInst
+                        break
 
-            if getattr(method_body, 'api', False):
-                for api_version, api_name in getattr(method_body, 'versions', []):
-                    if api_version_last < api_version <= version:
-                        api_version_last = api_version
-                        api_name_last = api_name
+            if method is None:
+                raise Exception('unsupported action')
+            else:
+                reply['result'] = methodInst(**params)
+        except Exception as e:
+            reply['error'] = str(e)
 
-                if api_name_last is None and api_version_last == 0:
-                    api_name_last = method_name
-
-                if api_name_last is not None and api_name_last == name:
-                    method_body(*args, **kwargs)
+        if version > 4:
+            return reply
+        else:
+            return reply['result']
 
 
-    @webApi
+    @webApi()
     def multi(self, actions):
         return self.anki.multi(actions)
 
 
-    @webApi
+    @webApi()
     def storeMediaFile(self, filename, data):
         return self.anki.storeMediaFile(filename, data)
 
 
-    @webApi
+    @webApi()
     def retrieveMediaFile(self, filename):
         return self.anki.retrieveMediaFile(filename)
 
 
-    @webApi
+    @webApi()
     def deleteMediaFile(self, filename):
         return self.anki.deleteMediaFile(filename)
 
 
-    @webApi
+    @webApi()
     def deckNames(self):
         return self.anki.deckNames()
 
 
-    @webApi
+    @webApi()
     def deckNamesAndIds(self):
         return self.anki.deckNamesAndIds()
 
 
-    @webApi
+    @webApi()
     def modelNames(self):
         return self.anki.modelNames()
 
 
-    @webApi
+    @webApi()
     def modelNamesAndIds(self):
         return self.anki.modelNamesAndIds()
 
 
-    @webApi
+    @webApi()
     def modelFieldNames(self, modelName):
         return self.anki.modelFieldNames(modelName)
 
 
-    @webApi
+    @webApi()
     def modelFieldsOnTemplates(self, modelName):
         return self.anki.modelFieldsOnTemplates(modelName)
 
 
-    @webApi
+    @webApi()
     def getDeckConfig(self, deck):
         return self.anki.getDeckConfig(deck)
 
 
-    @webApi
+    @webApi()
     def saveDeckConfig(self, config):
         return self.anki.saveDeckConfig(config)
 
 
-    @webApi
+    @webApi()
     def setDeckConfigId(self, decks, configId):
         return self.anki.setDeckConfigId(decks, configId)
 
 
-    @webApi
+    @webApi()
     def cloneDeckConfigId(self, name, cloneFrom=1):
         return self.anki.cloneDeckConfigId(name, cloneFrom)
 
 
-    @webApi
+    @webApi()
     def removeDeckConfigId(self, configId):
         return self.anki.removeDeckConfigId(configId)
 
 
-    @webApi
+    @webApi()
     def addNote(self, note):
         params = AnkiNoteParams(note)
         if params.validate():
             return self.anki.addNote(params)
 
 
-    @webApi
+    @webApi()
     def addNotes(self, notes):
         results = []
         for note in notes:
@@ -1032,7 +1023,7 @@ class AnkiConnect:
         return results
 
 
-    @webApi
+    @webApi()
     def canAddNotes(self, notes):
         results = []
         for note in notes:
@@ -1042,42 +1033,42 @@ class AnkiConnect:
         return results
 
 
-    @webApi
+    @webApi()
     def addTags(self, notes, tags, add=True):
         return self.anki.addTags(notes, tags, add)
 
 
-    @webApi
+    @webApi()
     def removeTags(self, notes, tags):
         return self.anki.addTags(notes, tags, False)
 
 
-    @webApi
+    @webApi()
     def suspend(self, cards, suspend=True):
         return self.anki.suspend(cards, suspend)
 
 
-    @webApi
+    @webApi()
     def unsuspend(self, cards):
         return self.anki.suspend(cards, False)
 
 
-    @webApi
+    @webApi()
     def areSuspended(self, cards):
         return self.anki.areSuspended(cards)
 
 
-    @webApi
+    @webApi()
     def areDue(self, cards):
         return self.anki.areDue(cards)
 
 
-    @webApi
+    @webApi()
     def getIntervals(self, cards, complete=False):
         return self.anki.getIntervals(cards, complete)
 
 
-    @webApi
+    @webApi()
     def upgrade(self):
         response = QMessageBox.question(
             self.anki.window(),
@@ -1100,91 +1091,92 @@ class AnkiConnect:
         return False
 
 
-    @webApi
+    @webApi()
     def version(self):
         return API_VERSION
 
 
-    @webApi
+    @webApi()
     def findNotes(self, query=None):
         return self.anki.findNotes(query)
 
 
-    @webApi
+    @webApi()
     def findCards(self, query=None):
         return self.anki.findCards(query)
 
 
-    @webApi
+    @webApi()
     def getDecks(self, cards):
         return self.anki.getDecks(cards)
 
 
-    @webApi
+    @webApi()
     def changeDeck(self, cards, deck):
         return self.anki.changeDeck(cards, deck)
 
 
-    @webApi
+    @webApi()
     def deleteDecks(self, decks, cardsToo=False):
         return self.anki.deleteDecks(decks, cardsToo)
 
 
-    @webApi
+    @webApi()
     def cardsToNotes(self, cards):
         return self.anki.cardsToNotes(cards)
 
 
-    @webApi
+    @webApi()
     def guiBrowse(self, query=None):
         return self.anki.guiBrowse(query)
 
 
-    @webApi
+    @webApi()
     def guiAddCards(self):
         return self.anki.guiAddCards()
 
 
-    @webApi
+    @webApi()
     def guiCurrentCard(self):
         return self.anki.guiCurrentCard()
 
 
-    @webApi
+    @webApi()
     def guiStartCardTimer(self):
         return self.anki.guiStartCardTimer()
 
 
-    @webApi
+    @webApi()
     def guiAnswerCard(self, ease):
         return self.anki.guiAnswerCard(ease)
 
 
-    @webApi
+    @webApi()
     def guiShowQuestion(self):
         return self.anki.guiShowQuestion()
 
 
-    @webApi
+    @webApi()
     def guiShowAnswer(self):
         return self.anki.guiShowAnswer()
 
 
-    @webApi
+    @webApi()
     def guiDeckOverview(self, name):
         return self.anki.guiDeckOverview(name)
 
 
-    @webApi
+    @webApi()
     def guiDeckBrowser(self):
         return self.anki.guiDeckBrowser()
 
 
-    @webApi
+    @webApi()
     def guiDeckReview(self, name):
         return self.anki.guiDeckReview(name)
 
-    @webApi
+
+    @webApi()
     def guiExitAnki(self):
         return self.anki.guiExitAnki()
 
