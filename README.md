@@ -56,14 +56,24 @@ Every request consists of a JSON-encoded object containing an `action`, a `versi
 simple example of a modern JavaScript application communicating with the extension is illustrated below:
 
 ```JavaScript
-function ankiInvoke(action, version, params={}) {
+function ankiConnectInvoke(action, version, params={}) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.addEventListener('loadend', () => {
-            if (xhr.responseText) {
-                resolve(JSON.parse(xhr.responseText));
-            } else {
-                reject('unable to connect to plugin');
+        xhr.addEventListener('error', () => reject('failed to connect to AnkiConnect'));
+        xhr.addEventListener('load', () => {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.error) {
+                    throw response.error;
+                } else {
+                    if (response.hasOwnProperty('result')) {
+                        resolve(response.result);
+                    } else {
+                        reject('failed to get results from AnkiConnect');
+                    }
+                }
+            } catch (e) {
+                reject(e);
             }
         });
 
@@ -73,10 +83,10 @@ function ankiInvoke(action, version, params={}) {
 }
 
 try {
-    const response = await ankiInvoke('deckNames', 5);
-    window.alert(`detected decks: ${response.result}`);
+    const result = await ankiConnectInvoke('deckNames', 5);
+    console.log(`got list of decks: ${result}`);
 } catch (e) {
-    window.alert(`error getting decks: ${response.error}`);
+    console.log(`error getting decks: ${e}`);
 }
 ```
 
@@ -528,7 +538,8 @@ guarantee that your application continues to function properly in the future.
     AnkiConnect can download audio files and embed them in newly created notes. The corresponding *audio* note member is
     optional and can be omitted. If you choose to include it, the *url* and *filename* fields must be also defined. The
     *skipHash* field can be optionally provided to skip the inclusion of downloaded files with an MD5 hash that matches
-    the provided value. This is useful for avoiding the saving of error pages and stub files.
+    the provided value. This is useful for avoiding the saving of error pages and stub files. The *fields* member is a
+    list of fields that should play audio when the card is displayed in Anki.
 
     *Sample request*:
     ```
@@ -540,15 +551,16 @@ guarantee that your application continues to function properly in the future.
                 "modelName": "Basic",
                 "fields": {
                     "Front": "front content",
-                    "Back": "back content",
+                    "Back": "back content"
                 },
                 "tags": [
-                    "yomichan",
+                    "yomichan"
                 ],
                 "audio": {
                     "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
                     "filename": "yomichan_ねこ_猫.mp3",
-                    "skipHash": "7e2c2f954ef6051373ba916f000168dc"
+                    "skipHash": "7e2c2f954ef6051373ba916f000168dc",
+                    "fields": "Front"
                 }
             }
         }
@@ -585,7 +597,8 @@ guarantee that your application continues to function properly in the future.
                     "audio": {
                         "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
                         "filename": "yomichan_ねこ_猫.mp3",
-                        "skipHash": "7e2c2f954ef6051373ba916f000168dc"
+                        "skipHash": "7e2c2f954ef6051373ba916f000168dc",
+                        "fields": "Front"
                     }
                 }
             ]
