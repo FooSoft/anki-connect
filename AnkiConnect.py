@@ -268,7 +268,7 @@ class AjaxServer:
                 params = json.loads(makeStr(req.body))
                 body = makeBytes(json.dumps(self.handler(params)))
             except ValueError:
-                body = json.dumps(None);
+                body = makeBytes(json.dumps(None))
 
         resp = bytes()
 
