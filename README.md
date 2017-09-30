@@ -55,7 +55,7 @@ in order to bind it to all network interfaces on your host.
 Every request consists of a JSON-encoded object containing an `action`, a `version`, and a set of contextual `params`. A
 simple example of a modern JavaScript application communicating with the extension is illustrated below:
 
-```JavaScript
+```javascript
 function ankiConnectInvoke(action, version, params={}) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -92,7 +92,7 @@ try {
 
 Or using [`curl`](https://curl.haxx.se) from the command line:
 
-```
+```bash
 curl localhost:8765 -X POST -d '{"action": "deckNames", "version": 5}'
 ```
 
@@ -101,15 +101,15 @@ return value of the executed API, and the `error` field is a description of any 
 (the value `null` is used if execution completed successfully).
 
 *Sample successful response*:
-```
+```json
 {"result": ["Default", "Filtered Deck 1"], "error": null}
 ```
 
 *Samples of failed responses*:
-```
+```json
 {"result": null, "error": "unsupported action"}
 ```
-```
+```json
 {"result": null, "error": "guiBrowse() got an unexpected keyword argument 'foobar'"}
 ```
 
@@ -137,14 +137,14 @@ guarantee that your application continues to function properly in the future.
     which are available in the reported AnkiConnect version or earlier, everything should work fine.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "version"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     5
     ```
 
@@ -155,14 +155,14 @@ guarantee that your application continues to function properly in the future.
     GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "upgrade"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -171,7 +171,7 @@ guarantee that your application continues to function properly in the future.
     Performs multiple actions in one request, returning an array with the response of each action (in the given order).
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "multi",
         "params": {
@@ -187,7 +187,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         ["Default"],
         [1494723142483, 1494703460437, 1494703479525]
@@ -201,14 +201,14 @@ guarantee that your application continues to function properly in the future.
     Gets the complete list of deck names for the current user.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "deckNames"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         "Default"
     ]
@@ -219,14 +219,14 @@ guarantee that your application continues to function properly in the future.
     Gets the complete list of deck names and their respective IDs for the current user.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "deckNamesAndIds"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
         "Default": 1
     }
@@ -238,7 +238,7 @@ guarantee that your application continues to function properly in the future.
     cards which belong to it.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "getDecks",
         "params": {
@@ -248,7 +248,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
         "Default": [1502032366472],
         "Japanese::JLPT N3": [1502298036657, 1502298033753]
@@ -260,7 +260,7 @@ guarantee that your application continues to function properly in the future.
     Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "changeDeck",
         "params": {
@@ -271,7 +271,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -281,7 +281,7 @@ guarantee that your application continues to function properly in the future.
     the deleted decks will also be deleted; otherwise they will be moved to the default deck.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "deleteDecks",
         "params": {
@@ -292,7 +292,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -303,7 +303,7 @@ guarantee that your application continues to function properly in the future.
     Gets the config group object for the given deck.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "getDeckConfig",
         "params": {
@@ -313,7 +313,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
         "lapse": {
             "leechFails": 8,
@@ -358,7 +358,7 @@ guarantee that your application continues to function properly in the future.
     it does not exist).
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "saveDeckConfig",
         "params": {
@@ -368,7 +368,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -378,7 +378,7 @@ guarantee that your application continues to function properly in the future.
     `false` if the given configuration group or any of the given decks do not exist.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "setDeckConfigId",
         "params": {
@@ -389,7 +389,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -400,7 +400,7 @@ guarantee that your application continues to function properly in the future.
     not exist.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "cloneDeckConfigId",
         "params": {
@@ -411,7 +411,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     1502972374573
     ```
 
@@ -421,7 +421,7 @@ guarantee that your application continues to function properly in the future.
     either the default config group (ID = 1) or a config group that does not exist.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "removeDeckConfigId",
         "params": {
@@ -431,7 +431,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -442,14 +442,14 @@ guarantee that your application continues to function properly in the future.
     Gets the complete list of model names for the current user.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "modelNames"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         "Basic",
         "Basic (and reversed card)"
@@ -461,18 +461,18 @@ guarantee that your application continues to function properly in the future.
     Gets the complete list of model names and their corresponding IDs for the current user.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "modelNamesAndIds"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
-        "Basic": 1483883011648
-        "Basic (and reversed card)": 1483883011644
-        "Basic (optional reversed card)": 1483883011631
+        "Basic": 1483883011648,
+        "Basic (and reversed card)": 1483883011644,
+        "Basic (optional reversed card)": 1483883011631,
         "Cloze": 1483883011630
     }
     ```
@@ -482,7 +482,7 @@ guarantee that your application continues to function properly in the future.
     Gets the complete list of field names for the provided model name.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "modelFieldNames",
         "params": {
@@ -492,7 +492,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         "Front",
         "Back"
@@ -505,7 +505,7 @@ guarantee that your application continues to function properly in the future.
     name. The question side is given first in each array.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "modelFieldsOnTemplates",
         "params": {
@@ -515,7 +515,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
         "Card 1": [
             ["Front"],
@@ -542,7 +542,7 @@ guarantee that your application continues to function properly in the future.
     list of fields that should play audio when the card is displayed in Anki.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "addNote",
         "params": {
@@ -568,7 +568,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     1496198395707
     ```
 
@@ -579,7 +579,7 @@ guarantee that your application continues to function properly in the future.
     documentation for `addNote` for an explanation of objects in the `notes` array.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "addNotes",
         "params": {
@@ -607,7 +607,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         1496198395707,
         null
@@ -620,7 +620,7 @@ guarantee that your application continues to function properly in the future.
     booleans indicating whether or not the parameters at the corresponding index could be used to create a new note.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "canAddNotes",
         "params": {
@@ -642,7 +642,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         true
     ]
@@ -655,7 +655,7 @@ guarantee that your application continues to function properly in the future.
     Adds tags to notes by note ID.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "addTags",
         "params": {
@@ -666,7 +666,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -675,7 +675,7 @@ guarantee that your application continues to function properly in the future.
     Remove tags from notes by note ID.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "removeTags",
         "params": {
@@ -686,7 +686,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -698,7 +698,7 @@ guarantee that your application continues to function properly in the future.
     otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "suspend",
         "params": {
@@ -708,7 +708,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -718,7 +718,7 @@ guarantee that your application continues to function properly in the future.
     otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "unsuspend",
         "params": {
@@ -728,7 +728,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -737,7 +737,7 @@ guarantee that your application continues to function properly in the future.
     Returns an array indicating whether each of the given cards is suspended (in the same order).
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "areSuspended",
         "params": {
@@ -747,7 +747,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [false, true]
     ```
 
@@ -760,7 +760,7 @@ guarantee that your application continues to function properly in the future.
     match the way Anki treats them when reviewing.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "areDue",
         "params": {
@@ -770,7 +770,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [false, true]
     ```
 
@@ -780,7 +780,7 @@ guarantee that your application continues to function properly in the future.
     for each given card ID when `complete` is `true`. (Negative intervals are in seconds and positive intervals in days.)
 
     *Sample request 1*:
-    ```
+    ```json
     {
         "action": "getIntervals",
         "params": {
@@ -790,12 +790,12 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result 1*:
-    ```
+    ```json
     [-14400, 3]
     ```
 
     *Sample request 2*:
-    ```
+    ```json
     {
         "action": "getIntervals",
         "params": {
@@ -806,7 +806,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result 2*:
-    ```
+    ```json
     [
         [-120, -180, -240, -300, -360, -14400],
         [-120, -180, -240, -300, -360, -14400, 1, 3]
@@ -820,7 +820,7 @@ guarantee that your application continues to function properly in the future.
     Returns an array of note IDs for a given query (same query syntax as **guiBrowse**).
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "findNotes",
         "params": {
@@ -830,7 +830,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         1483959289817,
         1483959291695
@@ -843,7 +843,7 @@ guarantee that your application continues to function properly in the future.
     for better performance).
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "findCards",
         "params": {
@@ -853,7 +853,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         1494723142483,
         1494703460437,
@@ -867,7 +867,7 @@ guarantee that your application continues to function properly in the future.
     given once in the array.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "cardsToNotes",
         "params": {
@@ -877,7 +877,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         1502098029797,
         1502298025183
@@ -894,7 +894,7 @@ guarantee that your application continues to function properly in the future.
     with an underscore. These files are still synchronized to AnkiWeb.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "storeMediaFile",
         "params": {
@@ -905,7 +905,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -919,7 +919,7 @@ guarantee that your application continues to function properly in the future.
     Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "retrieveMediaFile",
         "params": {
@@ -929,7 +929,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     "SGVsbG8sIHdvcmxkIQ=="
     ```
 
@@ -938,7 +938,7 @@ guarantee that your application continues to function properly in the future.
     Deletes the specified file inside the media folder.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "deleteMediaFile",
         "params": {
@@ -948,7 +948,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -959,7 +959,7 @@ guarantee that your application continues to function properly in the future.
     Invokes the card browser and searches for a given query. Returns an array of identifiers of the cards that were found.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiBrowse",
         "params": {
@@ -969,7 +969,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     [
         1494723142483,
         1494703460437,
@@ -982,14 +982,14 @@ guarantee that your application continues to function properly in the future.
     Invokes the AddCards dialog.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiAddCards"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -998,14 +998,14 @@ guarantee that your application continues to function properly in the future.
     Returns information about the current card or `null` if not in review mode.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiCurrentCard"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     {
         "answer": "back content",
         "question": "front content",
@@ -1032,14 +1032,14 @@ guarantee that your application continues to function properly in the future.
     Starts or resets the 'timerStarted' value for the current card. This is useful for deferring the start time to when it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling guiAnswerCard.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiStartCardTimer"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1048,14 +1048,14 @@ guarantee that your application continues to function properly in the future.
     Shows question text for the current card; returns `true` if in review mode or `false` otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiShowQuestion"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1064,14 +1064,14 @@ guarantee that your application continues to function properly in the future.
     Shows answer text for the current card; returns `true` if in review mode or `false` otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiShowAnswer"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1081,7 +1081,7 @@ guarantee that your application continues to function properly in the future.
     card must be displayed before before any answer can be accepted by Anki.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiAnswerCard",
         "params": {
@@ -1091,7 +1091,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1100,7 +1100,7 @@ guarantee that your application continues to function properly in the future.
     Opens the Deck Overview screen for the deck with the given name; returns `true` if succeeded or `false` otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiDeckOverview",
 		"params": {
@@ -1110,7 +1110,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1119,14 +1119,14 @@ guarantee that your application continues to function properly in the future.
     Opens the Deck Browser screen.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiDeckBrowser"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
@@ -1135,7 +1135,7 @@ guarantee that your application continues to function properly in the future.
     Starts review for the deck with the given name; returns `true` if succeeded or `false` otherwise.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiDeckReview",
 		"params": {
@@ -1145,7 +1145,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
     *Sample result*:
-    ```
+    ```json
     true
     ```
 
@@ -1154,14 +1154,14 @@ guarantee that your application continues to function properly in the future.
     Schedules a request to close Anki after 1s. This operation is asynchronous, so it will return immediately and won't wait until Anki actually exits.
 
     *Sample request*:
-    ```
+    ```json
     {
         "action": "guiExitAnki"
     }
     ```
 
     *Sample result*:
-    ```
+    ```json
     null
     ```
 
