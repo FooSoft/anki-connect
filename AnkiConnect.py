@@ -785,7 +785,8 @@ class AnkiBridge:
                 'answer': card._getQA()['a'],
                 'buttons': [b[0] for b in reviewer._answerButtonList()],
                 'modelName': model['name'],
-                'deckName': self.deckNameFromId(card.did)
+                'deckName': self.deckNameFromId(card.did),
+                'css': model['css']
             }
 
 
