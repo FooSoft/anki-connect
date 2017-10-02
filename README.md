@@ -5,6 +5,27 @@ The AnkiConnect plugin enables external applications such as [Yomichan](https://
 the user's card deck, automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible
 with the latest stable (2.0.x) and alpha (2.1.x) releases of Anki and works on Linux, Windows, and Mac OS X.
 
+## Table of Contents ##
+
+* [Installation](https://foosoft.net/projects/anki-connect/#installation)
+    *   [Notes for Windows Users](https://foosoft.net/projects/anki-connect/#notes-for-windows-users)
+    *   [Notes for Mac OS X Users](https://foosoft.net/projects/anki-connect/#notes-for-mac-os-x-users)
+* [Application Interface for Developers](https://foosoft.net/projects/anki-connect/#application-interface-for-developers)
+    *   [Sample Invocation](https://foosoft.net/projects/anki-connect/#sample-invocation)
+    *   [Supported Actions](https://foosoft.net/projects/anki-connect/#supported-actions)
+        *   [Miscellaneous](https://foosoft.net/projects/anki-connect/#miscellaneous)
+        *   [Decks](https://foosoft.net/projects/anki-connect/#decks)
+        *   [Deck Configurations](https://foosoft.net/projects/anki-connect/#deck-configurations)
+        *   [Models](https://foosoft.net/projects/anki-connect/#models)
+        *   [Note Creation](https://foosoft.net/projects/anki-connect/#note-creation)
+        *   [Note Tags](https://foosoft.net/projects/anki-connect/#note-tags)
+        *   [Card Suspension](https://foosoft.net/projects/anki-connect/#card-suspension)
+        *   [Card Intervals](https://foosoft.net/projects/anki-connect/#card-intervals)
+        *   [Finding Notes and Cards](https://foosoft.net/projects/anki-connect/#finding-notes-and-cards)
+        *   [Media File Storage](https://foosoft.net/projects/anki-connect/#media-file-storage)
+        *   [Graphical](https://foosoft.net/projects/anki-connect/#graphical)
+* [License](https://foosoft.net/projects/anki-connect/#license)
+
 ## Installation ##
 
 The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
