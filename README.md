@@ -114,7 +114,7 @@ try {
 Or using [`curl`](https://curl.haxx.se) from the command line:
 
 ```bash
-curl localhost:8765 -X POST -d '{"action": "deckNames", "version": 5}'
+curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 5}"
 ```
 
 AnkiConnect will respond with an object containing two fields: `result` and `error`. The `result` field contains the
