@@ -217,7 +217,8 @@ class AjaxServer:
     def resetHeaders(self):
         self.headers = [
             ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json']
+            ['Content-Type', 'text/json'],
+            ['Access-Control-Allow-Origin', '*']
         ]
         self.extraHeaders = {}
 
