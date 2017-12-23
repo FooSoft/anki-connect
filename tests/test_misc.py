@@ -7,4 +7,4 @@ class TestVersion(TestCase):
 
     def test_version(self):
         response = callAnkiConnectEndpoint({'action': 'version'})
-        self.assertEqual(4, response)
+        self.assertEqual(5, response)
