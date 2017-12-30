@@ -217,7 +217,8 @@ class AjaxServer:
     def resetHeaders(self):
         self.headers = [
             ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json']
+            ['Content-Type', 'text/json'],
+            ['Access-Control-Allow-Origin', '*']
         ]
         self.extraHeaders = {}
 
@@ -268,7 +269,7 @@ class AjaxServer:
                 params = json.loads(makeStr(req.body))
                 body = makeBytes(json.dumps(self.handler(params)))
             except ValueError:
-                body = json.dumps(None);
+                body = makeBytes(json.dumps(None))
 
         resp = bytes()
 
@@ -785,7 +786,8 @@ class AnkiBridge:
                 'answer': card._getQA()['a'],
                 'buttons': [b[0] for b in reviewer._answerButtonList()],
                 'modelName': model['name'],
-                'deckName': self.deckNameFromId(card.did)
+                'deckName': self.deckNameFromId(card.did),
+                'css': model['css']
             }
 
 
