@@ -424,6 +424,18 @@ class AnkiBridge:
         if not note.dupeOrEmpty():
             return note
 
+    def updateNoteFields(self, params):
+        collection = self.collection()
+        if collection is None:
+            return
+
+        note = collection.getNote(params['id'])
+        if note is None:
+            raise Exception("Failed to get note:{}".format(params['id']))
+        for name, value in params['fields'].items():
+            if name in note:
+                note[name] = value
+        note.flush()
 
     def addTags(self, notes, tags, add=True):
         self.startEditing()
@@ -1023,6 +1035,9 @@ class AnkiConnect:
 
         return results
 
+    @webApi()
+    def updateNoteFields(self, note):
+        return self.anki.updateNoteFields(note)
 
     @webApi()
     def canAddNotes(self, notes):
