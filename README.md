@@ -763,6 +763,38 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+#### Note Modification ####
+
+*   **updateNoteFields**
+
+    Modify the fields of an exist note.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateNoteFields",
+        "version": 5,
+        "params": {
+            "note": {
+                "id": 1514547547030,
+                "fields": {
+                    "Front": "new front content",
+                    "Back": "new back content"
+                },
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+
 #### Note Tags ####
 
 *   **addTags**
