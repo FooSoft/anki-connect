@@ -29,6 +29,7 @@ import socket
 import sys
 from time import time
 from unicodedata import normalize
+from operator import itemgetter
 
 
 #
@@ -706,6 +707,80 @@ class AnkiBridge:
         else:
             return []
 
+    def cardsInfo(self,cards):
+        result = []
+        for cid in cards:
+            try:
+                card = self.collection().getCard(cid)
+                model = card.model()
+                note = card.note()
+                fields = {}
+                for info in model['flds']:
+                    order = info['ord']
+                    name = info['name']
+                    fields[name] = note.fields[order]
+            
+                result.append({
+                    'cardId': card.id,
+                    'fields': fields,
+                    'fieldOrder': card.ord,
+                    'question': card._getQA()['q'],
+                    'answer': card._getQA()['a'],
+                    'modelName': model['name'],
+                    'deckName': self.deckNameFromId(card.did),
+                    'css': model['css'],
+                    'factor': card.factor, 
+                    #This factor is 10 times the ease percentage, 
+                    # so an ease of 310% would be reported as 3100
+                    'interval': card.ivl,
+                    'type': card.type, 
+                    #new = 0, learning = 1, review = 2
+                    'queue': card.queue,
+                    # same as type, plus:
+                    # suspended = -1, user buried = -2, sched buried = -3
+                    'due': card.due,
+                    # does different things depending on queue,
+                    # new: position in queue
+                    # learning: integer timestamp
+                    # review: integer days (since first review)
+                    'note': card.nid
+                })
+            except TypeError as e:
+                # Anki will give a TypeError if the card ID does not exist.
+                # Best behavior is probably to add an "empty card" to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
+
+        return result
+
+    def notesInfo(self,notes):
+        result = []
+        for nid in notes:
+            try:
+                note = self.collection().getNote(nid)
+                model = note.model()
+
+                fields = {}
+                for info in model['flds']:
+                    order = info['ord']
+                    name = info['name']
+                    fields[name] = note.fields[order]
+            
+                result.append({
+                    'noteId': note.id,
+                    'tags' : note.tags,
+                    'fields': fields,
+                    'modelName': model['name'],
+                })
+            except TypeError as e:
+                # Anki will give a TypeError if the note ID does not exist.
+                # Best behavior is probably to add an "empty card" to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
+        return result
+
 
     def getDecks(self, cards):
         decks = {}
@@ -1196,6 +1271,13 @@ class AnkiConnect:
     def guiExitAnki(self):
         return self.anki.guiExitAnki()
 
+    @webApi()
+    def cardsInfo(self, cards):
+        return self.anki.cardsInfo(cards)
+
+    @webApi()
+    def notesInfo(self, notes):
+        return self.anki.notesInfo(notes)
 
 #
 #   Entry
