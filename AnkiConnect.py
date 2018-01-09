@@ -718,7 +718,7 @@ class AnkiBridge:
                 for info in model['flds']:
                     order = info['ord']
                     name = info['name']
-                    fields[name] = note.fields[order]
+                    fields[name] = {'value': note.fields[order], 'order': order}
             
                 result.append({
                     'cardId': card.id,
@@ -733,16 +733,6 @@ class AnkiBridge:
                     #This factor is 10 times the ease percentage, 
                     # so an ease of 310% would be reported as 3100
                     'interval': card.ivl,
-                    'type': card.type, 
-                    #new = 0, learning = 1, review = 2
-                    'queue': card.queue,
-                    # same as type, plus:
-                    # suspended = -1, user buried = -2, sched buried = -3
-                    'due': card.due,
-                    # does different things depending on queue,
-                    # new: position in queue
-                    # learning: integer timestamp
-                    # review: integer days (since first review)
                     'note': card.nid
                 })
             except TypeError as e:
@@ -765,13 +755,14 @@ class AnkiBridge:
                 for info in model['flds']:
                     order = info['ord']
                     name = info['name']
-                    fields[name] = note.fields[order]
+                    fields[name] = {'value': note.fields[order], 'order': order}
             
                 result.append({
                     'noteId': note.id,
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
+                    'cards': note.cards()
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the note ID does not exist.
