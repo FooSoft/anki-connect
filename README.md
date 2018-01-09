@@ -1141,6 +1141,7 @@ guarantee that your application continues to function properly in the future.
             {
                 "noteId":1502298033753,
                 "modelName": "Basic",
+                "tags":["tag","another_tag"],
                 "fields": {
                     "Front": {"value": "front content", "order": 0},
                     "Back": {"value": "back content", "order": 1}
