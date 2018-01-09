@@ -1129,6 +1129,7 @@ guarantee that your application continues to function properly in the future.
         "action": "notesInfo",
         "version": 5,
         "params": {
+            "notes": [1502298033753]
         }
     }
     ```
