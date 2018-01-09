@@ -762,7 +762,8 @@ class AnkiBridge:
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
-                    'cards': note.cards()
+                    'cards': self.collection().db.list(
+                        "select id from cards where nid = ? order by ord", self.id)
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the note ID does not exist.
