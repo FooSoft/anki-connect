@@ -445,6 +445,10 @@ class AnkiBridge:
         self.stopEditing()
 
 
+    def getTags(self):
+        return self.collection().tags.all()
+
+
     def suspend(self, cards, suspend=True):
         for card in cards:
             isSuspended = self.isSuspended(card)
@@ -1125,6 +1129,11 @@ class AnkiConnect:
     @webApi()
     def removeTags(self, notes, tags):
         return self.anki.addTags(notes, tags, False)
+
+
+    @webApi()
+    def getTags(self):
+        return self.anki.getTags()
 
 
     @webApi()
