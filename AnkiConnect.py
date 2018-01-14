@@ -29,6 +29,7 @@ import socket
 import sys
 from time import time
 from unicodedata import normalize
+from operator import itemgetter
 
 
 #
@@ -425,11 +426,27 @@ class AnkiBridge:
         if not note.dupeOrEmpty():
             return note
 
+    def updateNoteFields(self, params):
+        collection = self.collection()
+        if collection is None:
+            return
+
+        note = collection.getNote(params['id'])
+        if note is None:
+            raise Exception("Failed to get note:{}".format(params['id']))
+        for name, value in params['fields'].items():
+            if name in note:
+                note[name] = value
+        note.flush()
 
     def addTags(self, notes, tags, add=True):
         self.startEditing()
         self.collection().tags.bulkAdd(notes, tags, add)
         self.stopEditing()
+
+
+    def getTags(self):
+        return self.collection().tags.all()
 
 
     def suspend(self, cards, suspend=True):
@@ -694,6 +711,72 @@ class AnkiBridge:
             return self.collection().findCards(query)
         else:
             return []
+
+    def cardsInfo(self,cards):
+        result = []
+        for cid in cards:
+            try:
+                card = self.collection().getCard(cid)
+                model = card.model()
+                note = card.note()
+                fields = {}
+                for info in model['flds']:
+                    order = info['ord']
+                    name = info['name']
+                    fields[name] = {'value': note.fields[order], 'order': order}
+            
+                result.append({
+                    'cardId': card.id,
+                    'fields': fields,
+                    'fieldOrder': card.ord,
+                    'question': card._getQA()['q'],
+                    'answer': card._getQA()['a'],
+                    'modelName': model['name'],
+                    'deckName': self.deckNameFromId(card.did),
+                    'css': model['css'],
+                    'factor': card.factor, 
+                    #This factor is 10 times the ease percentage, 
+                    # so an ease of 310% would be reported as 3100
+                    'interval': card.ivl,
+                    'note': card.nid
+                })
+            except TypeError as e:
+                # Anki will give a TypeError if the card ID does not exist.
+                # Best behavior is probably to add an "empty card" to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
+
+        return result
+
+    def notesInfo(self,notes):
+        result = []
+        for nid in notes:
+            try:
+                note = self.collection().getNote(nid)
+                model = note.model()
+
+                fields = {}
+                for info in model['flds']:
+                    order = info['ord']
+                    name = info['name']
+                    fields[name] = {'value': note.fields[order], 'order': order}
+            
+                result.append({
+                    'noteId': note.id,
+                    'tags' : note.tags,
+                    'fields': fields,
+                    'modelName': model['name'],
+                    'cards': self.collection().db.list(
+                        "select id from cards where nid = ? order by ord", note.id)
+                })
+            except TypeError as e:
+                # Anki will give a TypeError if the note ID does not exist.
+                # Best behavior is probably to add an "empty card" to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
+        return result
 
 
     def getDecks(self, cards):
@@ -1024,6 +1107,9 @@ class AnkiConnect:
 
         return results
 
+    @webApi()
+    def updateNoteFields(self, note):
+        return self.anki.updateNoteFields(note)
 
     @webApi()
     def canAddNotes(self, notes):
@@ -1043,6 +1129,11 @@ class AnkiConnect:
     @webApi()
     def removeTags(self, notes, tags):
         return self.anki.addTags(notes, tags, False)
+
+
+    @webApi()
+    def getTags(self):
+        return self.anki.getTags()
 
 
     @webApi()
@@ -1182,6 +1273,13 @@ class AnkiConnect:
     def guiExitAnki(self):
         return self.anki.guiExitAnki()
 
+    @webApi()
+    def cardsInfo(self, cards):
+        return self.anki.cardsInfo(cards)
+
+    @webApi()
+    def notesInfo(self, notes):
+        return self.anki.notesInfo(notes)
 
 #
 #   Entry

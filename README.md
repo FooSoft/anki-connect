@@ -763,6 +763,38 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+#### Note Modification ####
+
+*   **updateNoteFields**
+
+    Modify the fields of an exist note.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateNoteFields",
+        "version": 5,
+        "params": {
+            "note": {
+                "id": 1514547547030,
+                "fields": {
+                    "Front": "new front content",
+                    "Back": "new back content"
+                },
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+
 #### Note Tags ####
 
 *   **addTags**
@@ -809,6 +841,26 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": null,
+        "error": null
+    }
+    ```
+
+*   **getTags**
+
+    Gets the complete list of tags for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getTags",
+        "version": 5
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["european-languages", "idioms"],
         "error": null
     }
     ```
@@ -1029,6 +1081,93 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": [1502098029797, 1502298025183],
+        "error": null
+    }
+    ```
+
+*   **cardsInfo**
+
+    Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note type, the note that the card belongs to, and deck name, as well as ease and interval.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "cardsInfo",
+        "version": 5,
+        "params": {
+            "cards": [1498938915662, 1502098034048]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [
+            {
+                "answer": "back content",
+                "question": "front content",
+                "deckName": "Default",
+                "modelName": "Basic",
+                "fieldOrder": 1,
+                "fields": {
+                    "Front": {"value": "front content", "order": 0},
+                    "Back": {"value": "back content", "order": 1}
+                },
+                "css":"p {font-family:Arial;}",
+                "cardId": 1498938915662,
+                "interval": 16,
+                "note":1502298033753
+            },
+            {
+                "answer": "back content",
+                "question": "front content",
+                "deckName": "Default",
+                "modelName": "Basic",
+                "fieldOrder": 0,
+                "fields": {
+                    "Front": {"value": "front content", "order": 0},
+                    "Back": {"value": "back content", "order": 1}
+                },
+                "css":"p {font-family:Arial;}",
+                "cardId": 1502098034048,
+                "interval": 23,
+                "note":1502298033753
+            }
+        ],
+        "error": null
+    }
+    ```
+
+*   **notesInfo**
+
+    Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to the note.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "notesInfo",
+        "version": 5,
+        "params": {
+            "notes": [1502298033753]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [
+            {
+                "noteId":1502298033753,
+                "modelName": "Basic",
+                "tags":["tag","another_tag"],
+                "fields": {
+                    "Front": {"value": "front content", "order": 0},
+                    "Back": {"value": "back content", "order": 1}
+                },
+            }
+        ],
         "error": null
     }
     ```
