@@ -845,6 +845,26 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **getTags**
+
+    Gets the complete list of tags for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getTags",
+        "version": 5
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["european-languages", "idioms"],
+        "error": null
+    }
+    ```
+
 #### Card Suspension ####
 
 *   **suspend**
