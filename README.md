@@ -15,14 +15,10 @@ with the latest stable (2.0.x) and alpha (2.1.x) releases of Anki and works on L
     *   [Supported Actions](https://foosoft.net/projects/anki-connect/#supported-actions)
         *   [Miscellaneous](https://foosoft.net/projects/anki-connect/#miscellaneous)
         *   [Decks](https://foosoft.net/projects/anki-connect/#decks)
-        *   [Deck Configurations](https://foosoft.net/projects/anki-connect/#deck-configurations)
         *   [Models](https://foosoft.net/projects/anki-connect/#models)
-        *   [Note Creation](https://foosoft.net/projects/anki-connect/#note-creation)
-        *   [Note Tags](https://foosoft.net/projects/anki-connect/#note-tags)
-        *   [Card Suspension](https://foosoft.net/projects/anki-connect/#card-suspension)
-        *   [Card Intervals](https://foosoft.net/projects/anki-connect/#card-intervals)
-        *   [Finding Notes and Cards](https://foosoft.net/projects/anki-connect/#finding-notes-and-cards)
-        *   [Media File Storage](https://foosoft.net/projects/anki-connect/#media-file-storage)
+        *   [Notes](https://foosoft.net/projects/anki-connect/#notes)
+        *   [Cards](https://foosoft.net/projects/anki-connect/#cards)
+        *   [Media](https://foosoft.net/projects/anki-connect/#media)
         *   [Graphical](https://foosoft.net/projects/anki-connect/#graphical)
 * [License](https://foosoft.net/projects/anki-connect/#license)
 
@@ -345,8 +341,6 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Deck Configurations ####
-
 *   **getDeckConfig**
 
     Gets the configuration group object for the given deck.
@@ -636,7 +630,7 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Note Creation ####
+#### Notes ####
 
 *   **addNote**
 
@@ -763,8 +757,6 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Note Modification ####
-
 *   **updateNoteFields**
 
     Modify the fields of an exist note.
@@ -780,7 +772,7 @@ guarantee that your application continues to function properly in the future.
                 "fields": {
                     "Front": "new front content",
                     "Back": "new back content"
-                },
+                }
             }
         }
     }
@@ -793,9 +785,6 @@ guarantee that your application continues to function properly in the future.
         "error": null
     }
     ```
-
-
-#### Note Tags ####
 
 *   **addTags**
 
@@ -865,7 +854,65 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Card Suspension ####
+*   **findNotes**
+
+    Returns an array of note IDs for a given query. Same query syntax as `guiBrowse`.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "findNotes",
+        "version": 5,
+        "params": {
+            "query": "deck:current"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [1483959289817, 1483959291695],
+        "error": null
+    }
+    ```
+
+*   **notesInfo**
+
+    Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to
+    the note.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "notesInfo",
+        "version": 5,
+        "params": {
+            "notes": [1502298033753]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [
+            {
+                "noteId":1502298033753,
+                "modelName": "Basic",
+                "tags":["tag","another_tag"],
+                "fields": {
+                    "Front": {"value": "front content", "order": 0},
+                    "Back": {"value": "back content", "order": 1}
+                }
+            }
+        ],
+        "error": null
+    }
+    ```
+
+
+#### Cards ####
 
 *   **suspend**
 
@@ -937,8 +984,6 @@ guarantee that your application continues to function properly in the future.
         "error": null
     }
     ```
-
-#### Card Intervals ####
 
 *   **areDue**
 
@@ -1012,31 +1057,6 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Finding Notes and Cards ####
-
-*   **findNotes**
-
-    Returns an array of note IDs for a given query. Same query syntax as `guiBrowse`.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "findNotes",
-        "version": 5,
-        "params": {
-            "query": "deck:current"
-        }
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": [1483959289817, 1483959291695],
-        "error": null
-    }
-    ```
-
 *   **findCards**
 
     Returns an array of card IDs for a given query. Functionally identical to `guiBrowse` but doesn't use the GUI for
@@ -1087,7 +1107,8 @@ guarantee that your application continues to function properly in the future.
 
 *   **cardsInfo**
 
-    Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note type, the note that the card belongs to, and deck name, as well as ease and interval.
+    Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
+    type, the note that the card belongs to, and deck name, as well as ease and interval.
 
     *Sample request*:
     ```json
@@ -1139,47 +1160,13 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-*   **notesInfo**
-
-    Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to the note.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "notesInfo",
-        "version": 5,
-        "params": {
-            "notes": [1502298033753]
-        }
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": [
-            {
-                "noteId":1502298033753,
-                "modelName": "Basic",
-                "tags":["tag","another_tag"],
-                "fields": {
-                    "Front": {"value": "front content", "order": 0},
-                    "Back": {"value": "back content", "order": 1}
-                },
-            }
-        ],
-        "error": null
-    }
-    ```
-
-#### Media File Storage ####
+#### Media ####
 
 *   **storeMediaFile**
 
-    Stores a file with the specified base64-encoded contents inside the media folder.
-
-    *Note*: to prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the
-    filename with an underscore. These files are still synchronized to AnkiWeb.
+    Stores a file with the specified base64-encoded contents inside the media folder. To prevent Anki from removing
+    files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are
+    still synchronized to AnkiWeb.
 
     *Sample request*:
     ```json
