@@ -191,6 +191,27 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **sync**
+
+    Synchronizes the local anki collections with ankiweb.
+    
+    *Sample request*:
+    ```json
+    {
+        "action": "sync",
+        "version": 5
+
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+
+
 *   **multi**
 
     Performs multiple actions in one request, returning an array with the response of each action (in the given order).
