@@ -948,7 +948,7 @@ class AnkiBridge:
         timer.start(1000) # 1s should be enough to allow the response to be sent.
 
     def sync(self):
-        self.window()._sync()
+        self.window().onSync()
 
 #
 # AnkiConnect
