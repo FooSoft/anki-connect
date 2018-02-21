@@ -947,9 +947,13 @@ class AnkiBridge:
         timer.timeout.connect(exitAnki)
         timer.start(1000) # 1s should be enough to allow the response to be sent.
 
+    def sync(self):
+        self.window()._sync()
+
 #
 # AnkiConnect
 #
+
 
 class AnkiConnect:
     def __init__(self):
@@ -1280,6 +1284,11 @@ class AnkiConnect:
     @webApi()
     def notesInfo(self, notes):
         return self.anki.notesInfo(notes)
+
+    @webApi()
+    def sync(self):
+        return self.anki.sync()
+
 
 #
 #   Entry
