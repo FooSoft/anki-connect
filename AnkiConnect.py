@@ -793,6 +793,13 @@ class AnkiBridge:
         return decks
 
 
+    def createDeck(self, deck):
+        self.startEditing()
+        deckId = self.collection().decks.id(deck)
+        self.stopEditing()
+
+        return deckId
+
     def changeDeck(self, cards, deck):
         self.startEditing()
 
@@ -1207,6 +1214,9 @@ class AnkiConnect:
     def getDecks(self, cards):
         return self.anki.getDecks(cards)
 
+    @webApi()
+    def createDeck(self, deck):
+        return self.anki.createDeck(deck)
 
     @webApi()
     def changeDeck(self, cards, deck):
