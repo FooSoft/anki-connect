@@ -194,7 +194,7 @@ guarantee that your application continues to function properly in the future.
 *   **sync**
 
     Synchronizes the local anki collections with ankiweb.
-    
+
     *Sample request*:
     ```json
     {
@@ -210,7 +210,7 @@ guarantee that your application continues to function properly in the future.
         "result": null,
         "error": null
     }
-
+    ```
 
 *   **multi**
 
