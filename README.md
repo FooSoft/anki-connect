@@ -313,6 +313,28 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **createDeck**
+
+    Create a new empty deck. Will not overwrite a deck that exists with the same name.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "createDeck",
+        "version": 5,
+        "params": {
+            "deck": "Japanese::Tokyo"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": 1519323742721,
+        "error": null
+    }
+    ```
 *   **changeDeck**
 
     Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
