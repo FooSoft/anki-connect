@@ -89,11 +89,11 @@ def makeStr(data):
 def download(url):
     try:
         resp = web.urlopen(url, timeout=URL_TIMEOUT)
-    except web.URLError:
-        return None
+    except web.URLError as e:
+        raise Exception("A urlError has occoured for url " + url + ". Error messages was: " + e.message)
 
     if resp.code != 200:
-        return None
+        raise Exception("Return conde for url request" + url + "was not 200. Error code: " + resp.code)
 
     return resp.read()
 
@@ -370,11 +370,11 @@ class AnkiBridge:
     def addNote(self, params):
         collection = self.collection()
         if collection is None:
-            return
+            raise Exception("Collection was not found.")
 
         note = self.createNote(params)
         if note is None:
-            return
+            raise Exception("Failed to create note from params" + str(params))
 
         if params.audio is not None and len(params.audio.fields) > 0:
             data = download(params.audio.url)
@@ -405,15 +405,15 @@ class AnkiBridge:
     def createNote(self, params):
         collection = self.collection()
         if collection is None:
-            return
+            raise Exception("Collection was not found.")
 
         model = collection.models.byName(params.modelName)
         if model is None:
-            return
+            raise Exception("Model was not found for model: " + str(params.modelName))
 
         deck = collection.decks.byName(params.deckName)
         if deck is None:
-            return
+            raise Exception("Deck was not found for deck: " + str(params.deckName))
 
         note = anki.notes.Note(collection, model)
         note.model()['did'] = deck['id']
@@ -429,7 +429,7 @@ class AnkiBridge:
     def updateNoteFields(self, params):
         collection = self.collection()
         if collection is None:
-            return
+            raise Exception("Collection was not found.")
 
         note = collection.getNote(params['id'])
         if note is None:
@@ -854,7 +854,7 @@ class AnkiBridge:
 
     def guiCurrentCard(self):
         if not self.guiReviewActive():
-            return
+            raise Exception("Gui review is not currently active.")
 
         reviewer = self.reviewer()
         card = reviewer.card
