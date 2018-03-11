@@ -337,7 +337,9 @@ class AnkiNoteParams:
             type(self.fields) == dict and verifyStringList(list(self.fields.keys())) and verifyStringList(list(self.fields.values())) and
             type(self.tags) == list and verifyStringList(self.tags)
         )
-
+    
+    def __str__(self):
+        return "DeckName: " + self.deckName + ". ModelName: " + self.modelName + ". Fields: " + str(self.fields) + ". Tags: " + str(self.tags) + "."
 
 #
 # AnkiBridge
@@ -374,7 +376,7 @@ class AnkiBridge:
 
         note = self.createNote(params)
         if note is None:
-            raise Exception("Failed to create note from params" + str(params))
+            raise Exception("Failed to create note from params: " + str(params))
 
         if params.audio is not None and len(params.audio.fields) > 0:
             data = download(params.audio.url)
@@ -409,11 +411,11 @@ class AnkiBridge:
 
         model = collection.models.byName(params.modelName)
         if model is None:
-            raise Exception("Model was not found for model: " + str(params.modelName))
+            raise Exception("Model was not found for model: " + params.modelName)
 
         deck = collection.decks.byName(params.deckName)
         if deck is None:
-            raise Exception("Deck was not found for deck: " + str(params.deckName))
+            raise Exception("Deck was not found for deck: " + params.deckName)
 
         note = anki.notes.Note(collection, model)
         note.model()['did'] = deck['id']
@@ -423,7 +425,13 @@ class AnkiBridge:
             if name in note:
                 note[name] = value
 
-        if not note.dupeOrEmpty():
+        # Returns 1 if empty. 2 if duplicate. Otherwise returns False
+        duplicateOrEmpty = note.dupeOrEmpty()
+        if duplicateOrEmpty == 1:
+            raise Exception("Note was empty. Param were: " + str(params))
+        elif duplicateOrEmpty == 2:
+            raise Exception("Note is duplicate of existing note. Params were: " + str(params))
+        elif duplicateOrEmpty == False:
             return note
 
     def updateNoteFields(self, params):
@@ -1110,11 +1118,14 @@ class AnkiConnect:
     def addNotes(self, notes):
         results = []
         for note in notes:
-            params = AnkiNoteParams(note)
-            if params.validate():
-                results.append(self.anki.addNote(params))
-            else:
-                results.append(None)
+            try:
+                params = AnkiNoteParams(note)
+                if params.validate():
+                    results.append(self.anki.addNote(params))
+                else:
+                    results.append(None)
+            except Exception as e:
+                results.append(str(e))
 
         return results
 
