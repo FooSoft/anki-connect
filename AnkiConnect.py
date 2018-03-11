@@ -468,15 +468,17 @@ class AnkiBridge:
 
         return False
 
+    def isSuspended(self, card):
+        card = self.collection().getCard(card)
+        if card.queue == -1:
+            return True
+        else:
+            return False
 
     def areSuspended(self, cards):
         suspended = []
         for card in cards:
-            card = self.collection().getCard(card)
-            if card.queue == -1:
-                suspended.append(True)
-            else:
-                suspended.append(False)
+            suspended.append(self.isSuspended(card))
         return suspended
 
 
