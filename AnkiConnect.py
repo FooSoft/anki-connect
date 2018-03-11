@@ -90,10 +90,10 @@ def download(url):
     try:
         resp = web.urlopen(url, timeout=URL_TIMEOUT)
     except web.URLError as e:
-        raise Exception("A urlError has occoured for url " + url + ". Error messages was: " + e.message)
+        raise Exception('A urlError has occurred for url ' + url + '. Error messages was: ' + e.message)
 
     if resp.code != 200:
-        raise Exception("Return conde for url request" + url + "was not 200. Error code: " + resp.code)
+        raise Exception('Return code for url request' + url + 'was not 200. Error code: ' + resp.code)
 
     return resp.read()
 
@@ -339,7 +339,7 @@ class AnkiNoteParams:
         )
     
     def __str__(self):
-        return "DeckName: " + self.deckName + ". ModelName: " + self.modelName + ". Fields: " + str(self.fields) + ". Tags: " + str(self.tags) + "."
+        return 'DeckName: ' + self.deckName + '. ModelName: ' + self.modelName + '. Fields: ' + str(self.fields) + '. Tags: ' + str(self.tags) + '.'
 
 #
 # AnkiBridge
@@ -354,7 +354,7 @@ class AnkiBridge:
     def retrieveMediaFile(self, filename):
         # based on writeData from anki/media.py
         filename = os.path.basename(filename)
-        filename = normalize("NFC", filename)
+        filename = normalize('NFC', filename)
         filename = self.media().stripIllegal(filename)
 
         path = os.path.join(self.media().dir(), filename)
@@ -372,11 +372,11 @@ class AnkiBridge:
     def addNote(self, params):
         collection = self.collection()
         if collection is None:
-            raise Exception("Collection was not found.")
+            raise Exception('Collection was not found.')
 
         note = self.createNote(params)
         if note is None:
-            raise Exception("Failed to create note from params: " + str(params))
+            raise Exception('Failed to create note from params: ' + str(params))
 
         if params.audio is not None and len(params.audio.fields) > 0:
             data = download(params.audio.url)
@@ -407,15 +407,15 @@ class AnkiBridge:
     def createNote(self, params):
         collection = self.collection()
         if collection is None:
-            raise Exception("Collection was not found.")
+            raise Exception('Collection was not found.')
 
         model = collection.models.byName(params.modelName)
         if model is None:
-            raise Exception("Model was not found for model: " + params.modelName)
+            raise Exception('Model was not found for model: ' + params.modelName)
 
         deck = collection.decks.byName(params.deckName)
         if deck is None:
-            raise Exception("Deck was not found for deck: " + params.deckName)
+            raise Exception('Deck was not found for deck: ' + params.deckName)
 
         note = anki.notes.Note(collection, model)
         note.model()['did'] = deck['id']
@@ -428,20 +428,20 @@ class AnkiBridge:
         # Returns 1 if empty. 2 if duplicate. Otherwise returns False
         duplicateOrEmpty = note.dupeOrEmpty()
         if duplicateOrEmpty == 1:
-            raise Exception("Note was empty. Param were: " + str(params))
+            raise Exception('Note was empty. Param were: ' + str(params))
         elif duplicateOrEmpty == 2:
-            raise Exception("Note is duplicate of existing note. Params were: " + str(params))
+            raise Exception('Note is duplicate of existing note. Params were: ' + str(params))
         elif duplicateOrEmpty == False:
             return note
 
     def updateNoteFields(self, params):
         collection = self.collection()
         if collection is None:
-            raise Exception("Collection was not found.")
+            raise Exception('Collection was not found.')
 
         note = collection.getNote(params['id'])
         if note is None:
-            raise Exception("Failed to get note:{}".format(params['id']))
+            raise Exception('Failed to get note:{}'.format(params['id']))
         for name, value in params['fields'].items():
             if name in note:
                 note[name] = value
@@ -612,7 +612,7 @@ class AnkiBridge:
                     for match in matches:
                         # remove braces and modifiers
                         match = re.sub(r'[{}]', '', match)
-                        match = match.split(":")[-1]
+                        match = match.split(':')[-1]
 
                         # for the answer side, ignore fields present on the question side + the FrontSide field
                         if match == 'FrontSide' or side == 'afmt' and match in fields[0]:
@@ -750,7 +750,7 @@ class AnkiBridge:
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the card ID does not exist.
-                # Best behavior is probably to add an "empty card" to the
+                # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.
                 result.append({})
@@ -776,11 +776,11 @@ class AnkiBridge:
                     'fields': fields,
                     'modelName': model['name'],
                     'cards': self.collection().db.list(
-                        "select id from cards where nid = ? order by ord", note.id)
+                        'select id from cards where nid = ? order by ord', note.id)
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the note ID does not exist.
-                # Best behavior is probably to add an "empty card" to the
+                # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.
                 result.append({})
@@ -862,7 +862,7 @@ class AnkiBridge:
 
     def guiCurrentCard(self):
         if not self.guiReviewActive():
-            raise Exception("Gui review is not currently active.")
+            raise Exception('Gui review is not currently active.')
 
         reviewer = self.reviewer()
         card = reviewer.card
@@ -1124,8 +1124,8 @@ class AnkiConnect:
                     results.append(self.anki.addNote(params))
                 else:
                     results.append(None)
-            except Exception as e:
-                results.append(str(e))
+            except Exception:
+                results.append(None)
 
         return results
 
