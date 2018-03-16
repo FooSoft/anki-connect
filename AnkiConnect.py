@@ -401,7 +401,10 @@ class AnkiBridge:
 
 
     def canAddNote(self, note):
-        return bool(self.createNote(note))
+        try:
+            return bool(self.createNote(note))
+        except:
+            return False
 
 
     def createNote(self, params):
