@@ -117,7 +117,6 @@ def verifyStringList(strings):
     return True
 
 
-
 #
 # AjaxRequest
 #
@@ -337,7 +336,8 @@ class AnkiNoteParams:
             type(self.fields) == dict and verifyStringList(list(self.fields.keys())) and verifyStringList(list(self.fields.values())) and
             type(self.tags) == list and verifyStringList(self.tags)
         )
-    
+
+
     def __str__(self):
         return 'DeckName: ' + self.deckName + '. ModelName: ' + self.modelName + '. Fields: ' + str(self.fields) + '. Tags: ' + str(self.tags) + '.'
 
@@ -437,6 +437,7 @@ class AnkiBridge:
         elif duplicateOrEmpty == False:
             return note
 
+
     def updateNoteFields(self, params):
         collection = self.collection()
         if collection is None:
@@ -449,6 +450,7 @@ class AnkiBridge:
             if name in note:
                 note[name] = value
         note.flush()
+
 
     def addTags(self, notes, tags, add=True):
         self.startEditing()
@@ -479,12 +481,14 @@ class AnkiBridge:
 
         return False
 
+
     def isSuspended(self, card):
         card = self.collection().getCard(card)
         if card.queue == -1:
             return True
         else:
             return False
+
 
     def areSuspended(self, cards):
         suspended = []
@@ -725,6 +729,7 @@ class AnkiBridge:
         else:
             return []
 
+
     def cardsInfo(self,cards):
         result = []
         for cid in cards:
@@ -737,7 +742,7 @@ class AnkiBridge:
                     order = info['ord']
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
-            
+
                 result.append({
                     'cardId': card.id,
                     'fields': fields,
@@ -747,8 +752,8 @@ class AnkiBridge:
                     'modelName': model['name'],
                     'deckName': self.deckNameFromId(card.did),
                     'css': model['css'],
-                    'factor': card.factor, 
-                    #This factor is 10 times the ease percentage, 
+                    'factor': card.factor,
+                    #This factor is 10 times the ease percentage,
                     # so an ease of 310% would be reported as 3100
                     'interval': card.ivl,
                     'note': card.nid
@@ -762,6 +767,7 @@ class AnkiBridge:
 
         return result
 
+
     def notesInfo(self,notes):
         result = []
         for nid in notes:
@@ -774,7 +780,7 @@ class AnkiBridge:
                     order = info['ord']
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
-            
+
                 result.append({
                     'noteId': note.id,
                     'tags' : note.tags,
@@ -812,6 +818,7 @@ class AnkiBridge:
         self.stopEditing()
 
         return deckId
+
 
     def changeDeck(self, cards, deck):
         self.startEditing()
@@ -906,6 +913,7 @@ class AnkiBridge:
         else:
             return False
 
+
     def guiShowQuestion(self):
         if self.guiReviewActive():
             self.reviewer()._showQuestion()
@@ -959,6 +967,7 @@ class AnkiBridge:
         else:
             return False
 
+
     def guiExitAnki(self):
         timer = QTimer()
         def exitAnki():
@@ -967,8 +976,10 @@ class AnkiBridge:
         timer.timeout.connect(exitAnki)
         timer.start(1000) # 1s should be enough to allow the response to be sent.
 
+
     def sync(self):
         self.window().onSync()
+
 
 #
 # AnkiConnect
@@ -1134,9 +1145,11 @@ class AnkiConnect:
 
         return results
 
+
     @webApi()
     def updateNoteFields(self, note):
         return self.anki.updateNoteFields(note)
+
 
     @webApi()
     def canAddNotes(self, notes):
@@ -1230,9 +1243,11 @@ class AnkiConnect:
     def getDecks(self, cards):
         return self.anki.getDecks(cards)
 
+
     @webApi()
     def createDeck(self, deck):
         return self.anki.createDeck(deck)
+
 
     @webApi()
     def changeDeck(self, cards, deck):
@@ -1303,13 +1318,16 @@ class AnkiConnect:
     def guiExitAnki(self):
         return self.anki.guiExitAnki()
 
+
     @webApi()
     def cardsInfo(self, cards):
         return self.anki.cardsInfo(cards)
 
+
     @webApi()
     def notesInfo(self, notes):
         return self.anki.notesInfo(notes)
+
 
     @webApi()
     def sync(self):
