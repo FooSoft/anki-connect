@@ -538,7 +538,7 @@ class AnkiConnect:
             return False
 
         try:
-            return bool(self.createNote(note))
+            return bool(self.createNote(params))
         except:
             return False
 
@@ -1139,7 +1139,7 @@ class AnkiConnect:
         results = []
         for note in notes:
             try:
-                results.append(self.addNote(params))
+                results.append(self.addNote(note))
             except Exception:
                 results.append(None)
 
@@ -1150,7 +1150,7 @@ class AnkiConnect:
     def canAddNotes(self, notes):
         results = []
         for note in notes:
-            results.append(self.canAddNote(params))
+            results.append(self.canAddNote(note))
 
         return results
 
