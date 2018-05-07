@@ -360,6 +360,14 @@ class AnkiConnect:
             return collection
 
 
+    def decks(self):
+        decks = self.collection().decks
+        if decks is None:
+            raise Exception('decks are not available')
+        else:
+            return decks
+
+
     def scheduler(self):
         scheduler = self.collection().sched
         if scheduler is None:
@@ -472,7 +480,7 @@ class AnkiConnect:
 
     @api()
     def deckNames(self):
-        return self.collection().decks.allNames()
+        return self.decks().allnames()
 
 
     @api()
