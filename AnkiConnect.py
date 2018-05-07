@@ -414,6 +414,55 @@ class AnkiConnect:
         else:
             raise Exception('cannot create note for unknown reason')
 
+    #
+    # Miscellaneous
+    #
+
+    @api()
+    def version(self):
+        return API_VERSION
+
+
+    @api()
+    def upgrade(self):
+        response = QMessageBox.question(
+            self.window(),
+            'AnkiConnect',
+            'Upgrade to the latest version?',
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if response == QMessageBox.Yes:
+            try:
+                data = download(URL_UPGRADE)
+                path = os.path.splitext(__file__)[0] + '.py'
+                with open(path, 'w') as fp:
+                    fp.write(makeStr(data))
+                QMessageBox.information(
+                    self.window(),
+                    'AnkiConnect',
+                    'Upgraded to the latest version, please restart Anki.'
+                )
+                return True
+            except:
+                QMessageBox.critical(self.window(), 'AnkiConnect', 'Failed to download latest version.')
+
+        return False
+
+
+    @api()
+    def sync(self):
+        print self.window().onSync()
+
+
+    @api()
+    def multi(self, actions):
+        response = []
+        for item in actions:
+            response.append(self.handler(item))
+
+        return response
+
 
     @api()
     def storeMediaFile(self, filename, data):
@@ -580,14 +629,6 @@ class AnkiConnect:
         return intervals
 
 
-    @api()
-    def multi(self, actions):
-        response = []
-        for item in actions:
-            response.append(self.handler(item))
-
-        return response
-
 
     @api()
     def modelNames(self):
@@ -750,7 +791,7 @@ class AnkiConnect:
 
     @api()
     def findCards(self, query=None):
-        if query not None:
+        if query is None:
             return []
         else:
             return self.collection().findCards(query)
@@ -1022,38 +1063,6 @@ class AnkiConnect:
         timer.timeout.connect(exitAnki)
         timer.start(1000) # 1s should be enough to allow the response to be sent.
 
-
-    @api()
-    def sync(self):
-        self.window().onSync()
-
-
-    @api()
-    def upgrade(self):
-        response = QMessageBox.question(
-            self.window(),
-            'AnkiConnect',
-            'Upgrade to the latest version?',
-            QMessageBox.Yes | QMessageBox.No
-        )
-
-        if response == QMessageBox.Yes:
-            data = download(URL_UPGRADE)
-            if data is None:
-                QMessageBox.critical(self.window(), 'AnkiConnect', 'Failed to download latest version.')
-            else:
-                path = os.path.splitext(__file__)[0] + '.py'
-                with open(path, 'w') as fp:
-                    fp.write(makeStr(data))
-                QMessageBox.information(self.window(), 'AnkiConnect', 'Upgraded to the latest version, please restart Anki.')
-                return True
-
-        return False
-
-
-    @api()
-    def version(self):
-        return API_VERSION
 
 
     @api()
