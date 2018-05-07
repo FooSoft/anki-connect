@@ -480,7 +480,7 @@ class AnkiConnect:
 
     @api()
     def deckNames(self):
-        return self.decks().allnames()
+        return self.decks().allNames()
 
 
     @api()
