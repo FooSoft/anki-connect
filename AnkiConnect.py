@@ -434,7 +434,7 @@ class AnkiConnect:
 
         if response == QMessageBox.Yes:
             try:
-                data = download(URL_UPGRADE)
+                data = self.download(URL_UPGRADE)
                 path = os.path.splitext(__file__)[0] + '.py'
                 with open(path, 'w') as fp:
                     fp.write(makeStr(data))
@@ -444,8 +444,9 @@ class AnkiConnect:
                     'Upgraded to the latest version, please restart Anki.'
                 )
                 return True
-            except:
+            except Exception as e:
                 QMessageBox.critical(self.window(), 'AnkiConnect', 'Failed to download latest version.')
+                raise e
 
         return False
 
