@@ -9,11 +9,12 @@ def request(action, params={}, version=5):
 def invoke(action, params={}, version=5, url='http://localhost:8765'):
     requestJson = json.dumps(request(action, params, version))
     response = json.load(urllib2.urlopen(urllib2.Request(url, requestJson)))
-    return response['result'], response['error']
-
-
-def invokeNoError(action, params={}, version=5, url='http://localhost:8765'):
-    result, error = invoke(action, params, version, url)
-    if error is not None:
-        raise Exception(error)
-    return result
+    if len(response) != 2:
+        raise Exception('response has an unexpected number of fields')
+    if 'error' not in response:
+        raise Exception('response is missing required error field')
+    if 'result' not in response:
+        raise Exception('response is missing required result field')
+    if response['error'] is not None:
+        raise Exception(response['error'])
+    return response['result']

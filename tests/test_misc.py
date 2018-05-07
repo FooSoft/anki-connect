@@ -4,22 +4,22 @@ import unittest
 import util
 
 
-class TestVersion(unittest.TestCase):
+class TestMisc(unittest.TestCase):
     def test_version(self):
-        result = util.invokeNoError('version')
+        result = util.invoke('version')
         self.assertEqual(result, 5)
 
 
     def test_upgrade(self):
-        util.invokeNoError('upgrade')
+        util.invoke('upgrade')
 
 
     def test_sync(self):
-        util.invokeNoError('sync')
+        util.invoke('sync')
 
 
     def test_multi(self):
-        result = util.invokeNoError(
+        result = util.invoke(
             'multi', {
                 'actions': [
                     util.request('version'),
