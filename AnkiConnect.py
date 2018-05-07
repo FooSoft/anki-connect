@@ -414,6 +414,7 @@ class AnkiConnect:
         else:
             raise Exception('cannot create note for unknown reason')
 
+
     #
     # Miscellaneous
     #
@@ -463,6 +464,141 @@ class AnkiConnect:
             response.append(self.handler(item))
 
         return response
+
+
+    #
+    # Decks
+    #
+
+    @api()
+    def deckNames(self):
+        return self.collection().decks.allNames()
+
+
+    @api()
+    def deckNamesAndIds(self):
+        decks = {}
+        for deck in self.deckNames():
+            decks[deck] = self.collection().decks.id(deck)
+
+        return decks
+
+
+    @api()
+    def getDecks(self, cards):
+        decks = {}
+        collection = self.collection()
+        for card in cards:
+            did = collection.db.scalar('select did from cards where id = ?', card)
+            deck = collection.decks.get(did)['name']
+
+            if deck in decks:
+                decks[deck].append(card)
+            else:
+                decks[deck] = [card]
+
+        return decks
+
+
+    @api()
+    def createDeck(self, deck):
+        self.startEditing()
+        deckId = self.collection().decks.id(deck)
+        self.stopEditing()
+
+        return deckId
+
+
+    @api()
+    def changeDeck(self, cards, deck):
+        self.startEditing()
+
+        did = self.collection().decks.id(deck)
+        mod = anki.utils.intTime()
+        usn = self.collection().usn()
+
+        # normal cards
+        scids = anki.utils.ids2str(cards)
+        # remove any cards from filtered deck first
+        self.collection().sched.remFromDyn(cards)
+
+        # then move into new deck
+        self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
+        self.stopEditing()
+
+
+    @api()
+    def deleteDecks(self, decks, cardsToo=False):
+        self.startEditing()
+        for deck in decks:
+            did = self.collection().decks.id(deck)
+            self.collection().decks.rem(did, cardsToo)
+        self.stopEditing()
+
+
+    @api()
+    def getDeckConfig(self, deck):
+        if not deck in self.deckNames():
+            return False
+
+        collection = self.collection()
+        did = collection.decks.id(deck)
+        return collection.decks.confForDid(did)
+
+
+    @api()
+    def saveDeckConfig(self, config):
+        collection = self.collection()
+
+        config['id'] = str(config['id'])
+        config['mod'] = anki.utils.intTime()
+        config['usn'] = collection.usn()
+
+        if not config['id'] in collection.decks.dconf:
+            return False
+
+        collection.decks.dconf[config['id']] = config
+        collection.decks.changed = True
+        return True
+
+
+    @api()
+    def setDeckConfigId(self, decks, configId):
+        configId = str(configId)
+        for deck in decks:
+            if not deck in self.deckNames():
+                return False
+
+        collection = self.collection()
+        if not configId in collection.decks.dconf:
+            return False
+
+        for deck in decks:
+            did = str(collection.decks.id(deck))
+            aqt.mw.col.decks.decks[did]['conf'] = configId
+
+        return True
+
+
+    @api()
+    def cloneDeckConfigId(self, name, cloneFrom='1'):
+        configId = str(cloneFrom)
+        if not configId in self.collection().decks.dconf:
+            return False
+
+        config = self.collection().decks.getConf(configId)
+        return self.collection().decks.confId(name, config)
+
+
+    @api()
+    def removeDeckConfigId(self, configId):
+        configId = str(configId)
+        collection = self.collection()
+        if configId == 1 or not configId in collection.decks.dconf:
+            return False
+
+        collection.decks.remConf(configId)
+        return True
 
 
     @api()
@@ -695,85 +831,6 @@ class AnkiConnect:
 
 
     @api()
-    def getDeckConfig(self, deck):
-        if not deck in self.deckNames():
-            return False
-
-        collection = self.collection()
-        did = collection.decks.id(deck)
-        return collection.decks.confForDid(did)
-
-
-    @api()
-    def saveDeckConfig(self, config):
-        collection = self.collection()
-
-        config['id'] = str(config['id'])
-        config['mod'] = anki.utils.intTime()
-        config['usn'] = collection.usn()
-
-        if not config['id'] in collection.decks.dconf:
-            return False
-
-        collection.decks.dconf[config['id']] = config
-        collection.decks.changed = True
-        return True
-
-
-    @api()
-    def setDeckConfigId(self, decks, configId):
-        configId = str(configId)
-        for deck in decks:
-            if not deck in self.deckNames():
-                return False
-
-        collection = self.collection()
-        if not configId in collection.decks.dconf:
-            return False
-
-        for deck in decks:
-            did = str(collection.decks.id(deck))
-            aqt.mw.col.decks.decks[did]['conf'] = configId
-
-        return True
-
-
-    @api()
-    def cloneDeckConfigId(self, name, cloneFrom='1'):
-        configId = str(cloneFrom)
-        if not configId in self.collection().decks.dconf:
-            return False
-
-        config = self.collection().decks.getConf(configId)
-        return self.collection().decks.confId(name, config)
-
-
-    @api()
-    def removeDeckConfigId(self, configId):
-        configId = str(configId)
-        collection = self.collection()
-        if configId == 1 or not configId in collection.decks.dconf:
-            return False
-
-        collection.decks.remConf(configId)
-        return True
-
-
-    @api()
-    def deckNames(self):
-        return self.collection().decks.allNames()
-
-
-    @api()
-    def deckNamesAndIds(self):
-        decks = {}
-        for deck in self.deckNames():
-            decks[deck] = self.collection().decks.id(deck)
-
-        return decks
-
-
-    @api()
     def deckNameFromId(self, deckId):
         deck = self.collection().decks.get(deckId)
         if deck is None:
@@ -868,56 +925,7 @@ class AnkiConnect:
         return result
 
 
-    @api()
-    def getDecks(self, cards):
-        decks = {}
-        collection = self.collection()
-        for card in cards:
-            did = collection.db.scalar('select did from cards where id = ?', card)
-            deck = collection.decks.get(did)['name']
 
-            if deck in decks:
-                decks[deck].append(card)
-            else:
-                decks[deck] = [card]
-
-        return decks
-
-
-    @api()
-    def createDeck(self, deck):
-        self.startEditing()
-        deckId = self.collection().decks.id(deck)
-        self.stopEditing()
-
-        return deckId
-
-
-    @api()
-    def changeDeck(self, cards, deck):
-        self.startEditing()
-
-        did = self.collection().decks.id(deck)
-        mod = anki.utils.intTime()
-        usn = self.collection().usn()
-
-        # normal cards
-        scids = anki.utils.ids2str(cards)
-        # remove any cards from filtered deck first
-        self.collection().sched.remFromDyn(cards)
-
-        # then move into new deck
-        self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
-        self.stopEditing()
-
-
-    @api()
-    def deleteDecks(self, decks, cardsToo=False):
-        self.startEditing()
-        for deck in decks:
-            did = self.collection().decks.id(deck)
-            self.collection().decks.rem(did, cardsToo)
-        self.stopEditing()
 
 
     @api()
