@@ -37,17 +37,17 @@ from unicodedata import normalize
 # Constants
 #
 
-API_VERSION   = 5
-NET_ADDRESS   = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
-NET_BACKLOG   = 5
-NET_PORT      = 8765
+API_VERSION = 5
+NET_ADDRESS = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
+NET_BACKLOG = 5
+NET_PORT = 8765
 TICK_INTERVAL = 25
-URL_TIMEOUT   = 10
-URL_UPGRADE   = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
+URL_TIMEOUT = 10
+URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
 
 
 #
-# General helpers
+# Helpers
 #
 
 if sys.version_info[0] < 3:
@@ -66,19 +66,6 @@ else:
     from PyQt5.QtWidgets import QMessageBox
 
 
-#
-# Helpers
-#
-
-def webApi(*versions):
-    def decorator(func):
-        method = lambda *args, **kwargs: func(*args, **kwargs)
-        setattr(method, 'versions', versions)
-        setattr(method, 'api', True)
-        return method
-    return decorator
-
-
 def makeBytes(data):
     return data.encode('utf-8')
 
@@ -87,35 +74,14 @@ def makeStr(data):
     return data.decode('utf-8')
 
 
-def download(url):
-    try:
-        resp = web.urlopen(url, timeout=URL_TIMEOUT)
-    except web.URLError as e:
-        raise Exception('A urlError has occurred for url ' + url + '. Error messages was: ' + e.message)
+def api(*versions):
+    def decorator(func):
+        method = lambda *args, **kwargs: func(*args, **kwargs)
+        setattr(method, 'versions', versions)
+        setattr(method, 'api', True)
+        return method
 
-    if resp.code != 200:
-        raise Exception('Return code for url request' + url + 'was not 200. Error code: ' + resp.code)
-
-    return resp.read()
-
-
-def audioInject(note, fields, filename):
-    for field in fields:
-        if field in note:
-            note[field] += u'[sound:{}]'.format(filename)
-
-
-def verifyString(string):
-    t = type(string)
-    return t == str or t == unicode
-
-
-def verifyStringList(strings):
-    for s in strings:
-        if not verifyString(s):
-            return False
-
-    return True
+    return decorator
 
 
 #
@@ -212,7 +178,7 @@ class WebServer:
 
 
     def setHeader(self, name, value):
-        self.extraHeaders[name] = value
+        self.headersOpt[name] = value
 
 
     def resetHeaders(self):
@@ -221,13 +187,14 @@ class WebServer:
             ['Content-Type', 'text/json'],
             ['Access-Control-Allow-Origin', '*']
         ]
-        self.extraHeaders = {}
+        self.headersOpt = {}
 
 
     def getHeaders(self):
         headers = self.headers[:]
-        for name in self.extraHeaders:
-            headers.append([name, self.extraHeaders[name]])
+        for name in self.headersOpt:
+            headers.append([name, self.headersOpt[name]])
+
         return headers
 
 
@@ -301,49 +268,7 @@ class WebServer:
 
 
 #
-# AnkiNoteParams
-#
-
-class AnkiNoteParams:
-    def __init__(self, params):
-        self.deckName = params.get('deckName')
-        self.modelName = params.get('modelName')
-        self.fields = params.get('fields', {})
-        self.tags = params.get('tags', [])
-
-        class Audio:
-            def __init__(self, params):
-                self.url = params.get('url')
-                self.filename = params.get('filename')
-                self.skipHash = params.get('skipHash')
-                self.fields = params.get('fields', [])
-
-            def validate(self):
-                return (
-                    verifyString(self.url) and
-                    verifyString(self.filename) and os.path.dirname(self.filename) == '' and
-                    verifyStringList(self.fields) and
-                    (verifyString(self.skipHash) or self.skipHash is None)
-                )
-
-        audio = Audio(params.get('audio', {}))
-        self.audio = audio if audio.validate() else None
-
-
-    def validate(self):
-        return (
-            verifyString(self.deckName) and
-            verifyString(self.modelName) and
-            type(self.fields) == dict and verifyStringList(list(self.fields.keys())) and verifyStringList(list(self.fields.values())) and
-            type(self.tags) == list and verifyStringList(self.tags)
-        )
-
-
-    def __str__(self):
-        return 'DeckName: ' + self.deckName + '. ModelName: ' + self.modelName + '. Fields: ' + str(self.fields) + '. Tags: ' + str(self.tags) + '.'
-
-#
-# AnkiBridge
+# AnkiConnect
 #
 
 class AnkiConnect:
@@ -407,6 +332,50 @@ class AnkiConnect:
             return reply['result']
 
 
+    def download(self, url):
+        resp = web.urlopen(url, timeout=URL_TIMEOUT)
+        if resp.code == 200:
+            return resp.read()
+        else:
+            raise Exception('return code for download of {} was {}'.format(url, resp.code))
+
+
+    def window(self):
+        return aqt.mw
+
+
+    def reviewer(self):
+        reviewer = self.window().reviewer
+        if reviewer is None:
+            raise Exception('reviewer is not available')
+        else:
+            return reviewer
+
+
+    def collection(self):
+        collection = self.window().col
+        if collection is None:
+            raise Exception('collection is not available')
+        else:
+            return collection
+
+
+    def scheduler(self):
+        scheduler = self.collection().sched
+        if scheduler is None:
+            raise Exception('scheduler is not available')
+        else:
+            return scheduler
+
+
+    def media(self):
+        media = self.collection().media
+        if media is None:
+            raise Exception('media is not available')
+        else:
+            return media
+
+
     def startEditing(self):
         self.window().requireReset()
 
@@ -416,68 +385,44 @@ class AnkiConnect:
             self.window().maybeReset()
 
 
-    def window(self):
-        return aqt.mw
-
-
-    def reviewer(self):
-        return self.window().reviewer
-
-
-    def collection(self):
-        return self.window().col
-
-
-    def scheduler(self):
-        return self.collection().sched
-
-
-    def media(self):
+    def createNote(self, note):
         collection = self.collection()
-        if collection is not None:
-            return collection.media
 
-
-    def createNote(self, params):
-        collection = self.collection()
-        if collection is None:
-            raise Exception('Collection was not found.')
-
-        model = collection.models.byName(params.modelName)
+        model = collection.models.byName(note['modelName'])
         if model is None:
-            raise Exception('Model was not found for model: ' + params.modelName)
+            raise Exception('model was not found: {}'.format(note['modelName']))
 
-        deck = collection.decks.byName(params.deckName)
+        deck = collection.decks.byName(note['deckName'])
         if deck is None:
-            raise Exception('Deck was not found for deck: ' + params.deckName)
+            raise Exception('deck was not found: {}'.format(note['deckName']))
 
-        note = anki.notes.Note(collection, model)
-        note.model()['did'] = deck['id']
-        note.tags = params.tags
+        ankiNote = anki.notes.Note(collection, model)
+        ankiNote.model()['did'] = deck['id']
+        ankiNote.tags = note['tags']
 
-        for name, value in params.fields.items():
-            if name in note:
-                note[name] = value
+        for name, value in note['fields'].items():
+            if name in ankiNote:
+                ankiNote[name] = value
 
-        # Returns 1 if empty. 2 if duplicate. Otherwise returns False
-        duplicateOrEmpty = note.dupeOrEmpty()
+        duplicateOrEmpty = ankiNote.dupeOrEmpty()
         if duplicateOrEmpty == 1:
-            raise Exception('Note was empty. Param were: ' + str(params))
+            raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
-            raise Exception('Note is duplicate of existing note. Params were: ' + str(params))
+            raise Exception('cannot create note because it is a duplicte')
         elif duplicateOrEmpty == False:
-            return note
+            return ankiNote
+        else:
+            raise Exception('cannot create note for unknown reason')
 
 
-    @webApi()
+    @api()
     def storeMediaFile(self, filename, data):
         self.deleteMediaFile(filename)
         self.media().writeData(filename, base64.b64decode(data))
 
 
-    @webApi()
+    @api()
     def retrieveMediaFile(self, filename):
-        # based on writeData from anki/media.py
         filename = os.path.basename(filename)
         filename = normalize('NFC', filename)
         filename = self.media().stripIllegal(filename)
@@ -490,352 +435,328 @@ class AnkiConnect:
         return False
 
 
-    @webApi()
+    @api()
     def deleteMediaFile(self, filename):
         self.media().syncDelete(filename)
 
 
-    @webApi()
+    @api()
     def addNote(self, note):
-        params = AnkiNoteParams(note)
-        if not params.validate():
-            raise Exception('Invalid note parameters')
+        ankiNote = self.createNote(note)
 
-        collection = self.collection()
-        if collection is None:
-            raise Exception('Collection was not found.')
-
-        note = self.createNote(params)
-        if note is None:
-            raise Exception('Failed to create note from params: ' + str(params))
-
-        if params.audio is not None and len(params.audio.fields) > 0:
-            data = download(params.audio.url)
+        if note['audio'] is not None and len(note['audio']['fields']) > 0:
+            audio = note['audio']
+            data = download(audio['url'])
             if data is not None:
-                if params.audio.skipHash is None:
+                if audio['skipHash'] is None:
                     skip = False
                 else:
                     m = hashlib.md5()
                     m.update(data)
-                    skip = params.audio.skipHash == m.hexdigest()
+                    skip = audio['skipHash'] == m.hexdigest()
 
                 if not skip:
-                    audioInject(note, params.audio.fields, params.audio.filename)
-                    self.media().writeData(params.audio.filename, data)
+                    for field in audio['fields']:
+                        if field in ankiNote:
+                            ankiNote[field] += u'[sound:{}]'.format(audio['filename'])
 
+                    self.media().writeData(audio['filename'], data)
+
+        collection = self.collection()
         self.startEditing()
-        collection.addNote(note)
+        collection.addNote(ankiNote)
         collection.autosave()
         self.stopEditing()
 
-        return note.id
+        return ankiNote.id
 
 
-    @webApi()
+    @api()
     def canAddNote(self, note):
-        params = AnkiNoteParams(note)
-        if not params.validate():
-            return False
-
         try:
-            return bool(self.createNote(params))
+            return bool(self.createNote(note))
         except:
             return False
 
 
-    @webApi()
+    @api()
     def updateNoteFields(self, params):
-        collection = self.collection()
-        if collection is None:
-            raise Exception('Collection was not found.')
-
-        note = collection.getNote(params['id'])
+        note = self.collection().getNote(params['id'])
         if note is None:
-            raise Exception('Failed to get note:{}'.format(params['id']))
+            raise Exception('note was not found: {}'.format(params['id']))
+
         for name, value in params['fields'].items():
             if name in note:
                 note[name] = value
+
         note.flush()
 
 
-    @webApi()
+    @api()
     def addTags(self, notes, tags, add=True):
         self.startEditing()
         self.collection().tags.bulkAdd(notes, tags, add)
         self.stopEditing()
 
 
-    @webApi()
+    @api()
     def removeTags(self, notes, tags):
         return self.addTags(notes, tags, False)
 
 
-    @webApi()
+    @api()
     def getTags(self):
         return self.collection().tags.all()
 
 
-    @webApi()
+    @api()
     def suspend(self, cards, suspend=True):
         for card in cards:
-            isSuspended = self.isSuspended(card)
-            if suspend and isSuspended:
-                cards.remove(card)
-            elif not suspend and not isSuspended:
+            if self.suspended(card) == suspend:
                 cards.remove(card)
 
-        if cards:
-            self.startEditing()
-            if suspend:
-                self.collection().sched.suspendCards(cards)
-            else:
-                self.collection().sched.unsuspendCards(cards)
-            self.stopEditing()
-            return True
+        if len(cards) == 0:
+            return False
 
-        return False
+        scheduler = self.scheduler()
+        self.startEditing()
+        if suspend:
+            scheduler.suspendCards(cards)
+        else:
+            scheduler.unsuspendCards(cards)
+        self.stopEditing()
+
+        return True
 
 
-    @webApi()
+    @api()
     def unsuspend(self, cards):
         self.suspend(cards, False)
 
 
-    @webApi()
-    def isSuspended(self, card):
+    @api()
+    def suspended(self, card):
         card = self.collection().getCard(card)
         return card.queue == -1
 
 
-    @webApi()
+    @api()
     def areSuspended(self, cards):
         suspended = []
         for card in cards:
-            suspended.append(self.isSuspended(card))
+            suspended.append(self.suspended(card))
+
         return suspended
 
 
-    @webApi()
+    @api()
     def areDue(self, cards):
         due = []
         for card in cards:
-            if self.findCards('cid:%s is:new' % card):
+            if self.findCards('cid:{} is:new'.format(card)):
                 due.append(True)
-                continue
-
-            date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
-            if (ivl >= -1200):
-                if self.findCards('cid:%s is:due' % card):
-                    due.append(True)
-                else:
-                    due.append(False)
             else:
-                if date - ivl <= time():
-                    due.append(True)
+                date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
+                if ivl >= -1200:
+                    duo.append(bool(self.findCards('cid:{} is:due'.format(card))))
                 else:
-                    due.append(False)
+                    due.append(date - ivl <= time())
 
         return due
 
 
-    @webApi()
+    @api()
     def getIntervals(self, cards, complete=False):
         intervals = []
         for card in cards:
-            if self.findCards('cid:%s is:new' % card):
+            if self.findCards('cid:{} is:new'.format(card)):
                 intervals.append(0)
-                continue
+            else:
+                interval = self.collection().db.list('select ivl from revlog where cid = ?', card)
+                if not complete:
+                    interval = interval[-1]
+                intervals.append(interval)
 
-            interval = self.collection().db.list('select ivl from revlog where cid = ?', card)
-            if not complete:
-                interval = interval[-1]
-            intervals.append(interval)
         return intervals
 
 
-    @webApi()
+    @api()
     def multi(self, actions):
         response = []
         for item in actions:
             response.append(self.handler(item))
+
         return response
 
 
-    @webApi()
+    @api()
     def modelNames(self):
-        collection = self.collection()
-        if collection is not None:
-            return collection.models.allNames()
+        return self.collection().models.allNames()
 
 
-    @webApi()
+    @api()
     def modelNamesAndIds(self):
         models = {}
-
-        modelNames = self.modelNames()
-        for model in modelNames:
-            mid = self.collection().models.byName(model)['id']
-            mid = int(mid)  # sometimes Anki stores the ID as a string
-            models[model] = mid
+        for model in self.modelNames():
+            models[model] = int(self.collection().models.byName(model)['id'])
 
         return models
 
 
-    @webApi()
+    @api()
     def modelNameFromId(self, modelId):
-        collection = self.collection()
-        if collection is not None:
-            model = collection.models.get(modelId)
-            if model is not None:
-                return model['name']
+        model = self.collection().models.get(modelId)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelId))
+        else:
+            return model['name']
 
 
-    @webApi()
+    @api()
     def modelFieldNames(self, modelName):
-        collection = self.collection()
-        if collection is not None:
-            model = collection.models.byName(modelName)
-            if model is not None:
-                return [field['name'] for field in model['flds']]
+        model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+        else:
+            return [field['name'] for field in model['flds']]
 
 
-    @webApi()
+    @api()
     def modelFieldsOnTemplates(self, modelName):
         model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
 
-        if model is not None:
-            templates = {}
-            for template in model['tmpls']:
-                fields = []
+        templates = {}
+        for template in model['tmpls']:
+            fields = []
+            for side in ['qfmt', 'afmt']:
+                fieldsForSide = []
 
-                for side in ['qfmt', 'afmt']:
-                    fieldsForSide = []
+                # based on _fieldsOnTemplate from aqt/clayout.py
+                matches = re.findall('{{[^#/}]+?}}', template[side])
+                for match in matches:
+                    # remove braces and modifiers
+                    match = re.sub(r'[{}]', '', match)
+                    match = match.split(':')[-1]
 
-                    # based on _fieldsOnTemplate from aqt/clayout.py
-                    matches = re.findall('{{[^#/}]+?}}', template[side])
-                    for match in matches:
-                        # remove braces and modifiers
-                        match = re.sub(r'[{}]', '', match)
-                        match = match.split(':')[-1]
+                    # for the answer side, ignore fields present on the question side + the FrontSide field
+                    if match == 'FrontSide' or side == 'afmt' and match in fields[0]:
+                        continue
+                    fieldsForSide.append(match)
 
-                        # for the answer side, ignore fields present on the question side + the FrontSide field
-                        if match == 'FrontSide' or side == 'afmt' and match in fields[0]:
-                            continue
-                        fieldsForSide.append(match)
+                fields.append(fieldsForSide)
 
+            templates[template['name']] = fields
 
-                    fields.append(fieldsForSide)
-
-                templates[template['name']] = fields
-
-            return templates
+        return templates
 
 
-    @webApi()
+    @api()
     def getDeckConfig(self, deck):
         if not deck in self.deckNames():
             return False
 
-        did = self.collection().decks.id(deck)
-        return self.collection().decks.confForDid(did)
+        collection = self.collection()
+        did = collection.decks.id(deck)
+        return collection.decks.confForDid(did)
 
 
-    @webApi()
+    @api()
     def saveDeckConfig(self, config):
-        configId = str(config['id'])
-        if not configId in self.collection().decks.dconf:
+        collection = self.collection()
+
+        config['id'] = str(config['id'])
+        config['mod'] = anki.utils.intTime()
+        config['usn'] = collection.usn()
+
+        if not config['id'] in collection.decks.dconf:
             return False
 
-        mod = anki.utils.intTime()
-        usn = self.collection().usn()
-
-        config['mod'] = mod
-        config['usn'] = usn
-
-        self.collection().decks.dconf[configId] = config
-        self.collection().decks.changed = True
+        collection.decks.dconf[config['id']] = config
+        collection.decks.changed = True
         return True
 
 
-    @webApi()
+    @api()
     def setDeckConfigId(self, decks, configId):
+        configId = str(configId)
         for deck in decks:
             if not deck in self.deckNames():
                 return False
 
-        if not str(configId) in self.collection().decks.dconf:
+        collection = self.collection()
+        if not configId in collection.decks.dconf:
             return False
 
         for deck in decks:
-            did = str(self.collection().decks.id(deck))
+            did = str(collection.decks.id(deck))
             aqt.mw.col.decks.decks[did]['conf'] = configId
 
         return True
 
 
-    @webApi()
-    def cloneDeckConfigId(self, name, cloneFrom=1):
-        if not str(cloneFrom) in self.collection().decks.dconf:
+    @api()
+    def cloneDeckConfigId(self, name, cloneFrom='1'):
+        configId = str(cloneFrom)
+        if not configId in self.collection().decks.dconf:
             return False
 
-        cloneFrom = self.collection().decks.getConf(cloneFrom)
-        return self.collection().decks.confId(name, cloneFrom)
+        config = self.collection().decks.getConf(configId)
+        return self.collection().decks.confId(name, config)
 
 
-    @webApi()
+    @api()
     def removeDeckConfigId(self, configId):
-        if configId == 1 or not str(configId) in self.collection().decks.dconf:
+        configId = str(configId)
+        collection = self.collection()
+        if configId == 1 or not configId in collection.decks.dconf:
             return False
 
-        self.collection().decks.remConf(configId)
+        collection.decks.remConf(configId)
         return True
 
 
-    @webApi()
+    @api()
     def deckNames(self):
-        collection = self.collection()
-        if collection is not None:
-            return collection.decks.allNames()
+        return self.collection().decks.allNames()
 
 
-    @webApi()
+    @api()
     def deckNamesAndIds(self):
         decks = {}
-
-        deckNames = self.deckNames()
-        for deck in deckNames:
-            did = self.collection().decks.id(deck)
-            decks[deck] = did
+        for deck in self.deckNames():
+            decks[deck] = self.collection().decks.id(deck)
 
         return decks
 
 
-    @webApi()
+    @api()
     def deckNameFromId(self, deckId):
-        collection = self.collection()
-        if collection is not None:
-            deck = collection.decks.get(deckId)
-            if deck is not None:
-                return deck['name']
+        deck = self.collection().decks.get(deckId)
+        if deck is None:
+            raise Exception('deck was not found: {}'.format(deckId))
+        else:
+            return deck['name']
 
 
-    @webApi()
+    @api()
     def findNotes(self, query=None):
-        if query is not None:
+        if query is None:
+            return []
+        else:
             return self.collection().findNotes(query)
-        else:
-            return []
 
 
-    @webApi()
+    @api()
     def findCards(self, query=None):
-        if query is not None:
-            return self.collection().findCards(query)
-        else:
+        if query not None:
             return []
+        else:
+            return self.collection().findCards(query)
 
 
-    @webApi()
+    @api()
     def cardsInfo(self, cards):
         result = []
         for cid in cards:
@@ -874,7 +795,7 @@ class AnkiConnect:
         return result
 
 
-    @webApi()
+    @api()
     def notesInfo(self, notes):
         result = []
         for nid in notes:
@@ -893,8 +814,7 @@ class AnkiConnect:
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
-                    'cards': self.collection().db.list(
-                        'select id from cards where nid = ? order by ord', note.id)
+                    'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the note ID does not exist.
@@ -902,15 +822,17 @@ class AnkiConnect:
                 # returned result, so that the items of the input and return
                 # lists correspond.
                 result.append({})
+
         return result
 
 
-    @webApi()
+    @api()
     def getDecks(self, cards):
         decks = {}
+        collection = self.collection()
         for card in cards:
-            did = self.collection().db.scalar('select did from cards where id = ?', card)
-            deck = self.collection().decks.get(did)['name']
+            did = collection.db.scalar('select did from cards where id = ?', card)
+            deck = collection.decks.get(did)['name']
 
             if deck in decks:
                 decks[deck].append(card)
@@ -920,7 +842,7 @@ class AnkiConnect:
         return decks
 
 
-    @webApi()
+    @api()
     def createDeck(self, deck):
         self.startEditing()
         deckId = self.collection().decks.id(deck)
@@ -929,7 +851,7 @@ class AnkiConnect:
         return deckId
 
 
-    @webApi()
+    @api()
     def changeDeck(self, cards, deck):
         self.startEditing()
 
@@ -947,7 +869,7 @@ class AnkiConnect:
         self.stopEditing()
 
 
-    @webApi()
+    @api()
     def deleteDecks(self, decks, cardsToo=False):
         self.startEditing()
         for deck in decks:
@@ -956,12 +878,12 @@ class AnkiConnect:
         self.stopEditing()
 
 
-    @webApi()
+    @api()
     def cardsToNotes(self, cards):
         return self.collection().db.list('select distinct nid from cards where id in ' + anki.utils.ids2str(cards))
 
 
-    @webApi()
+    @api()
     def guiBrowse(self, query=None):
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
@@ -976,18 +898,18 @@ class AnkiConnect:
         return browser.model.cards
 
 
-    @webApi()
+    @api()
     def guiAddCards(self):
         addCards = aqt.dialogs.open('AddCards', self.window())
         addCards.activateWindow()
 
 
-    @webApi()
+    @api()
     def guiReviewActive(self):
         return self.reviewer().card is not None and self.window().state == 'review'
 
 
-    @webApi()
+    @api()
     def guiCurrentCard(self):
         if not self.guiReviewActive():
             raise Exception('Gui review is not currently active.')
@@ -1017,7 +939,7 @@ class AnkiConnect:
             }
 
 
-    @webApi()
+    @api()
     def guiStartCardTimer(self):
         if not self.guiReviewActive():
             return False
@@ -1031,7 +953,7 @@ class AnkiConnect:
             return False
 
 
-    @webApi()
+    @api()
     def guiShowQuestion(self):
         if self.guiReviewActive():
             self.reviewer()._showQuestion()
@@ -1040,7 +962,7 @@ class AnkiConnect:
             return False
 
 
-    @webApi()
+    @api()
     def guiShowAnswer(self):
         if self.guiReviewActive():
             self.window().reviewer._showAnswer()
@@ -1049,7 +971,7 @@ class AnkiConnect:
             return False
 
 
-    @webApi()
+    @api()
     def guiAnswerCard(self, ease):
         if not self.guiReviewActive():
             return False
@@ -1064,7 +986,7 @@ class AnkiConnect:
         return True
 
 
-    @webApi()
+    @api()
     def guiDeckOverview(self, name):
         collection = self.collection()
         if collection is not None:
@@ -1077,12 +999,12 @@ class AnkiConnect:
         return False
 
 
-    @webApi()
+    @api()
     def guiDeckBrowser(self):
         self.window().moveToState('deckBrowser')
 
 
-    @webApi()
+    @api()
     def guiDeckReview(self, name):
         if self.guiDeckOverview(name):
             self.window().moveToState('review')
@@ -1091,7 +1013,7 @@ class AnkiConnect:
             return False
 
 
-    @webApi()
+    @api()
     def guiExitAnki(self):
         timer = QTimer()
         def exitAnki():
@@ -1101,12 +1023,12 @@ class AnkiConnect:
         timer.start(1000) # 1s should be enough to allow the response to be sent.
 
 
-    @webApi()
+    @api()
     def sync(self):
         self.window().onSync()
 
 
-    @webApi()
+    @api()
     def upgrade(self):
         response = QMessageBox.question(
             self.window(),
@@ -1129,12 +1051,12 @@ class AnkiConnect:
         return False
 
 
-    @webApi()
+    @api()
     def version(self):
         return API_VERSION
 
 
-    @webApi()
+    @api()
     def addNotes(self, notes):
         results = []
         for note in notes:
@@ -1146,7 +1068,7 @@ class AnkiConnect:
         return results
 
 
-    @webApi()
+    @api()
     def canAddNotes(self, notes):
         results = []
         for note in notes:
@@ -1156,7 +1078,7 @@ class AnkiConnect:
 
 
 #
-#   Entry
+# Entry
 #
 
 ac = AnkiConnect()
