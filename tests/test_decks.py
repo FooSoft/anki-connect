@@ -17,5 +17,25 @@ class TestDeckNamesAndIds(unittest.TestCase):
         self.assertEqual(result['Default'], 1)
 
 
+class TestCreateDeck(unittest.TestCase):
+    def tearDown(self):
+        util.invoke('deleteDecks', {'decks': ['test']})
+
+
+    def runTest(self):
+        util.invoke('createDeck', {'deck': 'test'})
+        self.assertIn('test', util.invoke('deckNames'))
+
+
+class TestDeleteDecks(unittest.TestCase):
+    def setUp(self):
+        util.invoke('createDeck', {'deck': 'test'})
+
+
+    def runTest(self):
+        util.invoke('deleteDecks', {'decks': ['test']})
+        self.assertNotIn('test', util.invoke('deckNames'))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -376,6 +376,14 @@ class AnkiConnect:
             return scheduler
 
 
+    def database(self):
+        database = self.collection().db
+        if database is None:
+            raise Exception('database is not available')
+        else:
+            return database
+
+
     def media(self):
         media = self.collection().media
         if media is None:
@@ -491,11 +499,9 @@ class AnkiConnect:
     @api()
     def getDecks(self, cards):
         decks = {}
-        collection = self.collection()
         for card in cards:
-            did = collection.db.scalar('select did from cards where id = ?', card)
-            deck = collection.decks.get(did)['name']
-
+            did = self.database().scalar('select did from cards where id=?', card)
+            deck = self.decks().get(did)['name']
             if deck in decks:
                 decks[deck].append(card)
             else:
@@ -506,38 +512,45 @@ class AnkiConnect:
 
     @api()
     def createDeck(self, deck):
-        self.startEditing()
-        deckId = self.collection().decks.id(deck)
-        self.stopEditing()
+        try:
+            self.startEditing()
+            did = self.decks().id(deck)
+        finally:
+            self.stopEditing()
 
-        return deckId
+        return did
 
 
     @api()
     def changeDeck(self, cards, deck):
-        self.startEditing()
+        try:
+            self.startEditing()
 
-        did = self.collection().decks.id(deck)
-        mod = anki.utils.intTime()
-        usn = self.collection().usn()
+            did = self.collection().decks.id(deck)
+            mod = anki.utils.intTime()
+            usn = self.collection().usn()
 
-        # normal cards
-        scids = anki.utils.ids2str(cards)
-        # remove any cards from filtered deck first
-        self.collection().sched.remFromDyn(cards)
+            # normal cards
+            scids = anki.utils.ids2str(cards)
+            # remove any cards from filtered deck first
+            self.collection().sched.remFromDyn(cards)
 
-        # then move into new deck
-        self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
-        self.stopEditing()
+            # then move into new deck
+            self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ?', scids, usn, mod, did)
+        finally:
+            self.stopEditing()
 
 
     @api()
     def deleteDecks(self, decks, cardsToo=False):
-        self.startEditing()
-        for deck in decks:
-            did = self.collection().decks.id(deck)
-            self.collection().decks.rem(did, cardsToo)
-        self.stopEditing()
+        try:
+            self.startEditing()
+            decks = filter(lambda d: d in self.deckNames(), decks)
+            for deck in decks:
+                did = self.decks().id(deck)
+                self.decks().rem(did, cardsToo)
+        finally:
+            self.stopEditing()
 
 
     @api()
