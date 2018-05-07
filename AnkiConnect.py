@@ -462,16 +462,12 @@ class AnkiConnect:
 
     @api()
     def sync(self):
-        print self.window().onSync()
+        self.window().onSync()
 
 
     @api()
     def multi(self, actions):
-        response = []
-        for item in actions:
-            response.append(self.handler(item))
-
-        return response
+        return map(self.handler, actions)
 
 
     #
@@ -487,7 +483,7 @@ class AnkiConnect:
     def deckNamesAndIds(self):
         decks = {}
         for deck in self.deckNames():
-            decks[deck] = self.collection().decks.id(deck)
+            decks[deck] = self.decks().id(deck)
 
         return decks
 
