@@ -6,8 +6,7 @@ import util
 
 class TestVersion(unittest.TestCase):
     def runTest(self):
-        result = util.invoke('version')
-        self.assertEqual(result, 5)
+        self.assertEqual(util.invoke('version'), 5)
 
 
 class TestUpgrade(unittest.TestCase):
@@ -23,13 +22,12 @@ class TestSync(unittest.TestCase):
 class TestMulti(unittest.TestCase):
     def runTest(self):
         result = util.invoke(
-            'multi', {
-                'actions': [
-                    util.request('version'),
-                    util.request('version'),
-                    util.request('version')
-                ]
-            }
+            'multi',
+            actions=[
+                util.request('version'),
+                util.request('version'),
+                util.request('version')
+            ]
         )
 
         self.assertEqual(len(result), 3)

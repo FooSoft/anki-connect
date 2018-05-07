@@ -19,21 +19,21 @@ class TestDeckNamesAndIds(unittest.TestCase):
 
 class TestCreateDeck(unittest.TestCase):
     def tearDown(self):
-        util.invoke('deleteDecks', {'decks': ['test']})
+        util.invoke('deleteDecks', decks=['test'])
 
 
     def runTest(self):
-        util.invoke('createDeck', {'deck': 'test'})
+        util.invoke('createDeck', deck='test')
         self.assertIn('test', util.invoke('deckNames'))
 
 
 class TestDeleteDecks(unittest.TestCase):
     def setUp(self):
-        util.invoke('createDeck', {'deck': 'test'})
+        util.invoke('createDeck', deck='test')
 
 
     def runTest(self):
-        util.invoke('deleteDecks', {'decks': ['test']})
+        util.invoke('deleteDecks', decks=['test'])
         self.assertNotIn('test', util.invoke('deckNames'))
 
 

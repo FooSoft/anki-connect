@@ -1,14 +1,17 @@
 import json
 import urllib2
 
+API_VERSION = 5
+API_URL     = 'http://localhost:8765'
 
-def request(action, params={}, version=5):
-    return {'action': action, 'params': params, 'version': version}
+
+def request(action, **params):
+    return {'action': action, 'params': params, 'version': API_VERSION}
 
 
-def invoke(action, params={}, version=5, url='http://localhost:8765'):
-    requestJson = json.dumps(request(action, params, version))
-    response = json.load(urllib2.urlopen(urllib2.Request(url, requestJson)))
+def invoke(action, **params):
+    requestJson = json.dumps(request(action, **params))
+    response = json.load(urllib2.urlopen(urllib2.Request(API_URL, requestJson)))
     if len(response) != 2:
         raise Exception('response has an unexpected number of fields')
     if 'error' not in response:
