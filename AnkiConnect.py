@@ -647,8 +647,8 @@ class AnkiConnect:
     def addNote(self, note):
         ankiNote = self.createNote(note)
 
-        if note['audio'] is not None and len(note['audio']['fields']) > 0:
-            audio = note['audio']
+        audio = note.get('audio')
+        if audio is not None and len(audio['fields']) > 0:
             data = download(audio['url'])
             if data is not None:
                 if audio['skipHash'] is None:
@@ -683,16 +683,16 @@ class AnkiConnect:
 
 
     @api()
-    def updateNoteFields(self, params):
-        note = self.collection().getNote(params['id'])
-        if note is None:
-            raise Exception('note was not found: {}'.format(params['id']))
+    def updateNoteFields(self, note):
+        ankiNote = self.collection().getNote(note['id'])
+        if ankiNote is None:
+            raise Exception('note was not found: {}'.format(note['id']))
 
-        for name, value in params['fields'].items():
-            if name in note:
-                note[name] = value
+        for name, value in note['fields'].items():
+            if name in ankiNote:
+                ankiNote[name] = value
 
-        note.flush()
+        ankiNote.flush()
 
 
     @api()
