@@ -4,36 +4,24 @@ import unittest
 import util
 
 
-class TestVersion(unittest.TestCase):
+class TestMisc(unittest.TestCase):
     def runTest(self):
+        # version
         self.assertEqual(util.invoke('version'), 5)
 
-
-class TestUpgrade(unittest.TestCase):
-    def runTest(self):
+        # upgrade
         util.invoke('upgrade')
 
-
-class TestSync(unittest.TestCase):
-    def runTest(self):
+        # sync
         util.invoke('sync')
 
-
-class TestMulti(unittest.TestCase):
-    def runTest(self):
-        result = util.invoke(
-            'multi',
-            actions=[
-                util.request('version'),
-                util.request('version'),
-                util.request('version')
-            ]
-        )
-
-        self.assertEqual(len(result), 3)
-        for response in result:
-            self.assertIsNone(response['error'])
-            self.assertEqual(response['result'], 5)
+        # multi
+        actions = [util.request('version'), util.request('version'), util.request('version')]
+        results = util.invoke('multi', actions=actions)
+        self.assertEqual(len(results), len(actions))
+        for result in results:
+            self.assertIsNone(result['error'])
+            self.assertEqual(result['result'], 5)
 
 
 if __name__ == '__main__':
