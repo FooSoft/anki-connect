@@ -4,37 +4,30 @@ import unittest
 import util
 
 
-class TestDeckNames(unittest.TestCase):
+class TestDecks(unittest.TestCase):
     def runTest(self):
-        result = util.invoke('deckNames')
-        self.assertIn('Default', result)
+        # deckNames (part 1)
+        deckNames = util.invoke('deckNames')
+        self.assertIn('Default', deckNames)
 
-
-class TestDeckNamesAndIds(unittest.TestCase):
-    def runTest(self):
+        # deckNamesAndIds
         result = util.invoke('deckNamesAndIds')
         self.assertIn('Default', result)
         self.assertEqual(result['Default'], 1)
 
-
-class TestCreateDeck(unittest.TestCase):
-    def tearDown(self):
-        util.invoke('deleteDecks', decks=['test'])
-
-
-    def runTest(self):
-        util.invoke('createDeck', deck='test')
-        self.assertIn('test', util.invoke('deckNames'))
-
-
-class TestDeleteDecks(unittest.TestCase):
-    def setUp(self):
+        # createDeck
         util.invoke('createDeck', deck='test')
 
+        # deckNames (part 2)
+        deckNames = util.invoke('deckNames')
+        self.assertIn('test', deckNames)
 
-    def runTest(self):
+        # deleteDecks
         util.invoke('deleteDecks', decks=['test'])
-        self.assertNotIn('test', util.invoke('deckNames'))
+
+        # deckNames (part 3)
+        deckNames = util.invoke('deckNames')
+        self.assertNotIn('test', deckNames)
 
 
 if __name__ == '__main__':
