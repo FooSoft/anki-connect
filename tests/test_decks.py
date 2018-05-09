@@ -29,6 +29,32 @@ class TestDecks(unittest.TestCase):
         deckNames = util.invoke('deckNames')
         self.assertNotIn('test', deckNames)
 
+        # getDeckConfig
+        deckConfig = util.invoke('getDeckConfig', deck='Default')
+        self.assertEqual('Default', deckConfig['name'])
+
+        # saveDeckConfig
+        deckConfig = util.invoke('saveDeckConfig', config=deckConfig)
+
+        # setDeckConfigId
+        setDeckConfigId = util.invoke('setDeckConfigId', decks=['Default'], configId=1)
+        self.assertTrue(setDeckConfigId)
+
+        # cloneDeckConfigId (part 1)
+        deckConfigId = util.invoke('cloneDeckConfigId', cloneFrom=1, name='test')
+        self.assertTrue(deckConfigId)
+
+        # removeDeckConfigId (part 1)
+        removedDeckConfigId = util.invoke('removeDeckConfigId', configId=deckConfigId)
+        self.assertTrue(removedDeckConfigId)
+
+        # removeDeckConfigId (part 2)
+        removedDeckConfigId = util.invoke('removeDeckConfigId', configId=deckConfigId)
+        self.assertFalse(removedDeckConfigId)
+
+        # cloneDeckConfigId (part 2)
+        deckConfigId = util.invoke('cloneDeckConfigId', cloneFrom=deckConfigId, name='test')
+        self.assertFalse(deckConfigId)
 
 if __name__ == '__main__':
     unittest.main()
