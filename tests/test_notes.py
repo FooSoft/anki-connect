@@ -14,14 +14,8 @@ class TestNotes(unittest.TestCase):
 
 
     def runTest(self):
-        note = {
-            'deckName': 'test',
-            'modelName': 'Basic',
-            'fields': {'Front': 'front1', 'Back': 'back1'},
-            'tags': ['tag1']
-        }
-
         # addNote
+        note = {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ['tag1']}
         noteId = util.invoke('addNote', note=note)
         self.assertRaises(Exception, lambda: util.invoke('addNote', note=note))
 
@@ -60,18 +54,8 @@ class TestNotes(unittest.TestCase):
         self.assertEqual(noteInfo['fields']['Back']['value'], 'back2')
 
         notes = [
-            {
-                'deckName': 'test',
-                'modelName': 'Basic',
-                'fields': {'Front': 'front3', 'Back': 'back3'},
-                'tags': ['tag']
-            },
-            {
-                'deckName': 'test',
-                'modelName': 'Basic',
-                'fields': {'Front': 'front4', 'Back': 'back4'},
-                'tags': ['tag']
-            }
+            {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front3', 'Back': 'back3'}, 'tags': ['tag']},
+            {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front4', 'Back': 'back4'}, 'tags': ['tag']}
         ]
 
         # canAddNotes (part 1)

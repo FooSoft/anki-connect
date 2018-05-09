@@ -523,22 +523,20 @@ class AnkiConnect:
 
     @api()
     def changeDeck(self, cards, deck):
-        try:
-            self.startEditing()
+        self.startEditing()
 
-            did = self.collection().decks.id(deck)
-            mod = anki.utils.intTime()
-            usn = self.collection().usn()
+        did = self.collection().decks.id(deck)
+        mod = anki.utils.intTime()
+        usn = self.collection().usn()
 
-            # normal cards
-            scids = anki.utils.ids2str(cards)
-            # remove any cards from filtered deck first
-            self.collection().sched.remFromDyn(cards)
+        # normal cards
+        scids = anki.utils.ids2str(cards)
+        # remove any cards from filtered deck first
+        self.collection().sched.remFromDyn(cards)
 
-            # then move into new deck
-            self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ?', scids, usn, mod, did)
-        finally:
-            self.stopEditing()
+        # then move into new deck
+        self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
+        self.stopEditing()
 
 
     @api()

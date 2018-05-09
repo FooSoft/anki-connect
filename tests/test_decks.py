@@ -23,11 +23,27 @@ class TestDecks(unittest.TestCase):
         self.assertIn('test', deckNames)
 
         # deleteDecks
-        util.invoke('deleteDecks', decks=['test'])
+        util.invoke('deleteDecks', decks=['test'], cardsToo=True)
 
         # deckNames (part 3)
         deckNames = util.invoke('deckNames')
         self.assertNotIn('test', deckNames)
+
+        # changeDeck
+        # note = {'deckName': 'Default', 'modelName': 'Basic', 'fields': {'Front': 'front', 'Back': 'back'}, 'tags': ['tag']}
+        # noteId = util.invoke('addNote', note=note)
+        # util.invoke('changeDeck', cards=[noteId], deck='test')
+
+        # deckNames (part 4)
+        # deckNames = util.invoke('deckNames')
+        # self.assertIn('test', deckNames)
+
+        # deleteDecks (part 2)
+        # util.invoke('deleteDecks', decks=['test'], cardsToo=True)
+
+        # deckNames (part 5)
+        # deckNames = util.invoke('deckNames')
+        # self.assertNotIn('test', deckNames)
 
         # getDeckConfig
         deckConfig = util.invoke('getDeckConfig', deck='Default')
