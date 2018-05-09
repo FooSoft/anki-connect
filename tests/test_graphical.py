@@ -33,6 +33,9 @@ class TestGui(unittest.TestCase):
         # guiDeckBrowser
         util.invoke('guiDeckBrowser')
 
+        # guiExitAnki
+        # util.invoke('guiExitAnki')
+
 
 if __name__ == '__main__':
     unittest.main()
