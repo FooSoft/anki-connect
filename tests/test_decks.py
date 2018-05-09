@@ -16,34 +16,29 @@ class TestDecks(unittest.TestCase):
         self.assertEqual(result['Default'], 1)
 
         # createDeck
-        util.invoke('createDeck', deck='test')
+        util.invoke('createDeck', deck='test1')
 
         # deckNames (part 2)
         deckNames = util.invoke('deckNames')
-        self.assertIn('test', deckNames)
+        self.assertIn('test1', deckNames)
 
-        # deleteDecks
-        util.invoke('deleteDecks', decks=['test'], cardsToo=True)
+        # changeDeck
+        note = {'deckName': 'test1', 'modelName': 'Basic', 'fields': {'Front': 'front', 'Back': 'back'}, 'tags': ['tag']}
+        noteId = util.invoke('addNote', note=note)
+        cardIds = util.invoke('findCards', query='deck:test1')
+        util.invoke('changeDeck', cards=cardIds, deck='test2')
 
         # deckNames (part 3)
         deckNames = util.invoke('deckNames')
-        self.assertNotIn('test', deckNames)
+        self.assertIn('test2', deckNames)
 
-        # changeDeck
-        # note = {'deckName': 'Default', 'modelName': 'Basic', 'fields': {'Front': 'front', 'Back': 'back'}, 'tags': ['tag']}
-        # noteId = util.invoke('addNote', note=note)
-        # util.invoke('changeDeck', cards=[noteId], deck='test')
+        # deleteDecks
+        util.invoke('deleteDecks', decks=['test1', 'test2'], cardsToo=True)
 
         # deckNames (part 4)
-        # deckNames = util.invoke('deckNames')
-        # self.assertIn('test', deckNames)
-
-        # deleteDecks (part 2)
-        # util.invoke('deleteDecks', decks=['test'], cardsToo=True)
-
-        # deckNames (part 5)
-        # deckNames = util.invoke('deckNames')
-        # self.assertNotIn('test', deckNames)
+        deckNames = util.invoke('deckNames')
+        self.assertNotIn('test1', deckNames)
+        self.assertNotIn('test2', deckNames)
 
         # getDeckConfig
         deckConfig = util.invoke('getDeckConfig', deck='Default')
