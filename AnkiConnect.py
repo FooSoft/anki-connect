@@ -37,7 +37,7 @@ from unicodedata import normalize
 # Constants
 #
 
-API_VERSION = 5
+API_VERSION = 6
 NET_ADDRESS = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
 NET_BACKLOG = 5
 NET_PORT = 8765
@@ -1000,7 +1000,8 @@ class AnkiConnect:
                 'buttons': [b[0] for b in reviewer._answerButtonList()],
                 'modelName': model['name'],
                 'deckName': self.deckNameFromId(card.did),
-                'css': model['css']
+                'css': model['css'],
+                'template': card.template()['name']
             }
 
 
