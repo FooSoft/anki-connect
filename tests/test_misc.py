@@ -7,7 +7,7 @@ import util
 class TestMisc(unittest.TestCase):
     def runTest(self):
         # version
-        self.assertEqual(util.invoke('version'), 5)
+        self.assertEqual(util.invoke('version'), 6)
 
         # upgrade
         util.invoke('upgrade')
@@ -21,7 +21,7 @@ class TestMisc(unittest.TestCase):
         self.assertEqual(len(results), len(actions))
         for result in results:
             self.assertIsNone(result['error'])
-            self.assertEqual(result['result'], 5)
+            self.assertEqual(result['result'], 6)
 
 
 if __name__ == '__main__':
