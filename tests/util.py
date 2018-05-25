@@ -1,7 +1,7 @@
 import json
 import urllib2
 
-API_VERSION = 5
+API_VERSION = 6
 API_URL     = 'http://localhost:8765'
 
 

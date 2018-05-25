@@ -32,7 +32,7 @@ The installation process is similar to that of other Anki plugins and can be acc
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message *AnkiConnect v.5* displayed in your browser window.
+the server is running, you should see the message *AnkiConnect v.6* displayed in your browser window.
 
 ### Notes for Windows Users ###
 
@@ -100,7 +100,7 @@ function ankiConnectInvoke(action, version, params={}) {
 }
 
 try {
-    const result = await ankiConnectInvoke('deckNames', 5);
+    const result = await ankiConnectInvoke('deckNames', 6);
     console.log(`got list of decks: ${result}`);
 } catch (e) {
     console.log(`error getting decks: ${e}`);
@@ -110,7 +110,7 @@ try {
 Or using [`curl`](https://curl.haxx.se) from the command line:
 
 ```bash
-curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 5}"
+curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
 ```
 
 AnkiConnect will respond with an object containing two fields: `result` and `error`. The `result` field contains the
@@ -140,14 +140,14 @@ Below is a comprehensive list of currently supported actions. Note that deprecat
 despite not being listed on this page as long as your request is labeled with a version number corresponding to when the
 API was available for use.
 
-This page currently documents **version 5** of the API. Make sure to include this version number in your requests to
+This page currently documents **version 6** of the API. Make sure to include this version number in your requests to
 guarantee that your application continues to function properly in the future.
 
 #### Miscellaneous ####
 
 *   **version**
 
-    Gets the version of the API exposed by this plugin. Currently versions `1` through `5` are defined.
+    Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
@@ -157,14 +157,14 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "version",
-        "version": 5
+        "version": 6
     }
     ```
 
     *Sample result*:
     ```json
     {
-        "result": 5,
+        "result": 6,
         "error": null
     }
     ```
@@ -179,7 +179,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "upgrade",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -199,7 +199,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "sync",
-        "version": 5
+        "version": 6
 
     }
     ```
@@ -220,7 +220,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "multi",
-        "version": 5,
+        "version": 6,
         "params": {
             "actions": [
                 {"action": "deckNames"},
@@ -254,7 +254,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "deckNames",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -274,7 +274,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "deckNamesAndIds",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -295,7 +295,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getDecks",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1502298036657, 1502298033753, 1502032366472]
         }
@@ -321,7 +321,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "createDeck",
-        "version": 5,
+        "version": 6,
         "params": {
             "deck": "Japanese::Tokyo"
         }
@@ -343,7 +343,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "changeDeck",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1502098034045, 1502098034048, 1502298033753],
             "deck": "Japanese::JLPT N3"
@@ -368,7 +368,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "deleteDecks",
-        "version": 5,
+        "version": 6,
         "params": {
             "decks": ["Japanese::JLPT N5", "Easy Spanish"],
             "cardsToo": true
@@ -392,7 +392,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getDeckConfig",
-        "version": 5,
+        "version": 6,
         "params": {
             "deck": "Default"
         }
@@ -451,7 +451,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "saveDeckConfig",
-        "version": 5,
+        "version": 6,
         "params": {
             "config": {
                 "lapse": {
@@ -510,7 +510,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "setDeckConfigId",
-        "version": 5,
+        "version": 6,
         "params": {
             "decks": ["Default"],
             "configId": 1
@@ -536,7 +536,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "cloneDeckConfigId",
-        "version": 5,
+        "version": 6,
         "params": {
             "name": "Copy of Default",
             "cloneFrom": 1
@@ -561,7 +561,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "removeDeckConfigId",
-        "version": 5,
+        "version": 6,
         "params": {
             "configId": 1502972374573
         }
@@ -586,7 +586,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "modelNames",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -606,7 +606,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "modelNamesAndIds",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -631,7 +631,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "modelFieldNames",
-        "version": 5,
+        "version": 6,
         "params": {
             "modelName": "Basic"
         }
@@ -655,7 +655,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "modelFieldsOnTemplates",
-        "version": 5,
+        "version": 6,
         "params": {
             "modelName": "Basic (and reversed card)"
         }
@@ -690,7 +690,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "addNote",
-        "version": 5,
+        "version": 6,
         "params": {
             "note": {
                 "deckName": "Default",
@@ -731,7 +731,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "addNotes",
-        "version": 5,
+        "version": 6,
         "params": {
             "notes": [
                 {
@@ -773,7 +773,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "canAddNotes",
-        "version": 5,
+        "version": 6,
         "params": {
             "notes": [
                 {
@@ -808,7 +808,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "updateNoteFields",
-        "version": 5,
+        "version": 6,
         "params": {
             "note": {
                 "id": 1514547547030,
@@ -837,7 +837,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "addTags",
-        "version": 5,
+        "version": 6,
         "params": {
             "notes": [1483959289817, 1483959291695],
             "tags": "european-languages"
@@ -861,7 +861,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "removeTags",
-        "version": 5,
+        "version": 6,
         "params": {
             "notes": [1483959289817, 1483959291695],
             "tags": "european-languages"
@@ -885,7 +885,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getTags",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -905,7 +905,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "findNotes",
-        "version": 5,
+        "version": 6,
         "params": {
             "query": "deck:current"
         }
@@ -929,7 +929,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "notesInfo",
-        "version": 5,
+        "version": 6,
         "params": {
             "notes": [1502298033753]
         }
@@ -966,7 +966,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "suspend",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1483959291685, 1483959293217]
         }
@@ -990,7 +990,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "unsuspend",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1483959291685, 1483959293217]
         }
@@ -1013,7 +1013,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "areSuspended",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1483959291685, 1483959293217]
         }
@@ -1038,7 +1038,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "areDue",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1483959291685, 1483959293217]
         }
@@ -1062,7 +1062,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getIntervals",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1502298033753, 1502298036657]
         }
@@ -1081,7 +1081,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getIntervals",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1502298033753, 1502298036657],
             "complete": true
@@ -1109,7 +1109,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "findCards",
-        "version": 5,
+        "version": 6,
         "params": {
             "query": "deck:current"
         }
@@ -1133,7 +1133,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "cardsToNotes",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1502098034045, 1502098034048, 1502298033753]
         }
@@ -1157,7 +1157,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "cardsInfo",
-        "version": 5,
+        "version": 6,
         "params": {
             "cards": [1498938915662, 1502098034048]
         }
@@ -1215,7 +1215,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "storeMediaFile",
-        "version": 5,
+        "version": 6,
         "params": {
             "filename": "_hello.txt",
             "data": "SGVsbG8sIHdvcmxkIQ=="
@@ -1244,7 +1244,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "retrieveMediaFile",
-        "version": 5,
+        "version": 6,
         "params": {
             "filename": "_hello.txt"
         }
@@ -1267,7 +1267,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "deleteMediaFile",
-        "version": 5,
+        "version": 6,
         "params": {
             "filename": "_hello.txt"
         }
@@ -1293,7 +1293,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiBrowse",
-        "version": 5,
+        "version": 6,
         "params": {
             "query": "deck:current"
         }
@@ -1316,7 +1316,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiAddCards",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1336,7 +1336,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiCurrentCard",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1353,6 +1353,7 @@ guarantee that your application continues to function properly in the future.
                 "Front": {"value": "front content", "order": 0},
                 "Back": {"value": "back content", "order": 1}
             },
+            "template": "Forward",
             "cardId": 1498938915662,
             "buttons": [1, 2, 3]
         },
@@ -1370,7 +1371,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiStartCardTimer",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1390,7 +1391,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiShowQuestion",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1410,7 +1411,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiShowAnswer",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1431,7 +1432,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiAnswerCard",
-        "version": 5,
+        "version": 6,
         "params": {
             "ease": 1
         }
@@ -1454,7 +1455,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiDeckOverview",
-        "version": 5,
+        "version": 6,
 		"params": {
 			"name": "Default"
 		}
@@ -1477,7 +1478,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiDeckBrowser",
-        "version": 5
+        "version": 6
     }
     ```
 
@@ -1497,7 +1498,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiDeckReview",
-        "version": 5,
+        "version": 6,
 		"params": {
 			"name": "Default"
 		}
@@ -1521,7 +1522,7 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "guiExitAnki",
-        "version": 5
+        "version": 6
     }
     ```
 
