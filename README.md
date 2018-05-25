@@ -237,8 +237,8 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": [
-            ["Default"],
-            [1494723142483, 1494703460437, 1494703479525]
+            {"result": "Default", "error": null},
+            {"result": [1494723142483, 1494703460437, 1494703479525], "error": null}
         ],
         "error": null
     }
