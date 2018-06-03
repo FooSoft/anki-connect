@@ -759,7 +759,7 @@ class AnkiConnect:
             else:
                 date, ivl = self.collection().db.all('select id/1000.0, ivl from revlog where cid = ?', card)[-1]
                 if ivl >= -1200:
-                    duo.append(bool(self.findCards('cid:{} is:due'.format(card))))
+                    due.append(bool(self.findCards('cid:{} is:due'.format(card))))
                 else:
                     due.append(date - ivl <= time())
 
