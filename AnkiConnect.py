@@ -647,8 +647,8 @@ class AnkiConnect:
 
         audio = note.get('audio')
         if audio is not None and len(audio['fields']) > 0:
-            data = download(audio['url'])
-            if data is not None:
+            try:
+                data = download(audio['url'])
                 if audio['skipHash'] is None:
                     skip = False
                 else:
@@ -662,6 +662,8 @@ class AnkiConnect:
                             ankiNote[field] += u'[sound:{}]'.format(audio['filename'])
 
                     self.media().writeData(audio['filename'], data)
+            except:
+                pass
 
         collection = self.collection()
         self.startEditing()
