@@ -424,7 +424,7 @@ class AnkiConnect:
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
-            raise Exception('cannot create note because it is a duplicte')
+            raise Exception('cannot create note because it is a duplicate')
         elif duplicateOrEmpty == False:
             return ankiNote
         else:
