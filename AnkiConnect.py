@@ -648,7 +648,7 @@ class AnkiConnect:
         audio = note.get('audio')
         if audio is not None and len(audio['fields']) > 0:
             try:
-                data = download(audio['url'])
+                data = self.download(audio['url'])
                 if audio['skipHash'] is None:
                     skip = False
                 else:
