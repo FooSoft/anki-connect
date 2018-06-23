@@ -649,12 +649,13 @@ class AnkiConnect:
         if audio is not None and len(audio['fields']) > 0:
             try:
                 data = self.download(audio['url'])
-                if audio['skipHash'] is None:
+                skipHash = audio.get('skipHash')
+                if skipHash is None:
                     skip = False
                 else:
                     m = hashlib.md5()
                     m.update(data)
-                    skip = audio['skipHash'] == m.hexdigest()
+                    skip = skipHash == m.hexdigest()
 
                 if not skip:
                     for field in audio['fields']:
