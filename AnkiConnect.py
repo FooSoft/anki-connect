@@ -38,6 +38,7 @@ from unicodedata import normalize
 #
 
 API_VERSION = 6
+API_LOG_PATH = None
 NET_ADDRESS = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
 NET_BACKLOG = 5
 NET_PORT = 8765
@@ -274,6 +275,9 @@ class WebServer:
 class AnkiConnect:
     def __init__(self):
         self.server = WebServer(self.handler)
+        self.log = None
+        if API_LOG_PATH is not None:
+            self.log = open(API_LOG_PATH, 'w')
 
         try:
             self.server.listen()
@@ -294,6 +298,11 @@ class AnkiConnect:
 
 
     def handler(self, request):
+        if self.log is not None:
+            self.log.write('[request]\n')
+            json.dump(request, self.log, indent=4, sort_keys=True)
+            self.log.write('\n\n')
+
         name = request.get('action', '')
         version = request.get('version', 4)
         params = request.get('params', {})
@@ -326,10 +335,15 @@ class AnkiConnect:
         except Exception as e:
             reply['error'] = str(e)
 
-        if version > 4:
-            return reply
-        else:
-            return reply['result']
+        if version <= 4:
+            reply = reply['result']
+
+        if self.log is not None:
+            self.log.write('[reply]\n')
+            json.dump(reply, self.log, indent=4, sort_keys=True)
+            self.log.write('\n\n')
+
+        return reply
 
 
     def download(self, url):
