@@ -489,7 +489,7 @@ class AnkiConnect:
 
     @api()
     def multi(self, actions):
-        return map(self.handler, actions)
+        return list(map(self.handler, actions))
 
 
     #
