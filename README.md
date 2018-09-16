@@ -48,10 +48,11 @@ placed in a suspended state. As this behavior causes AnkiConnect to stop working
 foreground, App Nap should be disabled for Anki:
 
 1.  Start the Terminal application.
-2.  Execute the following command in the terminal window:
+2.  Execute the following commands in the terminal window:
 
     ```
     defaults write net.ichi2.anki NSAppSleepDisabled -bool true
+    defaults write org.qt-project.Qt.QtWebEngineCore NSAppSleepDisabled -bool true
     ```
 3.  Restart Anki.
 
