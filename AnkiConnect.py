@@ -53,15 +53,27 @@ URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/Ank
 
 if sys.version_info[0] < 3:
     import urllib2
-    web = urllib2
+    def download(url):
+        contents = None
+        resp = urllib2.urlopen(url, timeout=URL_TIMEOUT)
+        if resp.code == 200:
+            contents = resp.read()
+        return (resp.code, contents)
 
     from PyQt4.QtCore import QTimer
     from PyQt4.QtGui import QMessageBox
 else:
     unicode = str
 
-    from urllib import request
-    web = request
+    from anki.sync import AnkiRequestsClient
+    def download(url):
+        contents = None
+        client = AnkiRequestsClient()
+        client.timeout = URL_TIMEOUT
+        resp = client.get(url)
+        if resp.status_code == 200:
+            contents = client.streamContent(resp)
+        return (resp.status_code, contents)
 
     from PyQt5.QtCore import QTimer
     from PyQt5.QtWidgets import QMessageBox
@@ -347,11 +359,14 @@ class AnkiConnect:
 
 
     def download(self, url):
-        resp = web.urlopen(url, timeout=URL_TIMEOUT)
-        if resp.code == 200:
-            return resp.read()
+        try:
+            (code, contents) = download(url)
+        except Exception as e:
+            raise Exception('{} download failed with error {}'.format(url, str(e)))
+        if code == 200:
+            return contents
         else:
-            raise Exception('return code for download of {} was {}'.format(url, resp.code))
+            raise Exception('{} download failed with return code {}'.format(url, code))
 
 
     def window(self):
@@ -677,8 +692,11 @@ class AnkiConnect:
                             ankiNote[field] += u'[sound:{}]'.format(audio['filename'])
 
                     self.media().writeData(audio['filename'], data)
-            except:
-                pass
+            except Exception as e:
+                errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                for field in audio['fields']:
+                    if field in ankiNote:
+                        ankiNote[field] += errorMessage
 
         collection = self.collection()
         self.startEditing()
