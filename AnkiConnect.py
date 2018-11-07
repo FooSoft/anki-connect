@@ -449,11 +449,21 @@ class AnkiConnect:
             if name in ankiNote:
                 ankiNote[name] = value
 
+        allowDuplicate = False
+        if 'options' in note:
+          if 'allowDuplicate' in note['options']:
+            allowDuplicate = note['options']['allowDuplicate']
+            if type(allowDuplicate) is not bool:
+              raise Exception('option parameter \'allowDuplicate\' must be boolean')
+
         duplicateOrEmpty = ankiNote.dupeOrEmpty()
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
+          if not allowDuplicate:
             raise Exception('cannot create note because it is a duplicate')
+          else:
+            return ankiNote
         elif duplicateOrEmpty == False:
             return ankiNote
         else:
