@@ -685,8 +685,9 @@ guarantee that your application continues to function properly in the future.
     optional and can be omitted. If you choose to include it, the `url` and `filename` fields must be also defined. The
     `skipHash` field can be optionally provided to skip the inclusion of downloaded files with an MD5 hash that matches
     the provided value. This is useful for avoiding the saving of error pages and stub files. The `fields` member is a
-    list of fields that should play audio when the card is displayed in Anki. The 'allowDuplicate' member inside 'options'
-    group can be set to true to enable adding duplicate cards. Normally duplicate cards can not be added and trigger exception.   
+    list of fields that should play audio when the card is displayed in Anki. The `allowDuplicate` member inside
+    `options` group can be set to true to enable adding duplicate cards. Normally duplicate cards can not be added and
+    trigger exception.
 
     *Sample request*:
     ```json
