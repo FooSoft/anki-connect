@@ -509,19 +509,18 @@ class AnkiConnect:
 
     @api()
     def loadProfile(self, name):
+        if name not in self.window().pm.profiles():
+            return False
         if not self.window().isVisible():
             self.window().pm.load(name)
             self.window().loadProfile()
             self.window().profileDiag.closeWithoutQuitting()
-            return "Loaded profile {}.".format(name)
         else:
             cur_profile = self.window().pm.name
             if cur_profile != name:
                 self.window().unloadProfileAndShowProfileManager()
                 self.loadProfile(name)
-                return "Switched from profile {} to profile {}.".format(cur_profile, name)
-            else:
-                return "Profile {} already loaded.".format(name)
+        return True
     
 
     @api()
