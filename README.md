@@ -49,7 +49,6 @@ foreground, App Nap should be disabled for Anki:
 
 1.  Start the Terminal application.
 2.  Execute the following commands in the terminal window:
-
     ```
     defaults write net.ichi2.anki NSAppSleepDisabled -bool true
     defaults write org.qt-project.Qt.QtWebEngineCore NSAppSleepDisabled -bool true
@@ -209,6 +208,29 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": null,
+        "error": null
+    }
+    ```
+
+*   **loadProfile**
+
+    Selects the profile specified in request.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "loadProfile",
+        "params": {
+            "name": "user1"
+        },
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
         "error": null
     }
     ```
