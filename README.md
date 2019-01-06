@@ -213,30 +213,6 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-*   **loadProfile**
-
-    Selects the profile specified in request.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "loadProfile",
-        "params": {
-            "name": "user1"
-        },
-        "version": 6
-
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": true,
-        "error": null
-    }
-    ```
-
 *   **multi**
 
     Performs multiple actions in one request, returning an array with the response of each action (in the given order).
@@ -727,7 +703,7 @@ guarantee that your application continues to function properly in the future.
                     "Back": "back content"
                 },
                 "options": {
-                  "allowDuplicate": false
+                    "allowDuplicate": false
                 },
                 "tags": [
                     "yomichan"
