@@ -1025,10 +1025,78 @@ class AnkiConnect:
 
 
     @api()
-    def guiAddCards(self):
-        addCards = aqt.dialogs.open('AddCards', self.window())
-        addCards.activateWindow()
+    def guiAddCards(self, note=None):
 
+        if note is not None:
+            collection = self.collection()
+
+            model = collection.models.byName(note['modelName'])
+            if model is None:
+                raise Exception('model was not found: {}'.format(note['modelName']))
+
+            self.collection().models.setCurrent(model)
+            self.collection().models.update(model)
+
+            deck = collection.decks.byName(note['deckName'])
+            if deck is None:
+                raise Exception('deck was not found: {}'.format(note['deckName']))
+
+            self.collection().decks.select(deck['id'])
+
+        addAndClose = False
+        if note is not None and 'options' in note:
+            if 'addAndClose' in note['options']:
+                addAndClose = note['options']['addAndClose']
+                if type(addAndClose) is not bool:
+                    raise Exception('option parameter \'addAndClose\' must be boolean')
+
+        if addAndClose:
+            # an "AddCards" dialogue, that closes when you add a note
+            class AddCardsAndClose(aqt.addcards.AddCards):
+
+                def __init__(self, mw):
+                    super().__init__(mw)
+                    self.addButton.setText("Add and Close")
+                    self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+                    # kind of a hack:
+                    # if Anki closes while thise window is open, close it silently
+                    self.silentlyClose = True
+
+                def _addCards(self):
+                    self.editor.saveAddModeVars()
+                    note = self.editor.note
+                    note = self.addNote(note)
+                    if not note:
+                        return
+                    aqt.utils.tooltip(_("Added"), period=500)
+                    # stop anything playing
+                    anki.sound.clearAudioQueue()
+                    self.onReset(keep=True)
+                    self.mw.col.autosave()
+                    self.reject()
+
+            addCards = AddCardsAndClose(self.window())
+
+        else:
+            addCards = aqt.dialogs.open('AddCards', self.window())
+
+        addCards.activateWindow()
+        editor = addCards.editor
+        ankiNote = editor.note
+
+        if note is not None and 'fields' in note:
+            for name, value in note['fields'].items():
+                if name in ankiNote:
+                    ankiNote[name] = value
+            editor.loadNote()
+
+        if note is not None and 'tags' in note:
+            ankiNote.tags = note['tags']
+            editor.updateTags()
+
+        # if Anki does not Focus, the window will not notice that the
+        # fields are actually filled
+        addCards.setAndFocusNote(editor.note)
 
     @api()
     def guiReviewActive(self):
