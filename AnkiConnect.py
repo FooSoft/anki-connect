@@ -1030,6 +1030,12 @@ class AnkiConnect:
         if note is not None:
             collection = self.collection()
 
+            deck = collection.decks.byName(note['deckName'])
+            if deck is None:
+                raise Exception('deck was not found: {}'.format(note['deckName']))
+
+            self.collection().decks.select(deck['id'])
+
             model = collection.models.byName(note['modelName'])
             if model is None:
                 raise Exception('model was not found: {}'.format(note['modelName']))
@@ -1037,11 +1043,6 @@ class AnkiConnect:
             self.collection().models.setCurrent(model)
             self.collection().models.update(model)
 
-            deck = collection.decks.byName(note['deckName'])
-            if deck is None:
-                raise Exception('deck was not found: {}'.format(note['deckName']))
-
-            self.collection().decks.select(deck['id'])
 
         addAndClose = False
         if note is not None and 'options' in note:
@@ -1057,10 +1058,6 @@ class AnkiConnect:
                 def __init__(self, mw):
                     super().__init__(mw)
                     self.addButton.setText("Add and Close")
-                    self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
-                    # kind of a hack:
-                    # if Anki closes while thise window is open, close it silently
-                    self.silentlyClose = True
 
                 def _addCards(self):
                     self.editor.saveAddModeVars()
@@ -1075,7 +1072,21 @@ class AnkiConnect:
                     self.mw.col.autosave()
                     self.reject()
 
-            addCards = AddCardsAndClose(self.window())
+                def _reject(self):
+                    anki.hooks.remHook('reset', self.onReset)
+                    anki.hooks.remHook('currentModelChanged', self.onModelChange)
+                    anki.sound.clearAudioQueue()
+                    self.removeTempNote(self.editor.note)
+                    self.editor.cleanup()
+                    self.modelChooser.cleanup()
+                    self.deckChooser.cleanup()
+                    self.mw.maybeReset()
+                    aqt.utils.saveGeom(self, "add")
+                    aqt.dialogs.markClosed("AddCardsAndClose")
+                    aqt.qt.QDialog.reject(self)
+
+            aqt.dialogs._dialogs['AddCardsAndClose'] = [AddCardsAndClose, None]
+            addCards = aqt.dialogs.open('AddCardsAndClose', self.window())
 
         else:
             addCards = aqt.dialogs.open('AddCards', self.window())
@@ -1084,15 +1095,16 @@ class AnkiConnect:
         editor = addCards.editor
         ankiNote = editor.note
 
-        if note is not None and 'fields' in note:
-            for name, value in note['fields'].items():
-                if name in ankiNote:
-                    ankiNote[name] = value
-            editor.loadNote()
+        if note is not None:
+            if 'fields' in note:
+                for name, value in note['fields'].items():
+                    if name in ankiNote:
+                        ankiNote[name] = value
+                editor.loadNote()
 
-        if note is not None and 'tags' in note:
-            ankiNote.tags = note['tags']
-            editor.updateTags()
+            if 'tags' in note:
+                ankiNote.tags = note['tags']
+                editor.updateTags()
 
         # if Anki does not Focus, the window will not notice that the
         # fields are actually filled
