@@ -1044,14 +1044,14 @@ class AnkiConnect:
             self.collection().models.update(model)
 
 
-        addAndClose = False
+        closeAfterAdding = False
         if note is not None and 'options' in note:
-            if 'addAndClose' in note['options']:
-                addAndClose = note['options']['addAndClose']
-                if type(addAndClose) is not bool:
-                    raise Exception('option parameter \'addAndClose\' must be boolean')
+            if 'closeAfterAdding' in note['options']:
+                closeAfterAdding = note['options']['closeAfterAdding']
+                if type(closeAfterAdding) is not bool:
+                    raise Exception('option parameter \'closeAfterAdding\' must be boolean')
 
-        if addAndClose:
+        if closeAfterAdding:
             # an "AddCards" dialogue, that closes when you add a note
             class AddCardsAndClose(aqt.addcards.AddCards):
 

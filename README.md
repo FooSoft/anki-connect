@@ -1345,7 +1345,7 @@ guarantee that your application continues to function properly in the future.
     Invokes the *Add Cards* dialog and presets the note using the given deck and model, with the provided field values
     and tags. Invoking it multiple times will open multiple windows.
 
-    The `addAndClose` member inside `options` group can be set to true to create a dialog that closes upon adding the first note.
+    The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
 
     *Sample request*:
     ```json
@@ -1361,7 +1361,7 @@ guarantee that your application continues to function properly in the future.
                     "Extra": "Romania is a country in Europe"
                 },
                 "options": {
-                    "addAndClose": true
+                    "closeAfterAdding": true
                 },
                 "tags": [
                   "yomichan"
