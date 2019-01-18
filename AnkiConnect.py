@@ -1058,6 +1058,7 @@ class AnkiConnect:
                 def __init__(self, mw):
                     super().__init__(mw)
                     self.addButton.setText("Add and Close")
+                    self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
                 def _addCards(self):
                     self.editor.saveAddModeVars()
