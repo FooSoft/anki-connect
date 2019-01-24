@@ -1070,7 +1070,10 @@ class AnkiConnect:
 
                     def _addCards(self):
                         super()._addCards()
-                        self.reject()
+
+                        # if adding was successful it must mean it was added to the history of the window
+                        if len(self.history):
+                            self.reject()
 
                     def _reject(self):
                         savedMarkClosed = aqt.dialogs.markClosed
@@ -1088,7 +1091,10 @@ class AnkiConnect:
 
                     def addCards(self):
                         super(AddCardsAndClose, self).addCards()
-                        self.reject()
+
+                        # if adding was successful it must mean it was added to the history of the window
+                        if len(self.history):
+                            self.reject()
 
                     def reject(self):
                         savedClose = aqt.dialogs.close
