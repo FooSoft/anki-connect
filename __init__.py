@@ -1064,18 +1064,18 @@ class AnkiConnect:
                 class AddCardsAndClose(aqt.addcards.AddCards):
 
                     def __init__(self, mw):
-                        super().__init__(mw)
+                        super(AddCardsAndClose, self).__init__(mw)
                         self.addButton.setText("Add and Close")
                         self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
                     def _addCards(self):
-                        super()._addCards()
+                        super(AddCardsAndClose, self)._addCards()
                         self.reject()
 
                     def _reject(self):
                         savedMarkClosed = aqt.dialogs.markClosed
                         aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
-                        super()._reject()
+                        super(AddCardsAndClose, self)._reject()
                         aqt.dialogs.markClosed = savedMarkClosed
 
             else:
@@ -1087,14 +1087,14 @@ class AnkiConnect:
                         self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
                     def addCards(self):
-                        super(AddCardsAndClose, self).addCards()
+                        super(AddCardsAndClose, self)._addCards()
                         self.reject()
 
                     def reject(self):
-                        savedClose = aqt.dialogs.close
-                        aqt.dialogs.close = lambda _: savedClose(windowName)
-                        super(AddCardsAndClose, self).reject()
-                        aqt.dialogs.close = savedClose
+                        savedMarkClosed = aqt.dialogs.markClosed
+                        aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
+                        super(AddCardsAndClose, self)._reject()
+                        aqt.dialogs.markClosed = savedMarkClosed
 
             aqt.dialogs._dialogs[windowName] = [AddCardsAndClose, None]
             addCards = aqt.dialogs.open(windowName, self.window())
