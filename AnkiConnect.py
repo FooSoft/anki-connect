@@ -31,6 +31,8 @@ import sys
 from operator import itemgetter
 from time import time
 from unicodedata import normalize
+from random import choices
+from string import ascii_letters
 
 
 #
@@ -1043,7 +1045,6 @@ class AnkiConnect:
             self.collection().models.setCurrent(model)
             self.collection().models.update(model)
 
-
         closeAfterAdding = False
         if note is not None and 'options' in note:
             if 'closeAfterAdding' in note['options']:
@@ -1051,8 +1052,13 @@ class AnkiConnect:
                 if type(closeAfterAdding) is not bool:
                     raise Exception('option parameter \'closeAfterAdding\' must be boolean')
 
+        addCards = 'foobar'
+
         if closeAfterAdding:
-            # an "AddCards" dialogue, that closes when you add a note
+
+            randomString = ''.join(choices(ascii_letters, k=10))
+            windowName = 'AddCardsAndClose' + randomString
+
             class AddCardsAndClose(aqt.addcards.AddCards):
 
                 def __init__(self, mw):
@@ -1061,42 +1067,21 @@ class AnkiConnect:
                     self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
                 def _addCards(self):
-                    self.editor.saveAddModeVars()
-                    note = self.editor.note
-                    note = self.addNote(note)
-                    if not note:
-                        return
-                    aqt.utils.tooltip(_("Added"), period=500)
-                    # stop anything playing
-                    anki.sound.clearAudioQueue()
-                    self.onReset(keep=True)
-                    self.mw.col.autosave()
+                    super()._addCards()
                     self.reject()
 
                 def _reject(self):
-                    anki.hooks.remHook('reset', self.onReset)
-                    anki.hooks.remHook('currentModelChanged', self.onModelChange)
-                    anki.sound.clearAudioQueue()
-                    self.removeTempNote(self.editor.note)
-                    self.editor.cleanup()
-                    self.modelChooser.cleanup()
-                    self.deckChooser.cleanup()
-                    self.mw.maybeReset()
-                    aqt.utils.saveGeom(self, "add")
-                    aqt.dialogs.markClosed("AddCardsAndClose")
-                    aqt.qt.QDialog.reject(self)
+                    savedMarkClosed = aqt.dialogs.markClosed
+                    aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
+                    super()._reject()
+                    aqt.dialogs.markClosed = savedMarkClosed
 
-            aqt.dialogs._dialogs['AddCardsAndClose'] = [AddCardsAndClose, None]
-            addCards = aqt.dialogs.open('AddCardsAndClose', self.window())
+            aqt.dialogs._dialogs[windowName] = [AddCardsAndClose, None]
+            addCards = aqt.dialogs.open(windowName, self.window())
 
-        else:
-            addCards = aqt.dialogs.open('AddCards', self.window())
+            editor = addCards.editor
+            ankiNote = editor.note
 
-        addCards.activateWindow()
-        editor = addCards.editor
-        ankiNote = editor.note
-
-        if note is not None:
             if 'fields' in note:
                 for name, value in note['fields'].items():
                     if name in ankiNote:
@@ -1107,9 +1092,47 @@ class AnkiConnect:
                 ankiNote.tags = note['tags']
                 editor.updateTags()
 
-        # if Anki does not Focus, the window will not notice that the
-        # fields are actually filled
-        addCards.setAndFocusNote(editor.note)
+            # if Anki does not Focus, the window will not notice that the
+            # fields are actually filled
+            aqt.dialogs.open(windowName, self.window())
+            addCards.setAndFocusNote(editor.note)
+
+        elif note is not None:
+            currentWindow = aqt.dialogs._dialogs['AddCards'][1]
+
+            def openNewWindow():
+                addCards = aqt.dialogs.open('AddCards', self.window())
+
+                editor = addCards.editor
+                ankiNote = editor.note
+
+                # we have to fill out the card in the callback
+                # otherwise we can't assure, the new window is open
+                if 'fields' in note:
+                    for name, value in note['fields'].items():
+                        if name in ankiNote:
+                            ankiNote[name] = value
+                    editor.loadNote()
+
+                if 'tags' in note:
+                    ankiNote.tags = note['tags']
+                    editor.updateTags()
+
+                addCards.activateWindow()
+
+                # if Anki does not Focus, the window will not notice that the
+                # fields are actually filled
+                aqt.dialogs.open(windowName, self.window())
+                addCards.setAndFocusNote(editor.note)
+
+            if currentWindow is not None:
+                currentWindow.closeWithCallback(openNewWindow)
+            else:
+                openNewWindow()
+
+        else:
+            addCards = aqt.dialogs.open('AddCards', self.window())
+            addCards.activateWindow()
 
     @api()
     def guiReviewActive(self):
