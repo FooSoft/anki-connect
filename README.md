@@ -1342,10 +1342,11 @@ guarantee that your application continues to function properly in the future.
 
 *   **guiAddCards**
 
-    Invokes the *Add Cards* dialog and presets the note using the given deck and model, with the provided field values
-    and tags. Invoking it multiple times will open multiple windows.
+    Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
+    Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
 
     The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
+    Invoking the action mutliple times with this option will create _multiple windows_.
 
     *Sample request*:
     ```json
@@ -1364,7 +1365,7 @@ guarantee that your application continues to function properly in the future.
                     "closeAfterAdding": true
                 },
                 "tags": [
-                  "yomichan"
+                  "countries"
                 ]
             }
         }
