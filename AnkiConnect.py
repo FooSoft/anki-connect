@@ -1038,6 +1038,7 @@ class AnkiConnect:
                 raise Exception('deck was not found: {}'.format(note['deckName']))
 
             self.collection().decks.select(deck['id'])
+            savedMid = deck.pop('mid', None)
 
             model = collection.models.byName(note['modelName'])
             if model is None:
@@ -1053,7 +1054,7 @@ class AnkiConnect:
                 if type(closeAfterAdding) is not bool:
                     raise Exception('option parameter \'closeAfterAdding\' must be boolean')
 
-        addCards = 'foobar'
+        addCards = None
 
         if closeAfterAdding:
 
@@ -1105,6 +1106,9 @@ class AnkiConnect:
             aqt.dialogs._dialogs[windowName] = [AddCardsAndClose, None]
             addCards = aqt.dialogs.open(windowName, self.window())
 
+            if savedMid:
+                deck['mid'] = savedMid
+
             editor = addCards.editor
             ankiNote = editor.note
 
@@ -1130,6 +1134,9 @@ class AnkiConnect:
             def openNewWindow():
                 addCards = aqt.dialogs.open('AddCards', self.window())
 
+                if savedMid:
+                    deck['mid'] = savedMid
+
                 editor = addCards.editor
                 ankiNote = editor.note
 
@@ -1152,7 +1159,11 @@ class AnkiConnect:
                     addCards.setAndFocusNote(editor.note)
 
             if currentWindow is not None:
-                currentWindow.closeWithCallback(openNewWindow)
+                if ANKI21:
+                    currentWindow.closeWithCallback(openNewWindow)
+                else:
+                    currentWindow.reject()
+                    openNewWindow()
             else:
                 openNewWindow()
 
