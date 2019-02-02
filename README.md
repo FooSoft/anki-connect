@@ -201,7 +201,6 @@ guarantee that your application continues to function properly in the future.
     {
         "action": "sync",
         "version": 6
-
     }
     ```
 
