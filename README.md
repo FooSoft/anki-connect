@@ -1488,9 +1488,9 @@ guarantee that your application continues to function properly in the future.
     {
         "action": "guiDeckOverview",
         "version": 6,
-		"params": {
-			"name": "Default"
-		}
+        "params": {
+            "name": "Default"
+        }
     }
     ```
 
@@ -1531,9 +1531,9 @@ guarantee that your application continues to function properly in the future.
     {
         "action": "guiDeckReview",
         "version": 6,
-		"params": {
-			"name": "Default"
-		}
+        "params": {
+            "name": "Default"
+        }
     }
     ```
 
