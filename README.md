@@ -70,50 +70,7 @@ in order to bind it to all network interfaces on your host.
 
 ### Sample Invocation ###
 
-Every request consists of a JSON-encoded object containing an `action`, a `version`, and a set of contextual `params`. A
-simple example of a modern JavaScript application communicating with the extension is illustrated below:
-
-```javascript
-function ankiConnectInvoke(action, version, params={}) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.addEventListener('error', () => reject('failed to connect to AnkiConnect'));
-        xhr.addEventListener('load', () => {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.error) {
-                    throw response.error;
-                } else {
-                    if (response.hasOwnProperty('result')) {
-                        resolve(response.result);
-                    } else {
-                        reject('failed to get results from AnkiConnect');
-                    }
-                }
-            } catch (e) {
-                reject(e);
-            }
-        });
-
-        xhr.open('POST', 'http://127.0.0.1:8765');
-        xhr.send(JSON.stringify({action, version, params}));
-    });
-}
-
-try {
-    const result = await ankiConnectInvoke('deckNames', 6);
-    console.log(`got list of decks: ${result}`);
-} catch (e) {
-    console.log(`error getting decks: ${e}`);
-}
-```
-
-Or using [`curl`](https://curl.haxx.se) from the command line:
-
-```bash
-curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
-```
-
+Every request consists of a JSON-encoded object containing an `action`, a `version`, and a set of contextual `params`.
 AnkiConnect will respond with an object containing two fields: `result` and `error`. The `result` field contains the
 return value of the executed API, and the `error` field is a description of any exception thrown during API execution
 (the value `null` is used if execution completed successfully).
@@ -134,6 +91,80 @@ return value of the executed API, and the `error` field is a description of any 
 For compatibility with clients designed to work with older versions of AnkiConnect, failing to provide a `version` field
 in the request will make the version default to 4. Furthermore, when the provided version is level 4 or below, the API
 response will only contain the value of the `result`; no `error` field is available for error handling.
+
+You can use whatever language or tool you like to issue request to AnkiConnect, but a couple of simple examples are
+included below as reference.
+
+#### Curl ####
+
+```bash
+curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
+```
+
+#### Python ####
+
+```python
+import json
+import urllib2
+
+def request(action, **params):
+    return {'action': action, 'params': params, 'version': 6}
+
+def invoke(action, **params):
+    requestJson = json.dumps(request(action, **params))
+    response = json.load(urllib2.urlopen(urllib2.Request('http://localhost:8765', requestJson)))
+    if len(response) != 2:
+        raise Exception('response has an unexpected number of fields')
+    if 'error' not in response:
+        raise Exception('response is missing required error field')
+    if 'result' not in response:
+        raise Exception('response is missing required result field')
+    if response['error'] is not None:
+        raise Exception(response['error'])
+    return response['result']
+
+invoke('createDeck', deck='test1')
+result = invoke('deckNames')
+print('got list of decks: {}'.format(result))
+```
+
+#### JavaScript ####
+
+```javascript
+function invoke(action, version, params={}) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('error', () => reject('failed to issue request'));
+        xhr.addEventListener('load', () => {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (Object.getOwnPropertyNames(response).length != 2) {
+                    throw 'response has an unexpected number of fields';
+                }
+                if (!response.hasOwnProperty('error')) {
+                    throw 'response is missing required error field';
+                }
+                if (!response.hasOwnProperty('result')) {
+                    throw 'response is missing required result field';
+                }
+                if (response.error) {
+                    throw response.error;
+                }
+                resolve(response.result);
+            } catch (e) {
+                reject(e);
+            }
+        });
+
+        xhr.open('POST', 'http://127.0.0.1:8765');
+        xhr.send(JSON.stringify({action, version, params}));
+    });
+}
+
+await invoke('createDeck', {deck: 'test1'});
+const result = await invoke('deckNames', 6);
+console.log(`got list of decks: ${result}`);
+```
 
 ### Supported Actions ###
 
