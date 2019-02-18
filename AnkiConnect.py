@@ -713,11 +713,11 @@ class AnkiConnect:
                     skip = skipHash == m.hexdigest()
 
                 if not skip:
+                    audioFilename = self.media().writeData(audio['filename'], data)
                     for field in audio['fields']:
                         if field in ankiNote:
-                            ankiNote[field] += u'[sound:{}]'.format(audio['filename'])
-
-                    self.media().writeData(audio['filename'], data)
+                            ankiNote[field] += u'[sound:{}]'.format(audioFilename)
+                            
             except Exception as e:
                 errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 for field in audio['fields']:
