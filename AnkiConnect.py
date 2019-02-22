@@ -849,6 +849,34 @@ class AnkiConnect:
 
 
     @api()
+    def createModel(self, modelName, inOrderFields, cardTemplates):
+        # https://github.com/dae/anki/blob/b06b70f7214fb1f2ce33ba06d2b095384b81f874/anki/stdmodels.py
+        collection = self.collection()
+        mm = collection.models
+
+        # Generate new Note
+        m = mm.new(_(modelName))
+
+        # Create fields and add them to Note
+        for field in inOrderFields:
+            fm = mm.newField(_(field))
+            mm.addField(m, fm)
+
+        # TODO? => There is no validation that card fields are used correctly
+        # Generate new card template(s)
+        cardCount = 1
+        for card in cardTemplates:
+            t = mm.newTemplate(_('Card ' + str(cardCount)))
+            cardCount += 1
+            t['qfmt'] = card['Front']
+            t['afmt'] = card['Back']
+            mm.addTemplate(m, t)
+
+        mm.add(m)
+        return m
+
+
+    @api()
     def modelNamesAndIds(self):
         models = {}
         for model in self.modelNames():
