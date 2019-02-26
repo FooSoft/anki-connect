@@ -1001,6 +1001,13 @@ class AnkiConnect:
         return result
 
 
+    @api()
+    def deleteNotes(self, notes):
+        try:
+            self.collection().remNotes(notes)
+        finally:
+            self.stopEditing()
+
 
 
 
