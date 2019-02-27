@@ -84,6 +84,10 @@ class TestNotes(unittest.TestCase):
         noteIds = util.invoke('findNotes', query='deck:test')
         self.assertEqual(len(noteIds), len(notes) + 1)
 
+        # deleteNotes
+        util.invoke('deleteNotes', notes=noteIds)
+        noteIds = util.invoke('findNotes', query='deck:test')
+        self.assertEqual(len(noteIds), 0)
 
 if __name__ == '__main__':
     unittest.main()

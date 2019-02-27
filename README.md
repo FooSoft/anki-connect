@@ -1018,6 +1018,30 @@ guarantee that your application continues to function properly in the future.
     ```
 
 
+*   **deleteNotes**
+
+	Deletes notes with the given ids. If a note has several cards associated with it, all associated cards will be deleted.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "deleteNotes",
+        "version": 6,
+        "params": {
+            "notes": [1502298033753]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+
 #### Cards ####
 
 *   **suspend**
