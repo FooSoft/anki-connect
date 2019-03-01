@@ -32,7 +32,6 @@ from operator import itemgetter
 from time import time
 from unicodedata import normalize
 
-
 #
 # Constants
 #
@@ -849,8 +848,15 @@ class AnkiConnect:
 
 
     @api()
-    def createModel(self, modelName, inOrderFields, cardTemplates):
+    def createModel(self, modelName, inOrderFields, cardTemplates, css = None):
         # https://github.com/dae/anki/blob/b06b70f7214fb1f2ce33ba06d2b095384b81f874/anki/stdmodels.py
+        if (len(inOrderFields) == 0):
+            raise Exception('Must provide at least one field for inOrderFields')
+        if (len(cardTemplates) == 0):
+            raise Exception('Must provide at least one card for cardTemplates')
+        if (modelName in self.collection().models.allNames()):
+            raise Exception('Model name already exists')
+
         collection = self.collection()
         mm = collection.models
 
@@ -861,8 +867,11 @@ class AnkiConnect:
         for field in inOrderFields:
             fm = mm.newField(_(field))
             mm.addField(m, fm)
+        
+        # Add shared css to model if exists. Use default otherwise
+        if (css is not None):
+            m['css'] = css
 
-        # TODO? => There is no validation that card fields are used correctly
         # Generate new card template(s)
         cardCount = 1
         for card in cardTemplates:

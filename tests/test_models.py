@@ -20,6 +20,11 @@ class TestModels(unittest.TestCase):
         # modelFieldsOnTemplates
         modelFieldsOnTemplates = util.invoke('modelFieldsOnTemplates', modelName=modelNames[0])
 
+        # createModel with css
+        newModel = util.invoke('createModel', modelName='testModel', inOrderFields=['field1', 'field2'], cardTemplates=[{'Front':'field1','Back':'field2'}], css='some random css')
+
+        # createModel without css
+        newModel = util.invoke('createModel', modelName='testModel-second', inOrderFields=['field1', 'field2'], cardTemplates=[{'Front':'field1','Back':'field2'}])
 
 if __name__ == '__main__':
     unittest.main()
