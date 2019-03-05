@@ -725,7 +725,9 @@ class AnkiConnect:
 
         collection = self.collection()
         self.startEditing()
-        collection.addNote(ankiNote)
+        nCardsAdded = collection.addNote(ankiNote)
+        if nCardsAdded < 1:
+            raise Exception('The field values you have provided would make an empty question on all cards.')
         collection.autosave()
         self.stopEditing()
 
