@@ -728,10 +728,10 @@ guarantee that your application continues to function properly in the future.
     ```
 
 
-    **Create new Model**
+    **Create New Model**
 
-    Creates a new model to be used in Anki. User must provide modelName, inOrderFields and cardTemplates to be used
-    in the model.
+    Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
+    used in the model.
 
     *Sample request*
     ```json
@@ -820,7 +820,6 @@ guarantee that your application continues to function properly in the future.
         "error":null
     }
     ```
-
 
 #### Notes ####
 

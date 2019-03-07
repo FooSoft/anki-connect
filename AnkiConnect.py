@@ -520,7 +520,7 @@ class AnkiConnect:
                 self.window().unloadProfileAndShowProfileManager()
                 self.loadProfile(name)
         return True
-    
+
 
     @api()
     def sync(self):
@@ -716,7 +716,7 @@ class AnkiConnect:
                     for field in audio['fields']:
                         if field in ankiNote:
                             ankiNote[field] += u'[sound:{}]'.format(audioFilename)
-                            
+
             except Exception as e:
                 errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 for field in audio['fields']:
@@ -869,7 +869,7 @@ class AnkiConnect:
         for field in inOrderFields:
             fm = mm.newField(_(field))
             mm.addField(m, fm)
-        
+
         # Add shared css to model if exists. Use default otherwise
         if (css is not None):
             m['css'] = css
