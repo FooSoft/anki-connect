@@ -25,13 +25,13 @@ with the latest stable (2.0.x) and alpha (2.1.x) releases of Anki and works on L
 
 The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
 
-1.  Open the *Install Add-on* dialog by selecting *Tools* &gt; *Add-ons* &gt; *Browse &amp; Install* in Anki.
-2.  Input *[2055492159](https://ankiweb.net/shared/info/2055492159)* into the text box labeled *Code* and press the *OK* button to proceed.
+1.  Open the `Install Add-on` dialog by selecting `Tools` | `Add-ons` | `Browse & Install` in Anki.
+2.  Input [2055492159](https://ankiweb.net/shared/info/2055492159) into the text box labeled `Code` and press the `OK` button to proceed.
 3.  Restart Anki when prompted to do so in order to complete the installation of AnkiConnect.
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message *AnkiConnect v.6* displayed in your browser window.
+the server is running, you should see the message `AnkiConnect v.6` displayed in your browser window.
 
 ### Notes for Windows Users ###
 
