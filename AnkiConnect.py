@@ -1065,7 +1065,13 @@ class AnkiConnect:
                 class AddCardsAndClose(aqt.addcards.AddCards):
 
                     def __init__(self, mw):
+                        # the window must only reset if
+                        # * function `onModelChange` has been called prior
+                        # * window was newly opened
+
+                        self.modelHasChanged = True
                         super().__init__(mw)
+
                         self.addButton.setText("Add and Close")
                         self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
@@ -1075,6 +1081,22 @@ class AnkiConnect:
                         # if adding was successful it must mean it was added to the history of the window
                         if len(self.history):
                             self.reject()
+
+                    def onModelChange(self):
+                        if self.isActiveWindow():
+                            super().onModelChange()
+                            self.modelHasChanged = True
+
+                    def onReset(self, model=None, keep=False):
+                        if self.isActiveWindow() or self.modelHasChanged:
+                            super().onReset(model, keep)
+                            self.modelHasChanged = False
+
+                        else:
+                            # modelchoosers text is changed by a reset hook
+                            # therefore we need to change it back manually
+                            self.modelChooser.models.setText(self.editor.note.model()['name'])
+                            self.modelHasChanged = False
 
                     def _reject(self):
                         savedMarkClosed = aqt.dialogs.markClosed
@@ -1086,7 +1108,9 @@ class AnkiConnect:
                 class AddCardsAndClose(aqt.addcards.AddCards):
 
                     def __init__(self, mw):
+                        self.modelHasChanged = True
                         super(AddCardsAndClose, self).__init__(mw)
+
                         self.addButton.setText("Add and Close")
                         self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
 
@@ -1096,6 +1120,20 @@ class AnkiConnect:
                         # if adding was successful it must mean it was added to the history of the window
                         if len(self.history):
                             self.reject()
+
+                    def onModelChange(self):
+                        if self.isActiveWindow():
+                            super(AddCardsAndClose, self).onModelChange()
+                            self.modelHasChanged = True
+
+                    def onReset(self, model=None, keep=False):
+                        if self.isActiveWindow() or self.modelHasChanged:
+                            super(AddCardsAndClose, self).onReset(model, keep)
+                            self.modelHasChanged = False
+
+                        else:
+                            self.modelChooser.models.setText(self.editor.note.model()['name'])
+                            self.modelHasChanged = False
 
                     def reject(self):
                         savedClose = aqt.dialogs.close
