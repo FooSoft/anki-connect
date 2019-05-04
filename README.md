@@ -1594,6 +1594,8 @@ guarantee that your application continues to function properly in the future.
     The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
     Invoking the action mutliple times with this option will create _multiple windows_.
 
+    The result is the ID of the note which would be added, if the user chose to confirm the *Add Cards* dialogue.
+
     *Sample request*:
     ```json
     {
@@ -1621,7 +1623,7 @@ guarantee that your application continues to function properly in the future.
     *Sample result*:
     ```json
     {
-        "result": null,
+        "result": 1496198395707,
         "error": null
     }
     ```
