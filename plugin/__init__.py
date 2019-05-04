@@ -977,6 +977,8 @@ class AnkiConnect:
             aqt.dialogs.open(windowName, self.window())
             addCards.setAndFocusNote(editor.note)
 
+            return ankiNote.id
+
         elif note is not None:
             currentWindow = aqt.dialogs._dialogs['AddCards'][1]
 
@@ -1011,9 +1013,13 @@ class AnkiConnect:
             else:
                 openNewWindow()
 
+            return aqt.dialogs._dialogs['AddCards'][1].editor.note.id
+
         else:
             addCards = aqt.dialogs.open('AddCards', self.window())
             addCards.activateWindow()
+
+            return addCards.editor.note.id
 
     @util.api()
     def guiReviewActive(self):
