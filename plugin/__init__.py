@@ -980,40 +980,43 @@ class AnkiConnect:
             return ankiNote.id
 
         elif note is not None:
-            currentWindow = aqt.dialogs._dialogs['AddCards'][1]
+            collection = self.collection()
+            ankiNote = anki.notes.Note(collection, model)
+
+            # fill out card beforehand, so we can be sure of the note id
+            if 'fields' in note:
+                for name, value in note['fields'].items():
+                    if name in ankiNote:
+                        ankiNote[name] = value
+
+            if 'tags' in note:
+                ankiNote.tags = note['tags']
 
             def openNewWindow():
+                nonlocal ankiNote
+
                 addCards = aqt.dialogs.open('AddCards', self.window())
 
                 if savedMid:
                     deck['mid'] = savedMid
 
-                editor = addCards.editor
-                ankiNote = editor.note
-
-                # we have to fill out the card in the callback
-                # otherwise we can't assure, the new window is open
-                if 'fields' in note:
-                    for name, value in note['fields'].items():
-                        if name in ankiNote:
-                            ankiNote[name] = value
-                    editor.loadNote()
-
-                if 'tags' in note:
-                    ankiNote.tags = note['tags']
-                    editor.updateTags()
+                addCards.editor.note = ankiNote
+                addCards.editor.loadNote()
+                addCards.editor.updateTags()
 
                 addCards.activateWindow()
 
                 aqt.dialogs.open('AddCards', self.window())
-                addCards.setAndFocusNote(editor.note)
+                addCards.setAndFocusNote(addCards.editor.note)
+
+            currentWindow = aqt.dialogs._dialogs['AddCards'][1]
 
             if currentWindow is not None:
                 currentWindow.closeWithCallback(openNewWindow)
             else:
                 openNewWindow()
 
-            return aqt.dialogs._dialogs['AddCards'][1].editor.note.id
+            return ankiNote.id
 
         else:
             addCards = aqt.dialogs.open('AddCards', self.window())
