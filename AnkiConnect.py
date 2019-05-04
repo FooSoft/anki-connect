@@ -31,6 +31,8 @@ import sys
 from operator import itemgetter
 from time import time
 from unicodedata import normalize
+from random import choice
+from string import ascii_letters
 
 #
 # Constants
@@ -45,6 +47,7 @@ TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
 
+ANKI21 = anki.version.startswith('2.1')
 
 #
 # Helpers
@@ -1071,10 +1074,186 @@ class AnkiConnect:
 
 
     @api()
-    def guiAddCards(self):
-        addCards = aqt.dialogs.open('AddCards', self.window())
-        addCards.activateWindow()
+    def guiAddCards(self, note=None):
 
+        if note is not None:
+            collection = self.collection()
+
+            deck = collection.decks.byName(note['deckName'])
+            if deck is None:
+                raise Exception('deck was not found: {}'.format(note['deckName']))
+
+            self.collection().decks.select(deck['id'])
+            savedMid = deck.pop('mid', None)
+
+            model = collection.models.byName(note['modelName'])
+            if model is None:
+                raise Exception('model was not found: {}'.format(note['modelName']))
+
+            self.collection().models.setCurrent(model)
+            self.collection().models.update(model)
+
+        closeAfterAdding = False
+        if note is not None and 'options' in note:
+            if 'closeAfterAdding' in note['options']:
+                closeAfterAdding = note['options']['closeAfterAdding']
+                if type(closeAfterAdding) is not bool:
+                    raise Exception('option parameter \'closeAfterAdding\' must be boolean')
+
+        addCards = None
+
+        if closeAfterAdding:
+
+            randomString = ''.join(choice(ascii_letters) for _ in range(10))
+            windowName = 'AddCardsAndClose' + randomString
+
+            if ANKI21:
+                class AddCardsAndClose(aqt.addcards.AddCards):
+
+                    def __init__(self, mw):
+                        # the window must only reset if
+                        # * function `onModelChange` has been called prior
+                        # * window was newly opened
+
+                        self.modelHasChanged = True
+                        super().__init__(mw)
+
+                        self.addButton.setText("Add and Close")
+                        self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+
+                    def _addCards(self):
+                        super()._addCards()
+
+                        # if adding was successful it must mean it was added to the history of the window
+                        if len(self.history):
+                            self.reject()
+
+                    def onModelChange(self):
+                        if self.isActiveWindow():
+                            super().onModelChange()
+                            self.modelHasChanged = True
+
+                    def onReset(self, model=None, keep=False):
+                        if self.isActiveWindow() or self.modelHasChanged:
+                            super().onReset(model, keep)
+                            self.modelHasChanged = False
+
+                        else:
+                            # modelchoosers text is changed by a reset hook
+                            # therefore we need to change it back manually
+                            self.modelChooser.models.setText(self.editor.note.model()['name'])
+                            self.modelHasChanged = False
+
+                    def _reject(self):
+                        savedMarkClosed = aqt.dialogs.markClosed
+                        aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
+                        super()._reject()
+                        aqt.dialogs.markClosed = savedMarkClosed
+
+            else:
+                class AddCardsAndClose(aqt.addcards.AddCards):
+
+                    def __init__(self, mw):
+                        self.modelHasChanged = True
+                        super(AddCardsAndClose, self).__init__(mw)
+
+                        self.addButton.setText("Add and Close")
+                        self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+
+                    def addCards(self):
+                        super(AddCardsAndClose, self).addCards()
+
+                        # if adding was successful it must mean it was added to the history of the window
+                        if len(self.history):
+                            self.reject()
+
+                    def onModelChange(self):
+                        if self.isActiveWindow():
+                            super(AddCardsAndClose, self).onModelChange()
+                            self.modelHasChanged = True
+
+                    def onReset(self, model=None, keep=False):
+                        if self.isActiveWindow() or self.modelHasChanged:
+                            super(AddCardsAndClose, self).onReset(model, keep)
+                            self.modelHasChanged = False
+
+                        else:
+                            self.modelChooser.models.setText(self.editor.note.model()['name'])
+                            self.modelHasChanged = False
+
+                    def reject(self):
+                        savedClose = aqt.dialogs.close
+                        aqt.dialogs.close = lambda _: savedClose(windowName)
+                        super(AddCardsAndClose, self).reject()
+                        aqt.dialogs.close = savedClose
+
+            aqt.dialogs._dialogs[windowName] = [AddCardsAndClose, None]
+            addCards = aqt.dialogs.open(windowName, self.window())
+
+            if savedMid:
+                deck['mid'] = savedMid
+
+            editor = addCards.editor
+            ankiNote = editor.note
+
+            if 'fields' in note:
+                for name, value in note['fields'].items():
+                    if name in ankiNote:
+                        ankiNote[name] = value
+                editor.loadNote()
+
+            if 'tags' in note:
+                ankiNote.tags = note['tags']
+                editor.updateTags()
+
+            # if Anki does not Focus, the window will not notice that the
+            # fields are actually filled
+            aqt.dialogs.open(windowName, self.window())
+            if ANKI21:
+                addCards.setAndFocusNote(editor.note)
+
+        elif note is not None:
+            currentWindow = aqt.dialogs._dialogs['AddCards'][1]
+
+            def openNewWindow():
+                addCards = aqt.dialogs.open('AddCards', self.window())
+
+                if savedMid:
+                    deck['mid'] = savedMid
+
+                editor = addCards.editor
+                ankiNote = editor.note
+
+                # we have to fill out the card in the callback
+                # otherwise we can't assure, the new window is open
+                if 'fields' in note:
+                    for name, value in note['fields'].items():
+                        if name in ankiNote:
+                            ankiNote[name] = value
+                    editor.loadNote()
+
+                if 'tags' in note:
+                    ankiNote.tags = note['tags']
+                    editor.updateTags()
+
+                addCards.activateWindow()
+
+                aqt.dialogs.open('AddCards', self.window())
+                if ANKI21:
+                    addCards.setAndFocusNote(editor.note)
+
+            if currentWindow is not None:
+                if ANKI21:
+                    currentWindow.closeWithCallback(openNewWindow)
+                else:
+                    currentWindow.reject()
+                    openNewWindow()
+            else:
+                openNewWindow()
+
+        else:
+            addCards = aqt.dialogs.open('AddCards', self.window())
+            addCards.activateWindow()
 
     @api()
     def guiReviewActive(self):

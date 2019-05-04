@@ -1490,13 +1490,33 @@ guarantee that your application continues to function properly in the future.
 
 *   **guiAddCards**
 
-    Invokes the *Add Cards* dialog.
+    Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
+    Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
+
+    The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
+    Invoking the action mutliple times with this option will create _multiple windows_.
 
     *Sample request*:
     ```json
     {
         "action": "guiAddCards",
-        "version": 6
+        "version": 6,
+        "params": {
+            "note": {
+                "deckName": "Default",
+                "modelName": "Cloze",
+                "fields": {
+                    "Text": "The capital of Romania is {{c1::Bucharest}}",
+                    "Extra": "Romania is a country in Europe"
+                },
+                "options": {
+                    "closeAfterAdding": true
+                },
+                "tags": [
+                  "countries"
+                ]
+            }
+        }
     }
     ```
 
