@@ -727,7 +727,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
 
-*   **createNewModel**
+*   **createModel**
 
     Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
     used in the model.
@@ -735,7 +735,7 @@ guarantee that your application continues to function properly in the future.
     *Sample request*
     ```json
     {
-        "action": "createNewModel",
+        "action": "createModel",
         "version": 6,
         "params": {
             "modelName": "newModelName",
