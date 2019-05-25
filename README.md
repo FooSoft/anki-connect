@@ -1555,7 +1555,8 @@ guarantee that your application continues to function properly in the future.
             },
             "template": "Forward",
             "cardId": 1498938915662,
-            "buttons": [1, 2, 3]
+            "buttons": [1, 2, 3],
+            "nextReviews": ["<1m", "<10m", "4d"]
         },
         "error": null
     }
