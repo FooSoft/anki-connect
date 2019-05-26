@@ -1277,13 +1277,15 @@ class AnkiConnect:
             fields[name] = {'value': note.fields[order], 'order': order}
 
         if card is not None:
+            buttonList = reviewer._answerButtonList()
             return {
                 'cardId': card.id,
                 'fields': fields,
                 'fieldOrder': card.ord,
                 'question': card._getQA()['q'],
                 'answer': card._getQA()['a'],
-                'buttons': [b[0] for b in reviewer._answerButtonList()],
+                'buttons': [b[0] for b in buttonList],
+                'nextReviews': [reviewer.mw.col.sched.nextIvlStr(reviewer.card, b[0], True) for b in buttonList],
                 'modelName': model['name'],
                 'deckName': self.deckNameFromId(card.did),
                 'css': model['css'],
