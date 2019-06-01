@@ -1,5 +1,4 @@
-# Copyright (C) 2016 Alex Yatskov <alex@foosoft.net>
-# Author: Alex Yatskov <alex@foosoft.net>
+# Copyright 2016-2019 Alex Yatskov
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -346,11 +345,12 @@ class AnkiConnect:
                 raise Exception('unsupported action')
             else:
                 reply['result'] = methodInst(**params)
+
+            if version <= 4:
+                reply = reply['result']
+
         except Exception as e:
             reply['error'] = str(e)
-
-        if version <= 4:
-            reply = reply['result']
 
         if self.log is not None:
             self.log.write('[reply]\n')
