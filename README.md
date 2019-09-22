@@ -104,14 +104,14 @@ curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
 
 ```python
 import json
-import urllib2
+import urllib.request
 
 def request(action, **params):
     return {'action': action, 'params': params, 'version': 6}
 
 def invoke(action, **params):
-    requestJson = json.dumps(request(action, **params))
-    response = json.load(urllib2.urlopen(urllib2.Request('http://localhost:8765', requestJson)))
+    requestJson = json.dumps(request(action, **params)).encode('utf-8')
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
     if len(response) != 2:
         raise Exception('response has an unexpected number of fields')
     if 'error' not in response:
