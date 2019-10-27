@@ -947,6 +947,64 @@ class AnkiConnect:
 
         return templates
 
+    @api()
+    def modelTemplates(self, modelName):
+        model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        templates = {}
+        for template in model['tmpls']:
+            templates[template['name']] = {'Front': template['qfmt'], 'Back': template['afmt']}
+
+        return templates
+
+
+    @api()
+    def modelStyling(self, modelName):
+        model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        return {'css': model['css']}
+
+
+    @api()
+    def updateModelTemplates(self, model):
+        models = self.collection().models
+        ankiModel = models.byName(model['name'])
+        if ankiModel is None:
+            raise Exception('model was not found: {}'.format(model['name']))
+
+        templates = model['templates']
+
+        for ankiTemplate in ankiModel['tmpls']:
+            template = templates.get(ankiTemplate['name'])
+            if template:
+                qfmt = template.get('Front')
+                if qfmt:
+                    ankiTemplate['qfmt'] = qfmt
+
+                afmt = template.get('Back')
+                if afmt:
+                    ankiTemplate['afmt'] = afmt
+
+        models.save(ankiModel, True)
+        models.flush()
+
+
+    @api()
+    def updateModelStyling(self, model):
+        models = self.collection().models
+        ankiModel = models.byName(model['name'])
+        if ankiModel is None:
+            raise Exception('model was not found: {}'.format(model['name']))
+
+        ankiModel['css'] = model['css']
+
+        models.save(ankiModel, True)
+        models.flush()
+
 
     @api()
     def deckNameFromId(self, deckId):
