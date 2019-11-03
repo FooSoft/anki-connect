@@ -820,6 +820,125 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+
+*   **modelTemplates**
+
+    Returns an object indicating the template content for each card connected to the provided model by name.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "modelTemplates",
+        "version": 6,
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample result*
+    ```json
+    {
+        "result": {
+            "Card 1": {
+                "Front": "{{Front}}",
+                "Back": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}"
+            },
+            "Card 2": {
+                "Front": "{{Back}}",
+                "Back": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Front}}"
+            }
+        },
+        "error": null
+    }
+    ```
+
+
+*   **modelStyling**
+
+    Gets the CSS styling for the provided model by name.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "modelStyling",
+        "version": 6,
+        "params": {
+            "modelName": "Basic (and reversed card)"
+        }
+    }
+    ```
+
+    *Sample result*
+    ```json
+    {
+        "result": {
+            "css": ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n"
+        },
+        "error": null
+    }
+    ```
+
+
+*   **updateModelTemplates**
+
+    Modify the templates of an existing model by name. Only specifies cards and specified sides will be modified.
+    If an existing card or side is not included in the request, it will be left unchanged.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateModelTemplates",
+        "version": 6,
+        "params": {
+            "model": {
+                "name": "Custom",
+                "templates": {
+                    "Card 1": {
+                        "Front": "{{Question}}?",
+                        "Back": "{{Answer}}!"
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+
+*   **updateModelStyling**
+
+    Modify the CSS styling of an existing model by name.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateModelStyling",
+        "version": 6,
+        "params": {
+            "model": {
+                "name": "Custom",
+                "css": "p { color: blue; }"
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 #### Notes ####
 
 *   **addNote**
