@@ -224,7 +224,7 @@ guarantee that your application continues to function properly in the future.
 
 *   **sync**
 
-    Synchronizes the local anki collections with ankiweb.
+    Synchronizes the local Anki collections with AnkiWeb.
 
     *Sample request*:
     ```json
@@ -1506,7 +1506,7 @@ guarantee that your application continues to function properly in the future.
 
 *   **storeMediaFile**
 
-    Stores a file with the specified base64-encoded contents inside the media folder. To prevent Anki from removing
+    Stores a file with the specified Base64-encoded contents inside the media folder. To prevent Anki from removing
     files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are
     still synchronized to AnkiWeb.
 
@@ -1537,7 +1537,7 @@ guarantee that your application continues to function properly in the future.
 
 *   **retrieveMediaFile**
 
-    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
+    Retrieves the Base64-encoded contents of the specified file, returning `false` if the file does not exist.
 
     *Sample request*:
     ```json
@@ -1613,7 +1613,7 @@ guarantee that your application continues to function properly in the future.
     Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
 
     The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
-    Invoking the action mutliple times with this option will create _multiple windows_.
+    Invoking the action multiple times with this option will create _multiple windows_.
 
     *Sample request*:
     ```json
