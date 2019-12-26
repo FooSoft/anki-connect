@@ -39,6 +39,7 @@ from string import ascii_letters
 
 API_VERSION = 6
 API_LOG_PATH = None
+NET_CORS_ORIGIN = os.getenv('ANKICONNECT_CORS_ORIGIN', 'http://localhost')
 NET_ADDRESS = os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1')
 NET_BACKLOG = 5
 NET_PORT = 8765
@@ -199,7 +200,7 @@ class WebServer:
         self.headers = [
             ['HTTP/1.1 200 OK', None],
             ['Content-Type', 'text/json'],
-            ['Access-Control-Allow-Origin', '*']
+            ['Access-Control-Allow-Origin', NET_CORS_ORIGIN]
         ]
         self.headersOpt = {}
 
