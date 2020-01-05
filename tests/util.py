@@ -1,17 +1,14 @@
 import json
-import urllib2
-
-API_VERSION = 6
-API_URL     = 'http://localhost:8765'
+import urllib.request
 
 
 def request(action, **params):
-    return {'action': action, 'params': params, 'version': API_VERSION}
-
+    return {'action': action, 'params': params, 'version': 6}
 
 def invoke(action, **params):
-    requestJson = json.dumps(request(action, **params))
-    response = json.load(urllib2.urlopen(urllib2.Request(API_URL, requestJson)))
+    requestJson = json.dumps(request(action, **params)).encode('utf-8')
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+
     if len(response) != 2:
         raise Exception('response has an unexpected number of fields')
     if 'error' not in response:
@@ -20,4 +17,5 @@ def invoke(action, **params):
         raise Exception('response is missing required result field')
     if response['error'] is not None:
         raise Exception(response['error'])
+
     return response['result']

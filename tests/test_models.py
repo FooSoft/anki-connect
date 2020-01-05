@@ -2,10 +2,11 @@
 
 import unittest
 import util
+import uuid
 
 
-MODEL_1_NAME = 'testModel'
-MODEL_2_NAME = 'testModel-second'
+MODEL_1_NAME = str(uuid.uuid4())
+MODEL_2_NAME = str(uuid.uuid4())
 
 CSS = 'some random css'
 NEW_CSS = 'new random css'
