@@ -49,6 +49,8 @@ URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/Ank
 
 ANKI21 = anki.version.startswith('2.1')
 
+config = aqt.mw.addonManager.getConfig('AnkiConnect')
+
 #
 # Helpers
 #
