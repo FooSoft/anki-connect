@@ -47,48 +47,24 @@ TICK_INTERVAL = 25
 URL_TIMEOUT = 10
 URL_UPGRADE = 'https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py'
 
-ANKI21 = anki.version.startswith('2.1')
-
 config = aqt.mw.addonManager.getConfig('AnkiConnect')
 
 #
 # Helpers
 #
 
-if sys.version_info[0] < 3:
-    import urllib2
-    def download(url):
-        contents = None
-        resp = urllib2.urlopen(url, timeout=URL_TIMEOUT)
-        if resp.code == 200:
-            contents = resp.read()
-        return (resp.code, contents)
+from anki.sync import AnkiRequestsClient
+def download(url):
+    contents = None
+    client = AnkiRequestsClient()
+    client.timeout = URL_TIMEOUT
+    resp = client.get(url)
+    if resp.status_code == 200:
+        contents = client.streamContent(resp)
+    return (resp.status_code, contents)
 
-    from PyQt4.QtCore import QTimer
-    from PyQt4.QtGui import QMessageBox
-else:
-    unicode = str
-
-    from anki.sync import AnkiRequestsClient
-    def download(url):
-        contents = None
-        client = AnkiRequestsClient()
-        client.timeout = URL_TIMEOUT
-        resp = client.get(url)
-        if resp.status_code == 200:
-            contents = client.streamContent(resp)
-        return (resp.status_code, contents)
-
-    from PyQt5.QtCore import QTimer
-    from PyQt5.QtWidgets import QMessageBox
-
-
-def makeBytes(data):
-    return data.encode('utf-8')
-
-
-def makeStr(data):
-    return data.decode('utf-8')
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import QMessageBox
 
 
 def api(*versions):
@@ -162,17 +138,17 @@ class WebClient:
 
 
     def parseRequest(self, data):
-        parts = data.split(makeBytes('\r\n\r\n'), 1)
+        parts = data.split('\r\n\r\n'.encode('utf-8'), 1)
         if len(parts) == 1:
             return None, 0
 
         headers = {}
-        for line in parts[0].split(makeBytes('\r\n')):
-            pair = line.split(makeBytes(': '))
+        for line in parts[0].split('\r\n'.encode('utf-8')):
+            pair = line.split(': '.encode('utf-8'))
             headers[pair[0].lower()] = pair[1] if len(pair) > 1 else None
 
         headerLength = len(parts[0]) + 4
-        bodyLength = int(headers.get(makeBytes('content-length'), 0))
+        bodyLength = int(headers.get('content-length'.encode('utf-8'), 0))
         totalLength = headerLength + bodyLength
 
         if totalLength > len(data):
@@ -248,13 +224,13 @@ class WebServer:
 
     def handlerWrapper(self, req):
         if len(req.body) == 0:
-            body = makeBytes('AnkiConnect v.{}'.format(API_VERSION))
+            body = 'AnkiConnect v.{}'.format(API_VERSION).encode('utf-8')
         else:
             try:
-                params = json.loads(makeStr(req.body))
-                body = makeBytes(json.dumps(self.handler(params)))
+                params = json.loads(req.body.decode('utf-8'))
+                body = json.dumps(self.handler(params)).encode('utf-8')
             except ValueError:
-                body = makeBytes(json.dumps(None))
+                body = json.dumps(None).encode('utf-8')
 
         resp = bytes()
 
@@ -263,11 +239,11 @@ class WebServer:
 
         for key, value in headers:
             if value is None:
-                resp += makeBytes('{}\r\n'.format(key))
+                resp += '{}\r\n'.format(key).encode('utf-8')
             else:
-                resp += makeBytes('{}: {}\r\n'.format(key, value))
+                resp += '{}: {}\r\n'.format(key, value).encode('utf-8')
 
-        resp += makeBytes('\r\n')
+        resp += '\r\n'.encode('utf-8')
         resp += body
 
         return resp
@@ -498,7 +474,7 @@ class AnkiConnect:
                 data = self.download(URL_UPGRADE)
                 path = os.path.splitext(__file__)[0] + '.py'
                 with open(path, 'w') as fp:
-                    fp.write(makeStr(data))
+                    fp.write(data.decode('utf-8'))
                 QMessageBox.information(
                     self.window(),
                     'AnkiConnect',
@@ -1168,85 +1144,47 @@ class AnkiConnect:
             randomString = ''.join(choice(ascii_letters) for _ in range(10))
             windowName = 'AddCardsAndClose' + randomString
 
-            if ANKI21:
-                class AddCardsAndClose(aqt.addcards.AddCards):
+            class AddCardsAndClose(aqt.addcards.AddCards):
 
-                    def __init__(self, mw):
-                        # the window must only reset if
-                        # * function `onModelChange` has been called prior
-                        # * window was newly opened
+                def __init__(self, mw):
+                    # the window must only reset if
+                    # * function `onModelChange` has been called prior
+                    # * window was newly opened
 
+                    self.modelHasChanged = True
+                    super().__init__(mw)
+
+                    self.addButton.setText("Add and Close")
+                    self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+
+                def _addCards(self):
+                    super()._addCards()
+
+                    # if adding was successful it must mean it was added to the history of the window
+                    if len(self.history):
+                        self.reject()
+
+                def onModelChange(self):
+                    if self.isActiveWindow():
+                        super().onModelChange()
                         self.modelHasChanged = True
-                        super().__init__(mw)
 
-                        self.addButton.setText("Add and Close")
-                        self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+                def onReset(self, model=None, keep=False):
+                    if self.isActiveWindow() or self.modelHasChanged:
+                        super().onReset(model, keep)
+                        self.modelHasChanged = False
 
-                    def _addCards(self):
-                        super()._addCards()
+                    else:
+                        # modelchoosers text is changed by a reset hook
+                        # therefore we need to change it back manually
+                        self.modelChooser.models.setText(self.editor.note.model()['name'])
+                        self.modelHasChanged = False
 
-                        # if adding was successful it must mean it was added to the history of the window
-                        if len(self.history):
-                            self.reject()
-
-                    def onModelChange(self):
-                        if self.isActiveWindow():
-                            super().onModelChange()
-                            self.modelHasChanged = True
-
-                    def onReset(self, model=None, keep=False):
-                        if self.isActiveWindow() or self.modelHasChanged:
-                            super().onReset(model, keep)
-                            self.modelHasChanged = False
-
-                        else:
-                            # modelchoosers text is changed by a reset hook
-                            # therefore we need to change it back manually
-                            self.modelChooser.models.setText(self.editor.note.model()['name'])
-                            self.modelHasChanged = False
-
-                    def _reject(self):
-                        savedMarkClosed = aqt.dialogs.markClosed
-                        aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
-                        super()._reject()
-                        aqt.dialogs.markClosed = savedMarkClosed
-
-            else:
-                class AddCardsAndClose(aqt.addcards.AddCards):
-
-                    def __init__(self, mw):
-                        self.modelHasChanged = True
-                        super(AddCardsAndClose, self).__init__(mw)
-
-                        self.addButton.setText("Add and Close")
-                        self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
-
-                    def addCards(self):
-                        super(AddCardsAndClose, self).addCards()
-
-                        # if adding was successful it must mean it was added to the history of the window
-                        if len(self.history):
-                            self.reject()
-
-                    def onModelChange(self):
-                        if self.isActiveWindow():
-                            super(AddCardsAndClose, self).onModelChange()
-                            self.modelHasChanged = True
-
-                    def onReset(self, model=None, keep=False):
-                        if self.isActiveWindow() or self.modelHasChanged:
-                            super(AddCardsAndClose, self).onReset(model, keep)
-                            self.modelHasChanged = False
-
-                        else:
-                            self.modelChooser.models.setText(self.editor.note.model()['name'])
-                            self.modelHasChanged = False
-
-                    def reject(self):
-                        savedClose = aqt.dialogs.close
-                        aqt.dialogs.close = lambda _: savedClose(windowName)
-                        super(AddCardsAndClose, self).reject()
-                        aqt.dialogs.close = savedClose
+                def _reject(self):
+                    savedMarkClosed = aqt.dialogs.markClosed
+                    aqt.dialogs.markClosed = lambda _: savedMarkClosed(windowName)
+                    super()._reject()
+                    aqt.dialogs.markClosed = savedMarkClosed
 
             aqt.dialogs._dialogs[windowName] = [AddCardsAndClose, None]
             addCards = aqt.dialogs.open(windowName, self.window())
@@ -1270,8 +1208,7 @@ class AnkiConnect:
             # if Anki does not Focus, the window will not notice that the
             # fields are actually filled
             aqt.dialogs.open(windowName, self.window())
-            if ANKI21:
-                addCards.setAndFocusNote(editor.note)
+            addCards.setAndFocusNote(editor.note)
 
         elif note is not None:
             currentWindow = aqt.dialogs._dialogs['AddCards'][1]
@@ -1300,15 +1237,10 @@ class AnkiConnect:
                 addCards.activateWindow()
 
                 aqt.dialogs.open('AddCards', self.window())
-                if ANKI21:
-                    addCards.setAndFocusNote(editor.note)
+                addCards.setAndFocusNote(editor.note)
 
             if currentWindow is not None:
-                if ANKI21:
-                    currentWindow.closeWithCallback(openNewWindow)
-                else:
-                    currentWindow.reject()
-                    openNewWindow()
+                currentWindow.closeWithCallback(openNewWindow)
             else:
                 openNewWindow()
 
