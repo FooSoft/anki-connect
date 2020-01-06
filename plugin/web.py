@@ -17,7 +17,7 @@ import json
 import select
 import socket
 
-from AnkiConnect import web, util
+from . import web, util
 
 
 #

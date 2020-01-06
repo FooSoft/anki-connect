@@ -32,7 +32,7 @@ import anki
 import anki.lang
 import aqt
 
-from AnkiConnect import web, util
+from . import web, util
 
 
 #
