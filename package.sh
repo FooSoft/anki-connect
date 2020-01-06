@@ -1,2 +1,3 @@
 #!/usr/bin/bash
-7za a AnkiConnect.zip plugin/*
+git clean -xdf
+7za a AnkiConnect.zip ./plugin/*
