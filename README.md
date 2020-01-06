@@ -3,7 +3,7 @@
 The AnkiConnect plugin enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
 [Anki](https://apps.ankiweb.net/) over a network interface. This software makes it possible to execute queries against
 the user's card deck, automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible
-with the latest stable (2.0.x) and alpha (2.1.x) releases of Anki and works on Linux, Windows, and Mac OS X.
+with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below) are no longer supported.
 
 ## Table of Contents ##
 
@@ -69,10 +69,11 @@ in order to bind it to all network interfaces on your host.
 
 ### Sample Invocation ###
 
-Every request consists of a JSON-encoded object containing an `action`, a `version`, and a set of contextual `params`.
-AnkiConnect will respond with an object containing two fields: `result` and `error`. The `result` field contains the
-return value of the executed API, and the `error` field is a description of any exception thrown during API execution
-(the value `null` is used if execution completed successfully).
+Every request consists of a JSON-encoded object containing an `action`, a `version`, contextual `params`, and a `key`
+value used for authentication (which is optional and can be omitted by default). AnkiConnect will respond with an object
+containing two fields: `result` and `error`. The `result` field contains the return value of the executed API, and the
+`error` field is a description of any exception thrown during API execution (the value `null` is used if execution
+completed successfully).
 
 *Sample successful response*:
 ```json
@@ -196,28 +197,6 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": 6,
-        "error": null
-    }
-    ```
-
-*   **upgrade**
-
-    Displays a confirmation dialog box in Anki asking the user if they wish to upgrade AnkiConnect to the latest version
-    from the project's [master branch](https://raw.githubusercontent.com/FooSoft/anki-connect/master/AnkiConnect.py) on
-    GitHub. Returns a boolean value indicating if the plugin was upgraded or not.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "upgrade",
-        "version": 6
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": true,
         "error": null
     }
     ```
@@ -1506,7 +1485,7 @@ guarantee that your application continues to function properly in the future.
 
 *   **storeMediaFile**
 
-    Stores a file with the specified Base64-encoded contents inside the media folder. To prevent Anki from removing
+    Stores a file with the specified base64-encoded contents inside the media folder. To prevent Anki from removing
     files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are
     still synchronized to AnkiWeb.
 
@@ -1537,7 +1516,7 @@ guarantee that your application continues to function properly in the future.
 
 *   **retrieveMediaFile**
 
-    Retrieves the Base64-encoded contents of the specified file, returning `false` if the file does not exist.
+    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
 
     *Sample request*:
     ```json
@@ -1613,7 +1592,7 @@ guarantee that your application continues to function properly in the future.
     Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
 
     The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
-    Invoking the action multiple times with this option will create _multiple windows_.
+    Invoking the action mutliple times with this option will create _multiple windows_.
 
     *Sample request*:
     ```json
