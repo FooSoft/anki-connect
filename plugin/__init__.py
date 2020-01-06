@@ -29,6 +29,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QMessageBox
 
 import anki
+import anki.lang
 import aqt
 
 from AnkiConnect import web, util
@@ -65,6 +66,7 @@ class AnkiConnect:
             self.log.write('[{}]\n'.format(name))
             json.dump(data, self.log, indent=4, sort_keys=True)
             self.log.write('\n\n')
+            self.log.flush()
 
 
     def advance(self):
@@ -77,10 +79,15 @@ class AnkiConnect:
         name = request.get('action', '')
         version = request.get('version', 4)
         params = request.get('params', {})
+        key = request.get('key')
         reply = {'result': None, 'error': None}
 
         try:
+            if key != util.setting('apiKey'):
+                raise Exception('valid api key must be provided')
+
             method = None
+
             for methodName, methodInst in inspect.getmembers(self, predicate=inspect.ismethod):
                 apiVersionLast = 0
                 apiNameLast = None
@@ -580,11 +587,11 @@ class AnkiConnect:
         mm = collection.models
 
         # Generate new Note
-        m = mm.new(_(modelName))
+        m = mm.new(anki.lang._(modelName))
 
         # Create fields and add them to Note
         for field in inOrderFields:
-            fm = mm.newField(_(field))
+            fm = mm.newField(anki.lang._(field))
             mm.addField(m, fm)
 
         # Add shared css to model if exists. Use default otherwise
@@ -594,7 +601,7 @@ class AnkiConnect:
         # Generate new card template(s)
         cardCount = 1
         for card in cardTemplates:
-            t = mm.newTemplate(_('Card ' + str(cardCount)))
+            t = mm.newTemplate(anki.lang._('Card ' + str(cardCount)))
             cardCount += 1
             t['qfmt'] = card['Front']
             t['afmt'] = card['Back']

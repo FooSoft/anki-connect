@@ -9,9 +9,6 @@ class TestMisc(unittest.TestCase):
         # version
         self.assertEqual(util.invoke('version'), 6)
 
-        # upgrade
-        util.invoke('upgrade')
-
         # sync
         util.invoke('sync')
 
