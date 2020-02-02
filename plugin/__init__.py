@@ -207,7 +207,7 @@ class AnkiConnect:
             if type(allowDuplicate) is not bool:
               raise Exception('option parameter \'allowDuplicate\' must be boolean')
 
-        duplicateOrEmpty = ankiNote.dupeOrEmpty()
+        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInDeck(ankiNote, deck)
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
@@ -219,6 +219,32 @@ class AnkiConnect:
             return ankiNote
         else:
             raise Exception('cannot create note for unknown reason')
+
+    def isNoteDuplicateOrEmptyInDeck(self, note, deck):
+        "1 if first is empty; 2 if first is a duplicate, False otherwise."
+        result = note.dupeOrEmpty()
+        if result != 2:
+            return result
+
+        # dupeOrEmpty returns if a note is a global duplicate
+        # the rest of the function checks to see if the note is a duplicate in the deck
+        val = note.fields[0].strip()
+        did = deck['id']
+        csum = anki.utils.fieldChecksum(val)
+
+        for noteId in note.col.db.list(
+            "select id from notes where csum = ? and id != ? and mid = ?",
+            csum,
+            note.id or 0,
+            note.mid,
+        ):
+            if note.col.db.scalar(
+                "select id from cards where nid = ? and did = ?",
+                noteId,
+                did
+            ):
+                return 2
+        return False
 
 
     #
