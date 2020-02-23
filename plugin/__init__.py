@@ -449,29 +449,8 @@ class AnkiConnect:
     def addNote(self, note):
         ankiNote = self.createNote(note)
 
-        audio = note.get('audio')
-        if audio is not None and len(audio['fields']) > 0:
-            try:
-                data = util.download(audio['url'])
-                skipHash = audio.get('skipHash')
-                if skipHash is None:
-                    skip = False
-                else:
-                    m = hashlib.md5()
-                    m.update(data)
-                    skip = skipHash == m.hexdigest()
-
-                if not skip:
-                    audioFilename = self.media().writeData(audio['filename'], data)
-                    for field in audio['fields']:
-                        if field in ankiNote:
-                            ankiNote[field] += u'[sound:{}]'.format(audioFilename)
-
-            except Exception as e:
-                errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                for field in audio['fields']:
-                    if field in ankiNote:
-                        ankiNote[field] += errorMessage
+        audioObjectOrList = note.get('audio')
+        self.addAudio(ankiNote, audioObjectOrList)
 
         collection = self.collection()
         self.startEditing()
@@ -482,6 +461,34 @@ class AnkiConnect:
         self.stopEditing()
 
         return ankiNote.id
+
+
+    def addAudio(self, ankiNote, audioObjectOrList):
+        if audioObjectOrList is not None:
+            audioList = audioObjectOrList if isinstance(audioObjectOrList, list) else [audioObjectOrList]
+            for audio in audioList:
+                if audio is not None and len(audio['fields']) > 0:
+                    try:
+                        data = util.download(audio['url'])
+                        skipHash = audio.get('skipHash')
+                        if skipHash is None:
+                            skip = False
+                        else:
+                            m = hashlib.md5()
+                            m.update(data)
+                            skip = skipHash == m.hexdigest()
+
+                        if not skip:
+                            audioFilename = self.media().writeData(audio['filename'], data)
+                            for field in audio['fields']:
+                                if field in ankiNote:
+                                    ankiNote[field] += u'[sound:{}]'.format(audioFilename)
+
+                    except Exception as e:
+                        errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        for field in audio['fields']:
+                            if field in ankiNote:
+                                ankiNote[field] += errorMessage
 
 
     @util.api()
@@ -501,6 +508,9 @@ class AnkiConnect:
         for name, value in note['fields'].items():
             if name in ankiNote:
                 ankiNote[name] = value
+
+        audioObjectOrList = note['audio']
+        self.addAudio(ankiNote, audioObjectOrList)
 
         ankiNote.flush()
 
