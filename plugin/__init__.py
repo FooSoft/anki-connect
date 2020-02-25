@@ -485,7 +485,7 @@ class AnkiConnect:
                                     ankiNote[field] += u'[sound:{}]'.format(audioFilename)
 
                     except Exception as e:
-                        errorMessage = str(e).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        errorMessage = str(e).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                         for field in audio['fields']:
                             if field in ankiNote:
                                 ankiNote[field] += errorMessage
