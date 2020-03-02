@@ -926,12 +926,12 @@ guarantee that your application continues to function properly in the future.
     the created note created on success, and `null` on failure.
 
     AnkiConnect can download audio files and embed them in newly created notes. The corresponding `audio` note member is
-    optional and can be omitted. If you choose to include it, the `url` and `filename` fields must be also defined. The
-    `skipHash` field can be optionally provided to skip the inclusion of downloaded files with an MD5 hash that matches
-    the provided value. This is useful for avoiding the saving of error pages and stub files. The `fields` member is a
-    list of fields that should play audio when the card is displayed in Anki. The `allowDuplicate` member inside
-    `options` group can be set to true to enable adding duplicate cards. Normally duplicate cards can not be added and
-    trigger exception.
+    optional and can be omitted. If you choose to include it, it should contain a single object or an array of objects
+    with mandatory `url` and `filename` fields. The `skipHash` field can be optionally provided to skip the inclusion of
+    downloaded files with an MD5 hash that matches the provided value. This is useful for avoiding the saving of error
+    pages and stub files. The `fields` member is a list of fields that should play audio when the card is displayed in
+    Anki. The `allowDuplicate` member inside `options` group can be set to true to enable adding duplicate cards.
+    Normally duplicate cards can not be added and trigger exception.
 
     *Sample request*:
     ```json
@@ -952,14 +952,14 @@ guarantee that your application continues to function properly in the future.
                 "tags": [
                     "yomichan"
                 ],
-                "audio": {
+                "audio": [{
                     "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
                     "filename": "yomichan_ねこ_猫.mp3",
                     "skipHash": "7e2c2f954ef6051373ba916f000168dc",
                     "fields": [
                         "Front"
                     ]
-                }
+                }]
             }
         }
     }
@@ -996,14 +996,14 @@ guarantee that your application continues to function properly in the future.
                     "tags": [
                         "yomichan"
                     ],
-                    "audio": {
+                    "audio": [{
                         "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
                         "filename": "yomichan_ねこ_猫.mp3",
                         "skipHash": "7e2c2f954ef6051373ba916f000168dc",
                         "fields": [
                             "Front"
                         ]
-                    }
+                    }]
                 }
             ]
         }
@@ -1056,7 +1056,8 @@ guarantee that your application continues to function properly in the future.
 
 *   **updateNoteFields**
 
-    Modify the fields of an exist note.
+    Modify the fields of an exist note. You can also include audio files which will be added to the note with an
+    optional `audio` property. Please see the documentation for `addNote` for an explanation of objects in the `audio` array.
 
     *Sample request*:
     ```json
@@ -1069,7 +1070,15 @@ guarantee that your application continues to function properly in the future.
                 "fields": {
                     "Front": "new front content",
                     "Back": "new back content"
-                }
+                },
+                "audio": [{
+                    "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
+                    "filename": "yomichan_ねこ_猫.mp3",
+                    "skipHash": "7e2c2f954ef6051373ba916f000168dc",
+                    "fields": [
+                        "Front"
+                    ]
+                }]
             }
         }
     }
