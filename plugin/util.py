@@ -54,6 +54,7 @@ def setting(key):
         'webBindAddress':  os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1'),
         'webBindPort':     8765,
         'webCorsOrigin':   os.getenv('ANKICONNECT_CORS_ORIGIN', 'http://localhost'),
+        'webCorsOriginList': ['http://localhost'],
         'webTimeout':      10000,
     }
 

@@ -153,10 +153,26 @@ class WebServer:
             except ValueError:
                 body = json.dumps(None).encode('utf-8')
 
+        # handle multiple cors origins by checking the 'origin'-header against the allowed origin list from the config
+        webCorsOriginList = util.setting('webCorsOriginList')
+
+        # keep support for deprecated 'webCorsOrigin' field, as long it is not removed
+        webCorsOrigin = util.setting('webCorsOrigin')
+        if webCorsOrigin:
+            webCorsOriginList.append(webCorsOrigin)
+
+        corsOrigin = 'http://localhost'
+        if len(webCorsOriginList) == 1:
+            corsOrigin = webCorsOriginList[0]
+        elif b'origin' in req.headers:
+            originStr = req.headers[b'origin'].decode()
+            if originStr in webCorsOriginList:
+                corsOrigin = originStr
+
         headers = [
             ['HTTP/1.1 200 OK', None],
             ['Content-Type', 'text/json'],
-            ['Access-Control-Allow-Origin', util.setting('webCorsOrigin')],
+            ['Access-Control-Allow-Origin', corsOrigin],
             ['Content-Length', str(len(body))]
         ]
 
