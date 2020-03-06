@@ -46,16 +46,16 @@ def api(*versions):
 
 def setting(key):
     defaults = {
-        'apiKey':          None,
-        'apiLogPath':      None,
+        'apiKey': None,
+        'apiLogPath': None,
         'apiPollInterval': 25,
-        'apiVersion':      6,
-        'webBacklog':      5,
-        'webBindAddress':  os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1'),
-        'webBindPort':     8765,
-        'webCorsOrigin':   os.getenv('ANKICONNECT_CORS_ORIGIN', 'http://localhost'),
+        'apiVersion': 6,
+        'webBacklog': 5,
+        'webBindAddress': os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1'),
+        'webBindPort': 8765,
+        'webCorsOrigin': os.getenv('ANKICONNECT_CORS_ORIGIN', 'http://localhost'),
         'webCorsOriginList': ['http://localhost'],
-        'webTimeout':      10000,
+        'webTimeout': 10000,
     }
 
     try:
