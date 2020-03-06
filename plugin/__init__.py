@@ -802,12 +802,22 @@ class AnkiConnect:
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
 
+                if getattr(card, 'question', None) is None:
+                    question = card._getQA()['q']
+                else:
+                    question = card.question(),
+
+                if getattr(card, 'answer', None) is None:
+                    answer = card._getQA()['a']
+                else:
+                    answer = card.answer()
+
                 result.append({
                     'cardId': card.id,
                     'fields': fields,
                     'fieldOrder': card.ord,
-                    'question': card.question(),
-                    'answer': card.answer(),
+                    'question': question,
+                    'answer': answer,
                     'modelName': model['name'],
                     'deckName': self.deckNameFromId(card.did),
                     'css': model['css'],
