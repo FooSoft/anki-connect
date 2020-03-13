@@ -421,10 +421,15 @@ class AnkiConnect:
 
 
     @util.api()
-    def storeMediaFile(self, filename, data):
-        self.deleteMediaFile(filename)
-        self.media().writeData(filename, base64.b64decode(data))
-
+    def storeMediaFile(self, filename, data=None, url=None):
+        if data:
+            self.deleteMediaFile(filename)
+            self.media().writeData(filename, base64.b64decode(data))
+        elif url:
+            downloadedData = util.download(url)
+            self.media().writeData(filename, downloadedData)
+        else:
+            raise Exception('You must either provide a "data" or a "url" field.')
 
     @util.api()
     def retrieveMediaFile(self, filename):
