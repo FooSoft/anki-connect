@@ -642,7 +642,11 @@ class AnkiConnect:
         # Generate new card template(s)
         cardCount = 1
         for card in cardTemplates:
-            t = mm.newTemplate(anki.lang._('Card ' + str(cardCount)))
+            cardName = 'Card ' + str(cardCount)
+            if 'Name' in card:
+                cardName = card['Name']
+
+            t = mm.newTemplate(anki.lang._(cardName))
             cardCount += 1
             t['qfmt'] = card['Front']
             t['afmt'] = card['Back']
