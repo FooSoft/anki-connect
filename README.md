@@ -709,7 +709,8 @@ guarantee that your application continues to function properly in the future.
 *   **createModel**
 
     Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
-    used in the model.
+    used in the model. Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
+    card names will be `Card 1`, `Card 2`, and so on.
 
     *Sample request*
     ```json
@@ -722,6 +723,7 @@ guarantee that your application continues to function properly in the future.
             "css": "Optional CSS with default to builtin css",
             "cardTemplates": [
                 {
+                    "Name": "My Card 1",
                     "Front": "Front html {{Field1}}",
                     "Back": "Back html  {{Field2}}"
                 }
@@ -772,7 +774,7 @@ guarantee that your application continues to function properly in the future.
             ],
             "tmpls":[
                 {
-                    "name":"Card 1",
+                    "name":"My Card 1",
                     "ord":0,
                     "qfmt":"",
                     "afmt":"This is the back of the card {{Field2}}",
