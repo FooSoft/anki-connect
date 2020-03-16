@@ -20,6 +20,7 @@ with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below
         *   [Cards](https://foosoft.net/projects/anki-connect/#cards)
         *   [Media](https://foosoft.net/projects/anki-connect/#media)
         *   [Graphical](https://foosoft.net/projects/anki-connect/#graphical)
+        *   [Export](https://foosoft.net/projects/anki-connect/#export)
 
 ## Installation ##
 
@@ -1863,6 +1864,35 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": null,
+        "error": null
+    }
+    ```
+
+### Export ###
+
+*   **exportPackage**
+
+    Exports a given deck in .apkg format. Returns `true` if successful or `false` otherwise.
+    The optional property `includeSched` (default is `false`) can be specified to include the
+    cards' scheduling data.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "exportPackage",
+        "version": 6,
+        "params": {
+            "deck": "Default",
+            "path": "/data/Deck.apkg",
+            "includeSched": true
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
         "error": null
     }
     ```
