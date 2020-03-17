@@ -29,8 +29,11 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QMessageBox
 
 import anki
+import anki.exporting
 import anki.lang
+import anki.storage
 import aqt
+from anki.exporting import AnkiPackageExporter
 
 from . import web, util
 
@@ -1196,6 +1199,27 @@ class AnkiConnect:
             results.append(self.canAddNote(note))
 
         return results
+
+
+    @util.api()
+    def exportPackage(self, deck, path, includeSched=False):
+        results = []
+        results.append(self.createPackage(deck, path, includeSched))
+
+        return results
+
+
+    def createPackage(self, deck, path, includeSched):
+        collection = self.collection()
+        if collection is not None:
+            deck = collection.decks.byName(deck)
+            if deck is not None:
+                exporter = AnkiPackageExporter(collection)
+                exporter.did = deck["id"]
+                exporter.includeSched = includeSched
+                exporter.exportInto(path)
+                return True
+        return False
 
 
 #
