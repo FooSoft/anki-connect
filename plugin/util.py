@@ -58,7 +58,11 @@ def setting(key):
         'webTimeout': 10000,
     }
 
+    config = aqt.mw.addonManager.getConfig(__name__)
+    if 'profiles' in config and aqt.mw.pm.name in config['profiles']:
+        config.update(config['profiles'][aqt.mw.pm.name])
+
     try:
-        return aqt.mw.addonManager.getConfig(__name__).get(key, defaults[key])
+        return config.get(key, defaults[key])
     except:
         raise Exception('setting {} not found'.format(key))

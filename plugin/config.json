@@ -4,5 +4,13 @@
     "webBindAddress": "127.0.0.1",
     "webBindPort": 8765,
     "webCorsOrigin": "http://localhost",
-    "webCorsOriginList": ["http://localhost"]
+    "webCorsOriginList": ["http://localhost"],
+    "profiles":{
+        "user1": {
+            "webBindPort": 8766
+        },
+        "user2": {
+            "webBindPort": 8767
+        }
+    }
 }

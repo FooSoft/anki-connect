@@ -139,7 +139,8 @@ class WebServer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setblocking(False)
-        self.sock.bind((util.setting('webBindAddress'), util.setting('webBindPort')))
+        self.port = util.setting('webBindPort')
+        self.sock.bind((util.setting('webBindAddress'), self.port))
         self.sock.listen(util.setting('webBacklog'))
 
 

@@ -60,9 +60,8 @@ class AnkiConnect:
             QMessageBox.critical(
                 self.window(),
                 'AnkiConnect',
-                'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(util.setting('webBindPort'))
+                'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(self.server.port)
             )
-
 
     def logEvent(self, name, data):
         if self.log is not None:
@@ -1227,3 +1226,6 @@ class AnkiConnect:
 #
 
 ac = AnkiConnect()
+
+from anki.hooks import addHook
+addHook("profileLoaded", ac.__init__)
