@@ -145,7 +145,22 @@ class WebServer:
 
     def handlerWrapper(self, req):
         if len(req.body) == 0:
-            body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
+            try:
+                filename = list(req.headers)[0].decode('utf-8').split()[1]
+                if filename == "/":
+                    body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
+                else:
+                    print(filename)
+                    params = {
+                            "action": "retrieveMediaFile",
+                            "params": {
+                                "filename": filename,
+                                "encoding": "none"
+                            }
+                        }
+                    body = self.handler(params)
+            except:
+                body = json.dumps(None).encode('utf-8')
         else:
             try:
                 params = json.loads(req.body.decode('utf-8'))

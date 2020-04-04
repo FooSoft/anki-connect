@@ -435,7 +435,7 @@ class AnkiConnect:
             raise Exception('You must either provide a "data" or a "url" field.')
 
     @util.api()
-    def retrieveMediaFile(self, filename):
+    def retrieveMediaFile(self, filename, encoding="base64"):
         filename = os.path.basename(filename)
         filename = unicodedata.normalize('NFC', filename)
         filename = self.media().stripIllegal(filename)
@@ -443,7 +443,7 @@ class AnkiConnect:
         path = os.path.join(self.media().dir(), filename)
         if os.path.exists(path):
             with open(path, 'rb') as file:
-                return base64.b64encode(file.read()).decode('ascii')
+                return base64.b64encode(file.read()).decode('ascii') if encoding == "base64" else file.read()
 
         return False
 
