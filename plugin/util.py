@@ -44,6 +44,22 @@ def api(*versions):
     return decorator
 
 
+def getQuestion(card):
+    if getattr(card, 'question', None) is None:
+        question = card._getQA()['q']
+    else:
+        question = card.question(),
+    return question
+
+
+def getAnswer(card):
+    if getattr(card, 'answer', None) is None:
+        answer = card._getQA()['a']
+    else:
+        answer = card.answer()
+    return answer
+
+
 def setting(key):
     defaults = {
         'apiKey': None,

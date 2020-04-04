@@ -819,22 +819,12 @@ class AnkiConnect:
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
 
-                if getattr(card, 'question', None) is None:
-                    question = card._getQA()['q']
-                else:
-                    question = card.question(),
-
-                if getattr(card, 'answer', None) is None:
-                    answer = card._getQA()['a']
-                else:
-                    answer = card.answer()
-
                 result.append({
                     'cardId': card.id,
                     'fields': fields,
                     'fieldOrder': card.ord,
-                    'question': question,
-                    'answer': answer,
+                    'question': util.getQuestion(card),
+                    'answer': util.getAnswer(card),
                     'modelName': model['name'],
                     'deckName': self.deckNameFromId(card.did),
                     'css': model['css'],
@@ -1081,15 +1071,14 @@ class AnkiConnect:
             order = info['ord']
             name = info['name']
             fields[name] = {'value': note.fields[order], 'order': order}
-
         if card is not None:
             buttonList = reviewer._answerButtonList()
             return {
                 'cardId': card.id,
                 'fields': fields,
                 'fieldOrder': card.ord,
-                'question': card.question(),
-                'answer': card.answer(),
+                'question': util.getQuestion(card),
+                'answer': util.getAnswer(card),
                 'buttons': [b[0] for b in buttonList],
                 'nextReviews': [reviewer.mw.col.sched.nextIvlStr(reviewer.card, b[0], True) for b in buttonList],
                 'modelName': model['name'],
