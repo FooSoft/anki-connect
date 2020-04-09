@@ -429,6 +429,7 @@ class AnkiConnect:
             self.deleteMediaFile(filename)
             self.media().writeData(filename, base64.b64decode(data))
         elif url:
+            self.deleteMediaFile(filename)
             downloadedData = util.download(url)
             self.media().writeData(filename, downloadedData)
         else:
@@ -450,7 +451,10 @@ class AnkiConnect:
 
     @util.api()
     def deleteMediaFile(self, filename):
-        self.media().syncDelete(filename)
+        try:
+            self.media().syncDelete(filename)
+        except AttributeError:
+            self.media().trash_files([filename])
 
 
     @util.api()
