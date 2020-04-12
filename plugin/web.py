@@ -162,11 +162,12 @@ class WebServer:
             webCorsOriginList.append(webCorsOrigin)
 
         corsOrigin = 'http://localhost'
-        if len(webCorsOriginList) == 1:
+        allowAllCors = '*' in webCorsOriginList  # allow CORS for all domains
+        if len(webCorsOriginList) == 1 and not allowAllCors:
             corsOrigin = webCorsOriginList[0]
         elif b'origin' in req.headers:
             originStr = req.headers[b'origin'].decode()
-            if originStr in webCorsOriginList:
+            if originStr in webCorsOriginList or allowAllCors:
                 corsOrigin = originStr
 
         headers = [
