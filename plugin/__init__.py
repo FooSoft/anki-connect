@@ -285,6 +285,11 @@ class AnkiConnect:
         return list(map(self.handler, actions))
 
 
+    @util.api()
+    def getNumCardsReviewedToday(self):
+        return self.database().scalar('select count() from revlog where id > ?', (self.scheduler().dayCutoff - 86400) * 1000)
+    
+
     #
     # Decks
     #
