@@ -20,6 +20,10 @@ class TestMisc(unittest.TestCase):
             self.assertIsNone(result['error'])
             self.assertEqual(result['result'], 6)
 
+        # getNumCardsReviewedToday
+        result = util.invoke('getNumCardsReviewedToday')
+        self.assertIsInstance(result, int)
+
 
 if __name__ == '__main__':
     unittest.main()

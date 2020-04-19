@@ -277,6 +277,26 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **getNumCardsReviewedToday**
+
+    Gets the count of cards that have been reviewed in the current day (with day start time as configured by user in anki)
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getNumCardsReviewedToday",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": 0,
+        "error": null
+    }
+    ```
+
 #### Decks ####
 
 *   **deckNames**
