@@ -288,7 +288,7 @@ class AnkiConnect:
     @util.api()
     def getNumCardsReviewedToday(self):
         return self.database().scalar('select count() from revlog where id > ?', (self.scheduler().dayCutoff - 86400) * 1000)
-    
+
 
     #
     # Decks
@@ -1201,19 +1201,12 @@ class AnkiConnect:
 
     @util.api()
     def exportPackage(self, deck, path, includeSched=False):
-        results = []
-        results.append(self.createPackage(deck, path, includeSched))
-
-        return results
-
-
-    def createPackage(self, deck, path, includeSched):
         collection = self.collection()
         if collection is not None:
             deck = collection.decks.byName(deck)
             if deck is not None:
                 exporter = AnkiPackageExporter(collection)
-                exporter.did = deck["id"]
+                exporter.did = deck['id']
                 exporter.includeSched = includeSched
                 exporter.exportInto(path)
                 return True

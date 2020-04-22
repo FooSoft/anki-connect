@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import tempfile
 import unittest
 import util
 
@@ -23,6 +25,14 @@ class TestMisc(unittest.TestCase):
         # getNumCardsReviewedToday
         result = util.invoke('getNumCardsReviewedToday')
         self.assertIsInstance(result, int)
+
+        # exportPackage
+        fd, newname = tempfile.mkstemp(prefix='testexport', suffix='.apkg')
+        os.close(fd)
+        os.unlink(newname)
+        result = util.invoke('exportPackage', deck='Default', path=newname)
+        self.assertTrue(result)
+        self.assertTrue(os.path.exists(newname))
 
 
 if __name__ == '__main__':

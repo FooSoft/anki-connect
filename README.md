@@ -1,11 +1,11 @@
-# AnkiConnect #
+# AnkiConnect
 
 The AnkiConnect plugin enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
 [Anki](https://apps.ankiweb.net/) over a network interface. This software makes it possible to execute queries against
 the user's card deck, automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible
 with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below) are no longer supported.
 
-## Table of Contents ##
+## Table of Contents
 
 * [Installation](https://foosoft.net/projects/anki-connect/#installation)
     *   [Notes for Windows Users](https://foosoft.net/projects/anki-connect/#notes-for-windows-users)
@@ -22,7 +22,7 @@ with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below
         *   [Graphical](https://foosoft.net/projects/anki-connect/#graphical)
         *   [Export](https://foosoft.net/projects/anki-connect/#export)
 
-## Installation ##
+## Installation
 
 The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
 
@@ -34,13 +34,13 @@ Anki must be kept running in the background in order for other applications to b
 verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
 the server is running, you should see the message `AnkiConnect v.6` displayed in your browser window.
 
-### Notes for Windows Users ###
+### Notes for Windows Users
 
 Windows users may see a firewall nag dialog box appear on Anki startup. This occurs because AnkiConnect hosts a local
 server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for this
 plugin to function correctly.
 
-### Notes for Mac OS X Users ###
+### Notes for Mac OS X Users
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
@@ -56,7 +56,7 @@ foreground, App Nap should be disabled for Anki:
     ```
 3.  Restart Anki.
 
-## Application Interface for Developers ##
+## Application Interface for Developers
 
 AnkiConnect exposes Anki features to external applications via an easy to use
 [RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) API. After it is installed, this plugin will
@@ -68,7 +68,7 @@ access it from the same host on which it is running. If you need to access it ov
 environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0`
 in order to bind it to all network interfaces on your host.
 
-### Sample Invocation ###
+### Sample Invocation
 
 Every request consists of a JSON-encoded object containing an `action`, a `version`, contextual `params`, and a `key`
 value used for authentication (which is optional and can be omitted by default). AnkiConnect will respond with an object
@@ -96,13 +96,13 @@ response will only contain the value of the `result`; no `error` field is availa
 You can use whatever language or tool you like to issue request to AnkiConnect, but a couple of simple examples are
 included below as reference.
 
-#### Curl ####
+#### Curl
 
 ```bash
 curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
 ```
 
-#### Python ####
+#### Python
 
 ```python
 import json
@@ -129,7 +129,7 @@ result = invoke('deckNames')
 print('got list of decks: {}'.format(result))
 ```
 
-#### JavaScript ####
+#### JavaScript
 
 ```javascript
 function invoke(action, version, params={}) {
@@ -167,7 +167,7 @@ const result = await invoke('deckNames', 6);
 console.log(`got list of decks: ${result}`);
 ```
 
-### Supported Actions ###
+### Supported Actions
 
 Below is a comprehensive list of currently supported actions. Note that deprecated APIs will continue to function
 despite not being listed on this page as long as your request is labeled with a version number corresponding to when the
@@ -176,7 +176,7 @@ API was available for use.
 This page currently documents **version 6** of the API. Make sure to include this version number in your requests to
 guarantee that your application continues to function properly in the future.
 
-#### Miscellaneous ####
+#### Miscellaneous
 
 *   **version**
 
@@ -297,7 +297,33 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Decks ####
+*   **exportPackage**
+
+    Exports a given deck in `.apkg` format. Returns `true` if successful or `false` otherwise. The optional property
+    `includeSched` (default is `false`) can be specified to include the cards' scheduling data.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "exportPackage",
+        "version": 6,
+        "params": {
+            "deck": "Default",
+            "path": "/data/Deck.apkg",
+            "includeSched": true
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
+#### Decks
 
 *   **deckNames**
 
@@ -629,7 +655,7 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Models ####
+#### Models
 
 *   **modelNames**
 
@@ -941,7 +967,7 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Notes ####
+#### Notes
 
 *   **addNote**
 
@@ -1265,7 +1291,7 @@ guarantee that your application continues to function properly in the future.
     ```
 
 
-#### Cards ####
+#### Cards
 
 *   **suspend**
 
@@ -1513,7 +1539,7 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Media ####
+#### Media
 
 *   **storeMediaFile**
 
@@ -1613,7 +1639,7 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-#### Graphical ####
+#### Graphical
 
 *   **guiBrowse**
 
@@ -1884,35 +1910,6 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "result": null,
-        "error": null
-    }
-    ```
-
-### Export ###
-
-*   **exportPackage**
-
-    Exports a given deck in .apkg format. Returns `true` if successful or `false` otherwise.
-    The optional property `includeSched` (default is `false`) can be specified to include the
-    cards' scheduling data.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "exportPackage",
-        "version": 6,
-        "params": {
-            "deck": "Default",
-            "path": "/data/Deck.apkg",
-            "includeSched": true
-        }
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": true,
         "error": null
     }
     ```
