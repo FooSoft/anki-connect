@@ -980,7 +980,9 @@ guarantee that your application continues to function properly in the future.
     downloaded files with an MD5 hash that matches the provided value. This is useful for avoiding the saving of error
     pages and stub files. The `fields` member is a list of fields that should play audio when the card is displayed in
     Anki. The `allowDuplicate` member inside `options` group can be set to true to enable adding duplicate cards.
-    Normally duplicate cards can not be added and trigger exception.
+    Normally duplicate cards can not be added and trigger exception. The `duplicateScope` member inside `options` can be
+    used to specify the scope for which duplicates are checked. A value of `"deck"` will only check for duplicates in the
+    target deck; any other value will check the entire collection.
 
     *Sample request*:
     ```json
@@ -996,7 +998,8 @@ guarantee that your application continues to function properly in the future.
                     "Back": "back content"
                 },
                 "options": {
-                    "allowDuplicate": false
+                    "allowDuplicate": false,
+                    "duplicateScope": "deck"
                 },
                 "tags": [
                     "yomichan"
