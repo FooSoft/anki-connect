@@ -204,13 +204,16 @@ class AnkiConnect:
                 ankiNote[name] = value
 
         allowDuplicate = False
+        duplicateScope = None
         if 'options' in note:
           if 'allowDuplicate' in note['options']:
             allowDuplicate = note['options']['allowDuplicate']
             if type(allowDuplicate) is not bool:
               raise Exception('option parameter \'allowDuplicate\' must be boolean')
+          if 'duplicateScope' in note['options']:
+            duplicateScope = note['options']['duplicateScope']
 
-        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInDeck(ankiNote, deck)
+        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInScope(ankiNote, deck, duplicateScope)
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
@@ -223,10 +226,10 @@ class AnkiConnect:
         else:
             raise Exception('cannot create note for unknown reason')
 
-    def isNoteDuplicateOrEmptyInDeck(self, note, deck):
+    def isNoteDuplicateOrEmptyInScope(self, note, deck, duplicateScope):
         "1 if first is empty; 2 if first is a duplicate, False otherwise."
         result = note.dupeOrEmpty()
-        if result != 2:
+        if result != 2 or duplicateScope != 'deck':
             return result
 
         # dupeOrEmpty returns if a note is a global duplicate
