@@ -1548,7 +1548,7 @@ guarantee that your application continues to function properly in the future.
 
     Stores a file with the specified base64-encoded contents inside the media folder. alternatively you can specify a
     url from where the file shell be downloaded. If both field `data` and `url` are provided, the `data` field will be
-    used. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename 
+    used. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
     with an underscore. These files are still synchronized to AnkiWeb.
 
     *Sample request*:
@@ -1575,7 +1575,7 @@ guarantee that your application continues to function properly in the future.
     ```
     Hello world!
     ```
-    
+
     *Sample request*:
     ```json
     {
