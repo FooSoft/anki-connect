@@ -806,7 +806,7 @@ class AnkiConnect:
         if query is None:
             return []
         else:
-            return self.collection().findNotes(query)
+            return list(map(int, self.collection().findNotes(query)))
 
 
     @util.api()
@@ -814,7 +814,7 @@ class AnkiConnect:
         if query is None:
             return []
         else:
-            return self.collection().findCards(query)
+            return list(map(int, self.collection().findCards(query)))
 
 
     @util.api()
