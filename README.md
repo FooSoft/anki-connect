@@ -323,6 +323,30 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **importPackage**
+
+    Imports a file in `.apkg` format into the collection. Returns `true` if successful or `false` otherwise.
+    Note that the file path is relative to Anki's collection.media folder, not to the client.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "importPackage",
+        "version": 6,
+        "params": {
+            "path": "/data/Deck.apkg",
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
 #### Decks
 
 *   **deckNames**
