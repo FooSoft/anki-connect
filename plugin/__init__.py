@@ -34,6 +34,7 @@ import anki.lang
 import anki.storage
 import aqt
 from anki.exporting import AnkiPackageExporter
+from anki.importing import AnkiPackageImporter
 
 from . import web, util
 
@@ -1215,6 +1216,22 @@ class AnkiConnect:
                 return True
         return False
 
+    @util.api()
+    def importPackage(self, path):
+        collection = self.collection()
+        if collection is not None:
+            try:
+                self.startEditing()
+                importer = AnkiPackageImporter(collection, path)
+                importer.run()
+            except:
+                self.stopEditing()
+                raise
+            else:
+                self.stopEditing()
+                return True
+
+        return False
 
 #
 # Entry
