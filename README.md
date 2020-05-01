@@ -222,6 +222,26 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
+*   **getProfiles**
+
+    Retrieve the list of profiles.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getProfiles",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["User 1"],
+        "error": null
+    }
+    ```
+
 *   **loadProfile**
 
     Selects the profile specified in request.
