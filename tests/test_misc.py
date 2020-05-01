@@ -14,6 +14,14 @@ class TestMisc(unittest.TestCase):
         # sync
         util.invoke('sync')
 
+        # getProfiles
+        profiles = util.invoke('getProfiles')
+        self.assertIsInstance(profiles, list)
+        self.assertGreater(len(profiles), 0)
+
+        # loadProfile
+        util.invoke('loadProfile', name=profiles[0])
+
         # multi
         actions = [util.request('version'), util.request('version'), util.request('version')]
         results = util.invoke('multi', actions=actions)
