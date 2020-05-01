@@ -34,6 +34,20 @@ class TestMisc(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(os.path.exists(newname))
 
+        # importPackage
+        deckName = 'importTest'
+        fd, newname = tempfile.mkstemp(prefix='testimport', suffix='.apkg')
+        os.close(fd)
+        os.unlink(newname)
+        util.invoke('createDeck', deck=deckName)
+        note = {'deckName': deckName, 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ''}
+        noteId = util.invoke('addNote', note=note)
+        util.invoke('exportPackage', deck=deckName, path=newname)
+        util.invoke('deleteDecks', decks=[deckName], cardsToo=True)
+        util.invoke('importPackage', path=newname)
+        deckNames = util.invoke('deckNames')
+        self.assertIn(deckName, deckNames)
+
 
 if __name__ == '__main__':
     unittest.main()
