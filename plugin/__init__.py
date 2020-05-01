@@ -261,6 +261,9 @@ class AnkiConnect:
     def version(self):
         return util.setting('apiVersion')
 
+    @util.api()
+    def getProfiles(self):
+        return self.window().pm.profiles()
 
     @util.api()
     def loadProfile(self, name):
