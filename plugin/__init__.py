@@ -198,7 +198,8 @@ class AnkiConnect:
 
         ankiNote = anki.notes.Note(collection, model)
         ankiNote.model()['did'] = deck['id']
-        ankiNote.tags = note['tags']
+        if 'tags' in note:
+            ankiNote.tags = note['tags']
 
         for name, value in note['fields'].items():
             if name in ankiNote:
