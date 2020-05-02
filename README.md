@@ -7,20 +7,20 @@ with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below
 
 ## Table of Contents
 
-* [Installation](https://foosoft.net/projects/anki-connect/#installation)
-    *   [Notes for Windows Users](https://foosoft.net/projects/anki-connect/#notes-for-windows-users)
-    *   [Notes for Mac OS X Users](https://foosoft.net/projects/anki-connect/#notes-for-mac-os-x-users)
-* [Application Interface for Developers](https://foosoft.net/projects/anki-connect/#application-interface-for-developers)
-    *   [Sample Invocation](https://foosoft.net/projects/anki-connect/#sample-invocation)
-    *   [Supported Actions](https://foosoft.net/projects/anki-connect/#supported-actions)
-        *   [Miscellaneous](https://foosoft.net/projects/anki-connect/#miscellaneous)
-        *   [Decks](https://foosoft.net/projects/anki-connect/#decks)
-        *   [Models](https://foosoft.net/projects/anki-connect/#models)
-        *   [Notes](https://foosoft.net/projects/anki-connect/#notes)
-        *   [Cards](https://foosoft.net/projects/anki-connect/#cards)
-        *   [Media](https://foosoft.net/projects/anki-connect/#media)
-        *   [Graphical](https://foosoft.net/projects/anki-connect/#graphical)
-        *   [Export](https://foosoft.net/projects/anki-connect/#export)
+* [Installation](#installation)
+    *   [Notes for Windows Users](#notes-for-windows-users)
+    *   [Notes for Mac OS X Users](#notes-for-mac-os-x-users)
+* [Application Interface for Developers](#application-interface-for-developers)
+    *   [Sample Invocation](#sample-invocation)
+    *   [Supported Actions](#supported-actions)
+        *   [Miscellaneous](#miscellaneous)
+        *   [Decks](#decks)
+        *   [Models](#models)
+        *   [Notes](#notes)
+        *   [Cards](#cards)
+        *   [Media](#media)
+        *   [Graphical](#graphical)
+        *   [Export](#export)
 
 ## Installation
 
