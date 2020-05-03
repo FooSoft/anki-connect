@@ -385,7 +385,7 @@ guarantee that your application continues to function properly in the future.
     *Sample result*:
     ```json
     {
-        "error": null
+        "error": null,
         "result": "<center> lots of HTML here </center>",
     }
     ```
