@@ -30,10 +30,6 @@ class TestMisc(unittest.TestCase):
             self.assertIsNone(result['error'])
             self.assertEqual(result['result'], 6)
 
-        # getNumCardsReviewedToday
-        result = util.invoke('getNumCardsReviewedToday')
-        self.assertIsInstance(result, int)
-
         # exportPackage
         fd, newname = tempfile.mkstemp(prefix='testexport', suffix='.apkg')
         os.close(fd)
