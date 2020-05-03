@@ -13,7 +13,7 @@ class TestMisc(unittest.TestCase):
         self.assertIsInstance(result, int)
 
         # collectionStats
-        result = util.invoke('collectionStats')
+        result = util.invoke('getCollectionStats')
         self.assertIsInstance(result, str)
 
 

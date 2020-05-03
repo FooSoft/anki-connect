@@ -299,7 +299,7 @@ class AnkiConnect:
 
 
     @util.api()
-    def collectionStats(self):
+    def getCollectionStats(self):
         return self.collection().stats().report()
 
 
