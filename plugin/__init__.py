@@ -298,6 +298,11 @@ class AnkiConnect:
         return self.database().scalar('select count() from revlog where id > ?', (self.scheduler().dayCutoff - 86400) * 1000)
 
 
+    @util.api()
+    def collectionStats(self):
+        return self.collection().stats().report()
+
+
     #
     # Decks
     #

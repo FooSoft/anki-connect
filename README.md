@@ -14,6 +14,7 @@ with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below
     *   [Sample Invocation](#sample-invocation)
     *   [Supported Actions](#supported-actions)
         *   [Miscellaneous](#miscellaneous)
+        *   [Statistics](#statistics)
         *   [Decks](#decks)
         *   [Models](#models)
         *   [Notes](#notes)
@@ -297,26 +298,6 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-*   **getNumCardsReviewedToday**
-
-    Gets the count of cards that have been reviewed in the current day (with day start time as configured by user in anki)
-
-    *Sample request*:
-    ```json
-    {
-        "action": "getNumCardsReviewedToday",
-        "version": 6
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": 0,
-        "error": null
-    }
-    ```
-
 *   **exportPackage**
 
     Exports a given deck in `.apkg` format. Returns `true` if successful or `false` otherwise. The optional property
@@ -364,6 +345,48 @@ guarantee that your application continues to function properly in the future.
     {
         "result": true,
         "error": null
+    }
+    ```
+
+#### Statistics
+
+*   **getNumCardsReviewedToday**
+
+    Gets the count of cards that have been reviewed in the current day (with day start time as configured by user in anki)
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getNumCardsReviewedToday",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": 0,
+        "error": null
+    }
+    ```
+
+*   **collectionStats**
+
+    Gets the collection statistics report
+
+    *Sample request*:
+    ```json
+    {
+        "action": "collectionStats",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "error": null
+        "result": "<center> lots of HTML here </center>",
     }
     ```
 
