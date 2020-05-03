@@ -12,6 +12,10 @@ class TestMisc(unittest.TestCase):
         result = util.invoke('getNumCardsReviewedToday')
         self.assertIsInstance(result, int)
 
+        # collectionStats
+        result = util.invoke('collectionStats')
+        self.assertIsInstance(result, str)
+
 
 if __name__ == '__main__':
     unittest.main()
