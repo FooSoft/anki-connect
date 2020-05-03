@@ -370,14 +370,14 @@ guarantee that your application continues to function properly in the future.
     }
     ```
 
-*   **getCollectionStats**
+*   **getCollectionStatsHTML**
 
     Gets the collection statistics report
 
     *Sample request*:
     ```json
     {
-        "action": "getCollectionStats",
+        "action": "getCollectionStatsHTML",
         "version": 6
     }
     ```
