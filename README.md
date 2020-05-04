@@ -21,7 +21,6 @@ with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below
         *   [Cards](#cards)
         *   [Media](#media)
         *   [Graphical](#graphical)
-        *   [Export](#export)
 
 ## Installation
 
