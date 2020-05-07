@@ -377,7 +377,10 @@ guarantee that your application continues to function properly in the future.
     ```json
     {
         "action": "getCollectionStatsHTML",
-        "version": 6
+        "version": 6,
+        "params": {
+            "wholeCollection": true
+        }
     }
     ```
 
