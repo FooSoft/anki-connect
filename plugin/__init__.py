@@ -299,8 +299,10 @@ class AnkiConnect:
 
 
     @util.api()
-    def getCollectionStatsHTML(self):
-        return self.collection().stats().report()
+    def getCollectionStatsHTML(self, wholeCollection=True):
+        stats = self.collection().stats()
+        stats.wholeCollection = wholeCollection
+        return stats.report()
 
 
     #
