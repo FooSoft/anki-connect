@@ -236,7 +236,7 @@ class AnkiConnect:
 
         # dupeOrEmpty returns if a note is a global duplicate
         # the rest of the function checks to see if the note is a duplicate in the deck
-        val = note.fields[0].strip()
+        val = note.fields[0]
         did = deck['id']
         csum = anki.utils.fieldChecksum(val)
 
