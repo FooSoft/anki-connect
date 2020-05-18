@@ -926,7 +926,7 @@ class AnkiConnect:
             else:
                 browser.onSearchActivated()
 
-        return browser.model.cards
+        return list(map(int, browser.model.cards))
 
 
     @util.api()
