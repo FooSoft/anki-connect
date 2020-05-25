@@ -156,11 +156,11 @@ Documentation for currently supported actions is split up by category and is ref
 will continue to function despite not being listed on this page as long as your request is labeled with a version number
 corresponding to when the API was available for use (**version 6** at the time of this writing).
 
-*   [Cards](https://github.com/FooSoft/anki-connect/actions/cards.md)
-*   [Decks](https://github.com/FooSoft/anki-connect/actions/decks.md)
-*   [Graphical](https://github.com/FooSoft/anki-connect/actions/graphical.md)
-*   [Media](https://github.com/FooSoft/anki-connect/actions/media.md)
-*   [Miscellaneous](https://github.com/FooSoft/anki-connect/actions/miscellaneous.md)
-*   [Models](https://github.com/FooSoft/anki-connect/actions/models.md)
-*   [Notes](https://github.com/FooSoft/anki-connect/actions/notes.md)
-*   [Statistics](https://github.com/FooSoft/anki-connect/actions/statistics.md)
+*   [Cards](https://github.com/FooSoft/anki-connect/blob/master/actions/cards.md)
+*   [Decks](https://github.com/FooSoft/anki-connect/blob/master/actions/decks.md)
+*   [Graphical](https://github.com/FooSoft/anki-connect/blob/master/actions/graphical.md)
+*   [Media](https://github.com/FooSoft/anki-connect/blob/master/actions/media.md)
+*   [Miscellaneous](https://github.com/FooSoft/anki-connect/blob/master/actions/miscellaneous.md)
+*   [Models](https://github.com/FooSoft/anki-connect/blob/master/actions/models.md)
+*   [Notes](https://github.com/FooSoft/anki-connect/blob/master/actions/notes.md)
+*   [Statistics](https://github.com/FooSoft/anki-connect/blob/master/actions/statistics.md)
