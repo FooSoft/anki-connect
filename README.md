@@ -1,27 +1,27 @@
 # AnkiConnect
 
-The AnkiConnect plugin enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
-[Anki](https://apps.ankiweb.net/) over a network interface. This software makes it possible to execute queries against
-the user's card deck, automatically create new vocabulary and Kanji flash cards, and more. AnkiConnect is compatible
-with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below) are no longer supported.
+AnkiConnect enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
+[Anki](https://apps.ankiweb.net/) over a simple HTTP API. Its capabilities include executing queries against the user's
+card deck, automatically creating new cards, and more. AnkiConnect is compatible with the latest stable (2.1.x) releases
+of Anki; older versions (2.0.x and below) are no longer supported.
 
 ## Installation
 
-The installation process is similar to that of other Anki plugins and can be accomplished in three steps:
+The installation process is similar to other Anki plugins and can be accomplished in three steps:
 
 1.  Open the `Install Add-on` dialog by selecting `Tools` | `Add-ons` | `Browse & Install` in Anki.
 2.  Input [2055492159](https://ankiweb.net/shared/info/2055492159) into the text box labeled `Code` and press the `OK` button to proceed.
 3.  Restart Anki when prompted to do so in order to complete the installation of AnkiConnect.
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
-verify that AnkiConnect is running at any time by accessing [localhost:8765](http://localhost:8765) in your browser. If
-the server is running, you should see the message `AnkiConnect v.6` displayed in your browser window.
+verify that AnkiConnect is running at any time by accessing `localhost:8765` in your browser. If the server is running,
+you will see the message `AnkiConnect` displayed in your browser window.
 
 ### Notes for Windows Users
 
-Windows users may see a firewall nag dialog box appear on Anki startup. This occurs because AnkiConnect hosts a local
-server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for this
-plugin to function correctly.
+Windows users may see a firewall nag dialog box appear on Anki startup. This occurs because AnkiConnect runs a local
+HTTP server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for
+this plugin to function correctly.
 
 ### Notes for Mac OS X Users
 
@@ -32,19 +32,16 @@ foreground, App Nap should be disabled for Anki:
 
 1.  Start the Terminal application.
 2.  Execute the following commands in the terminal window:
-    ```
-    defaults write net.ankiweb.dtop NSAppSleepDisabled -bool true
-    defaults write net.ichi2.anki NSAppSleepDisabled -bool true
-    defaults write org.qt-project.Qt.QtWebEngineCore NSAppSleepDisabled -bool true
-    ```
+    *   `defaults write net.ankiweb.dtop NSAppSleepDisabled -bool true`
+    *   `defaults write net.ichi2.anki NSAppSleepDisabled -bool true`
+    *   `defaults write org.qt-project.Qt.QtWebEngineCore NSAppSleepDisabled -bool true`
 3.  Restart Anki.
 
 ## Application Interface for Developers
 
-AnkiConnect exposes Anki features to external applications via an easy to use
-[RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) API. After it is installed, this plugin will
-initialize a minimal HTTP sever running on port 8765 every time Anki executes. Other applications (including browser
-extensions) can then communicate with it via HTTP POST requests.
+AnkiConnect exposes internal Anki features to external applications via an easy to use API. After being installed, this
+plugin will start an HTTP sever on port 8765 whenever Anki is launched. Other applications (including browser
+extensions) can then communicate with it via HTTP requests.
 
 By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1` IP address, so that you will only be able to
 access it from the same host on which it is running. If you need to access it over a network, you can set the
@@ -154,7 +151,7 @@ console.log(`got list of decks: ${result}`);
 
 Documentation for currently supported actions is split up by category and is referenced below. Note that deprecated APIs
 will continue to function despite not being listed on this page as long as your request is labeled with a version number
-corresponding to when the API was available for use (**version 6** at the time of this writing).
+corresponding to when the API was available for use.
 
 *   [Cards](https://github.com/FooSoft/anki-connect/blob/master/actions/cards.md)
 *   [Decks](https://github.com/FooSoft/anki-connect/blob/master/actions/decks.md)
