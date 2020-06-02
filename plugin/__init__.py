@@ -30,7 +30,6 @@ from PyQt5.QtWidgets import QMessageBox
 
 import anki
 import anki.exporting
-import anki.lang
 import anki.storage
 import aqt
 from anki.exporting import AnkiPackageExporter
@@ -660,11 +659,11 @@ class AnkiConnect:
         mm = collection.models
 
         # Generate new Note
-        m = mm.new(anki.lang._(modelName))
+        m = mm.new(modelName)
 
         # Create fields and add them to Note
         for field in inOrderFields:
-            fm = mm.newField(anki.lang._(field))
+            fm = mm.newField(field)
             mm.addField(m, fm)
 
         # Add shared css to model if exists. Use default otherwise
@@ -678,7 +677,7 @@ class AnkiConnect:
             if 'Name' in card:
                 cardName = card['Name']
 
-            t = mm.newTemplate(anki.lang._(cardName))
+            t = mm.newTemplate(cardName)
             cardCount += 1
             t['qfmt'] = card['Front']
             t['afmt'] = card['Back']
