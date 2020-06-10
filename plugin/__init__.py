@@ -566,7 +566,35 @@ class AnkiConnect:
     @util.api()
     def getTags(self):
         return self.collection().tags.all()
+    
+    @util.api()
+    def setEaseFactors(self, cards, easeFactors):
+        couldSetEaseFactors = []
+        ind = 0
+        for card in cards:
+            ankiCard = self.collection().getCard(card)
+            if ankiCard is None:
+                raise Exception('card was not found: {}'.format(card['id']))
+                couldSetEaseFactors.append(False)
+            else:
+                couldSetEaseFactors.append(True)
 
+            ankiCard.factor = easeFactors[ind]
+
+            ankiCard.flush()
+
+            ind += 1
+
+        return couldSetEaseFactors
+    
+    @util.api()
+    def getEaseFactors(self, cards):
+        easeFactors = []
+        for card in cards:
+            ankiCard = self.collection().getCard(card)
+            easeFactors.append(ankiCard.factor)
+
+        return easeFactors
 
     @util.api()
     def suspend(self, cards, suspend=True):

@@ -20,6 +20,16 @@ class TestCards(unittest.TestCase):
         cardIds = util.invoke('findCards', query='deck:test')
         self.assertEqual(len(cardIds), 1)
 
+        # setEaseFactors
+        EASE_TO_TRY = 4200
+        easeFactors = [EASE_TO_TRY for card in cardIds]
+        couldGetEaseFactors = util.invoke('setEaseFactors', cards=cardIds, easeFactors=easeFactors)
+        self.assertEqual([True for card in cardIds], couldGetEaseFactors)
+
+        # getEaseFactors
+        easeFactorsFound = util.invoke('getEaseFactors', cards=cardIds)
+        self.assertEqual(easeFactors, easeFactorsFound)
+
         # suspend
         util.invoke('suspend', cards=cardIds)
 
