@@ -1,5 +1,52 @@
 # Card Actions
 
+*   **getEaseFactors**
+
+    Returns an array with the ease factor for each of the given cards (in the same order).
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getEaseFactors",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [4100, 3900],
+        "error": null
+    }
+    ```
+
+*   **setEaseFactors**
+
+    Sets ease factor of cards by card ID; returns `true` if successful (all cards existed) or `false` otherwise.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "setEaseFactors",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217],
+            "easeFactors": [4100, 3900]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [true, true],
+        "error": null
+    }
+    ```
+
 *   **suspend**
 
     Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
