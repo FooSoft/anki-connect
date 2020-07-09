@@ -34,6 +34,7 @@ import anki.storage
 import aqt
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
+from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
 from . import web, util
 
@@ -877,13 +878,20 @@ class AnkiConnect:
                     'question': util.getQuestion(card),
                     'answer': util.getAnswer(card),
                     'modelName': model['name'],
+                    'ord': card.ord,
                     'deckName': self.deckNameFromId(card.did),
                     'css': model['css'],
                     'factor': card.factor,
                     #This factor is 10 times the ease percentage,
                     # so an ease of 310% would be reported as 3100
                     'interval': card.ivl,
-                    'note': card.nid
+                    'note': card.nid,
+                    'type': card.type,
+                    'queue': card.queue,
+                    'due': card.due,
+                    'reps': card.reps,
+                    'lapses': card.lapses,
+                    'left': card.left,
                 })
             except TypeError as e:
                 # Anki will give a TypeError if the card ID does not exist.
@@ -894,6 +902,68 @@ class AnkiConnect:
 
         return result
 
+
+    @util.api()
+    def cardReviews(self, deck, startID):
+        return self.database().all("select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog "
+                                   "where id>? and cid in (select id from cards where did=?)",
+                                   startID, self.decks().id(deck))
+
+    @util.api()
+    def reloadCollection(self):
+        self.collection().reset()
+
+    @util.api()
+    def getLatestReviewID(self, deck):
+        return self.database().scalar("select max(id) from revlog where cid in (select id from cards where did=?)",
+                                      self.decks().id(deck)) or 0
+
+    @util.api()
+    def updateCompleteDeck(self, data):
+        self.startEditing()
+        did = self.decks().id(data["deck"])
+        self.decks().flush()
+        model_manager = self.collection().models
+        for _, card in data["cards"].items():
+            self.database().execute(
+                "replace into cards (id, nid, did, ord, type, queue, due, ivl, factor, reps, lapses, left, "
+                "mod, usn, odue, odid, flags, data) "
+                "values (" + "?," * (12 + 6 - 1) + "?)",
+                card["id"], card["nid"], did, card["ord"], card["type"], card["queue"], card["due"],
+                card["ivl"], card["factor"], card["reps"], card["lapses"], card["left"],
+                intTime(), -1, 0, 0, 0, 0
+            )
+            note = data["notes"][str(card["nid"])]
+            tags = self.collection().tags.join(self.collection().tags.canonify(note["tags"]))
+            self.database().execute(
+                "replace into notes(id, mid, tags, flds,"
+                "guid, mod, usn, flags, data, sfld, csum) values (" + "?," * (4 + 7 - 1) + "?)",
+                note["id"], note["mid"], tags, joinFields(note["fields"]),
+                guid64(), intTime(), -1, 0, 0, "", fieldChecksum(note["fields"][0])
+            )
+            model = data["models"][str(note["mid"])]
+            if not model_manager.get(model["id"]):
+                model_o = model_manager.new()
+                for field_name in model["fields"]:
+                    field = model_manager.newField(field_name)
+                    model_manager.addField(model_o, field)
+                for template_name in model["templateNames"]:
+                    template = model_manager.newTemplate(template_name)
+                    model_manager.addTemplate(model_o, template)
+                model_o["id"] = model["id"]
+                model_manager.update(model_o)
+                model_manager.flush()
+
+        self.stopEditing()
+
+    @util.api()
+    def insertReviews(self, reviews):
+        if len(reviews) == 0: return
+        sql = "insert into revlog(id,cid,usn,ease,ivl,lastIvl,factor,time,type) values "
+        for row in reviews:
+            sql += "(%s)," % ",".join(row)
+        sql = sql[:-1]
+        self.database().execute(sql)
 
     @util.api()
     def notesInfo(self, notes):
