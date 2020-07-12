@@ -168,3 +168,23 @@
         "error": null
     }
     ```
+
+*   **reloadCollection**
+
+    Tells anki to reload all data from the database.
+    
+    *Sample request*:
+    ```json
+    {
+        "action": "reloadCollection",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```

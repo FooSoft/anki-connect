@@ -329,3 +329,73 @@
         "error": null
     }
     ```
+
+*   **updateCompleteDeck**
+
+    Pastes all transmitted data into the database and reloads the collection. 
+    You can send a deckName and corresponding cards, notes & models. 
+    All cards are assumed to belong to the given deck.
+    All notes referenced by given cards should be present. 
+    All models referenced by given notes should be present.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateCompleteDeck",
+        "version": 6,
+        "params": {
+            "data":  {
+                "deck": "test3",
+                "cards": {
+                     "1485369472028": {
+                         "id": 1485369472028,
+                         "nid": 1485369340204,
+                         "ord": 0,
+                         "type": 0,
+                         "queue": 0,
+                         "due": 1186031,
+                         "factor": 0,
+                         "ivl": 0,
+                         "reps": 0,
+                         "lapses": 0,
+                         "left": 0
+                     }
+                },
+                "notes": {
+                    "1485369340204": {
+                        "id": 1485369340204,
+                        "mid": 1375786181313,
+                        "fields": [
+                            "frontValue",
+                            "backValue"
+                        ],
+                        "tags": [
+                            "aTag"
+                        ]
+                    }
+                },
+                "models": {
+                    "1375786181313": {
+                        "id": 1375786181313,
+                        "name": "anotherModel",
+                        "fields": [
+                            "Front",
+                            "Back"
+                        ],
+                        "templateNames": [
+                            "Card 1"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```

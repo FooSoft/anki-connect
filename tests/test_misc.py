@@ -52,6 +52,9 @@ class TestMisc(unittest.TestCase):
         deckNames = util.invoke('deckNames')
         self.assertIn(deckName, deckNames)
 
+        # reloadCollection
+        util.invoke("reloadCollection")
+
 
 if __name__ == '__main__':
     unittest.main()

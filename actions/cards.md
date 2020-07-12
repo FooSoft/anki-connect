@@ -271,7 +271,14 @@
                 "css":"p {font-family:Arial;}",
                 "cardId": 1498938915662,
                 "interval": 16,
-                "note":1502298033753
+                "note":1502298033753,
+                "ord": 1,
+                "type": 0,
+                "queue": 0,
+                "due": 1,
+                "reps": 1,
+                "lapses": 0,
+                "left": 6
             },
             {
                 "answer": "back content",
@@ -286,7 +293,14 @@
                 "css":"p {font-family:Arial;}",
                 "cardId": 1502098034048,
                 "interval": 23,
-                "note":1502298033753
+                "note":1502298033753,
+                "ord": 1,
+                "type": 0,
+                "queue": 0,
+                "due": 1,
+                "reps": 1,
+                "lapses": 0,
+                "left": 6
             }
         ],
         "error": null
