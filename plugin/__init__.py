@@ -943,7 +943,7 @@ class AnkiConnect:
             )
             model = data["models"][str(note["mid"])]
             if not model_manager.get(model["id"]):
-                model_o = model_manager.new()
+                model_o = model_manager.new(model["name"])
                 for field_name in model["fields"]:
                     field = model_manager.newField(field_name)
                     model_manager.addField(model_o, field)
@@ -961,7 +961,7 @@ class AnkiConnect:
         if len(reviews) == 0: return
         sql = "insert into revlog(id,cid,usn,ease,ivl,lastIvl,factor,time,type) values "
         for row in reviews:
-            sql += "(%s)," % ",".join(row)
+            sql += "(%s)," % ",".join(map(str, row))
         sql = sql[:-1]
         self.database().execute(sql)
 
