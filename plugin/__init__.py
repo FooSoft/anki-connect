@@ -207,6 +207,8 @@ class AnkiConnect:
 
         allowDuplicate = False
         duplicateScope = None
+        duplicateScopeDeckName = None
+        duplicateScopeCheckChildren = False
         if 'options' in note:
           if 'allowDuplicate' in note['options']:
             allowDuplicate = note['options']['allowDuplicate']
@@ -214,8 +216,16 @@ class AnkiConnect:
               raise Exception('option parameter \'allowDuplicate\' must be boolean')
           if 'duplicateScope' in note['options']:
             duplicateScope = note['options']['duplicateScope']
+          if 'duplicateScopeOptions' in note['options']:
+            duplicateScopeOptions = note['options']['duplicateScopeOptions']
+            if 'deckName' in duplicateScopeOptions:
+              duplicateScopeDeckName = duplicateScopeOptions['deckName']
+            if 'checkChildren' in duplicateScopeOptions:
+              duplicateScopeCheckChildren = duplicateScopeOptions['checkChildren']
+              if type(duplicateScopeCheckChildren) is not bool:
+                raise Exception('option parameter \'duplicateScopeOptions.checkChildren\' must be boolean')
 
-        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInScope(ankiNote, deck, duplicateScope)
+        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInScope(ankiNote, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren)
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
@@ -228,7 +238,7 @@ class AnkiConnect:
         else:
             raise Exception('cannot create note for unknown reason')
 
-    def isNoteDuplicateOrEmptyInScope(self, note, deck, duplicateScope):
+    def isNoteDuplicateOrEmptyInScope(self, note, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren):
         "1 if first is empty; 2 if first is a duplicate, False otherwise."
         result = note.dupeOrEmpty()
         if result != 2 or duplicateScope != 'deck':
@@ -240,18 +250,32 @@ class AnkiConnect:
         did = deck['id']
         csum = anki.utils.fieldChecksum(val)
 
+        if duplicateScopeDeckName is not None:
+            deck2 = collection.decks.byName(duplicateScopeDeckName)
+            if deck2 is None:
+                # Invalid deck, so cannot be duplicate
+                return False
+            did = deck2['id']
+
+        dids = {}
+        if duplicateScopeCheckChildren:
+            for kv in collection.decks.children(did):
+                dids[kv[1]] = True
+        else:
+            dids[did] = True
+
         for noteId in note.col.db.list(
             "select id from notes where csum = ? and id != ? and mid = ?",
             csum,
             note.id or 0,
             note.mid,
         ):
-            if note.col.db.scalar(
-                "select id from cards where nid = ? and did = ?",
-                noteId,
-                did
+            for cardDeckId in note.col.db.list(
+                "select did from cards where nid = ?",
+                noteId
             ):
-                return 2
+                if cardDeckId in dids:
+                    return 2
         return False
 
 
