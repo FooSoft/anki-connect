@@ -233,15 +233,18 @@ class AnkiConnect:
             raise Exception('cannot create note because it is a duplicate')
           else:
             return ankiNote
-        elif duplicateOrEmpty == False:
+        elif duplicateOrEmpty == 0:
             return ankiNote
         else:
             raise Exception('cannot create note for unknown reason')
 
     def isNoteDuplicateOrEmptyInScope(self, note, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren):
-        "1 if first is empty; 2 if first is a duplicate, False otherwise."
+        "1 if first is empty; 2 if first is a duplicate, 0 otherwise."
         if duplicateScope != 'deck':
-            return note.dupeOrEmpty()
+            result = note.dupeOrEmpty()
+            if result == False:
+                return 0
+            return result
 
         # dupeOrEmpty returns if a note is a global duplicate
         # the rest of the function checks to see if the note is a duplicate in the deck
@@ -255,7 +258,7 @@ class AnkiConnect:
             deck2 = collection.decks.byName(duplicateScopeDeckName)
             if deck2 is None:
                 # Invalid deck, so cannot be duplicate
-                return False
+                return 0
             did = deck2['id']
 
         dids = {}
@@ -277,7 +280,7 @@ class AnkiConnect:
             ):
                 if cardDeckId in dids:
                     return 2
-        return False
+        return 0
 
 
     #
