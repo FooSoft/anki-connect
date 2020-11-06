@@ -240,16 +240,17 @@ class AnkiConnect:
 
     def isNoteDuplicateOrEmptyInScope(self, note, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren):
         "1 if first is empty; 2 if first is a duplicate, False otherwise."
-        result = note.dupeOrEmpty()
-        if result != 2 or duplicateScope != 'deck':
-            return result
+        if duplicateScope != 'deck':
+            return note.dupeOrEmpty()
 
         # dupeOrEmpty returns if a note is a global duplicate
         # the rest of the function checks to see if the note is a duplicate in the deck
         val = note.fields[0]
-        did = deck['id']
+        if not val.strip():
+            return 1
         csum = anki.utils.fieldChecksum(val)
 
+        did = deck['id']
         if duplicateScopeDeckName is not None:
             deck2 = collection.decks.byName(duplicateScopeDeckName)
             if deck2 is None:
