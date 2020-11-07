@@ -262,11 +262,10 @@ class AnkiConnect:
             did = deck2['id']
 
         dids = {}
+        dids[did] = True
         if duplicateScopeCheckChildren:
             for kv in collection.decks.children(did):
                 dids[kv[1]] = True
-        else:
-            dids[did] = True
 
         for noteId in note.col.db.list(
             "select id from notes where csum = ? and id != ? and mid = ?",
