@@ -18,11 +18,16 @@ import os
 import anki
 import anki.sync
 import aqt
-
+import enum
 
 #
 # Utilities
 #
+
+class MediaType (enum.Enum):
+    Audio = 1
+    Video = 2
+    Picture = 3
 
 def download(url):
     client = anki.sync.AnkiRequestsClient()
