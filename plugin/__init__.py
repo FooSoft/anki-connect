@@ -468,10 +468,15 @@ class AnkiConnect:
 
 
     @util.api()
-    def storeMediaFile(self, filename, data=None, url=None):
+    def storeMediaFile(self, filename, data=None, path=None, url=None):
         if data:
             self.deleteMediaFile(filename)
             self.media().writeData(filename, base64.b64decode(data))
+        elif file:
+            self.deleteMediaFile(filename)
+            with open(path, 'rb') as f:
+                data = f.read()
+            self.media().writeData(filename, data)
         elif url:
             self.deleteMediaFile(filename)
             downloadedData = util.download(url)

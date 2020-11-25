@@ -2,10 +2,8 @@
 
 *   **storeMediaFile**
 
-    Stores a file with the specified base64-encoded contents inside the media folder. alternatively you can specify a
-    url from where the file shell be downloaded. If both field `data` and `url` are provided, the `data` field will be
-    used. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename
-    with an underscore. These files are still synchronized to AnkiWeb.
+    Stores a file with the specified base64-encoded contents inside the media folder. Alternatively you can specify a
+    absolute file path, or a url from where the file shell be downloaded. If more than one of `data`, `path` and `url` are provided, the `data` field will be used first, then `path`, and finally `url`. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are still synchronized to AnkiWeb.
 
     *Sample request*:
     ```json
@@ -30,6 +28,26 @@
     *Content of `_hello.txt`*:
     ```
     Hello world!
+    ```
+
+    *Sample request*:
+    ```json
+    {
+        "action": "storeMediaFile",
+        "version": 6,
+        "params": {
+            "filename": "_hello.txt",
+            "file": "/path/to/file"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
     ```
 
     *Sample request*:
