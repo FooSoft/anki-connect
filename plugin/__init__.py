@@ -233,36 +233,39 @@ class AnkiConnect:
             raise Exception('cannot create note because it is a duplicate')
           else:
             return ankiNote
-        elif duplicateOrEmpty == False:
+        elif duplicateOrEmpty == 0:
             return ankiNote
         else:
             raise Exception('cannot create note for unknown reason')
 
     def isNoteDuplicateOrEmptyInScope(self, note, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren):
-        "1 if first is empty; 2 if first is a duplicate, False otherwise."
-        result = note.dupeOrEmpty()
-        if result != 2 or duplicateScope != 'deck':
+        "1 if first is empty; 2 if first is a duplicate, 0 otherwise."
+        if duplicateScope != 'deck':
+            result = note.dupeOrEmpty()
+            if result == False:
+                return 0
             return result
 
         # dupeOrEmpty returns if a note is a global duplicate
         # the rest of the function checks to see if the note is a duplicate in the deck
         val = note.fields[0]
-        did = deck['id']
+        if not val.strip():
+            return 1
         csum = anki.utils.fieldChecksum(val)
 
+        did = deck['id']
         if duplicateScopeDeckName is not None:
             deck2 = collection.decks.byName(duplicateScopeDeckName)
             if deck2 is None:
                 # Invalid deck, so cannot be duplicate
-                return False
+                return 0
             did = deck2['id']
 
         dids = {}
+        dids[did] = True
         if duplicateScopeCheckChildren:
             for kv in collection.decks.children(did):
                 dids[kv[1]] = True
-        else:
-            dids[did] = True
 
         for noteId in note.col.db.list(
             "select id from notes where csum = ? and id != ? and mid = ?",
@@ -276,7 +279,7 @@ class AnkiConnect:
             ):
                 if cardDeckId in dids:
                     return 2
-        return False
+        return 0
 
 
     #
