@@ -509,7 +509,13 @@ class AnkiConnect:
         ankiNote = self.createNote(note)
 
         audioObjectOrList = note.get('audio')
-        self.addAudio(ankiNote, audioObjectOrList)
+        self.addMedia(ankiNote, audioObjectOrList, util.MediaType.Audio)
+
+        videoObjectOrList = note.get('video')
+        self.addMedia(ankiNote, videoObjectOrList, util.MediaType.Video)
+
+        pictureObjectOrList = note.get('picture')
+        self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
 
         collection = self.collection()
         self.startEditing()
@@ -522,20 +528,20 @@ class AnkiConnect:
         return ankiNote.id
 
 
-    def addAudio(self, ankiNote, audioObjectOrList):
-        if audioObjectOrList is None:
+    def addMedia(self, ankiNote, mediaObjectOrList, mediaType):
+        if mediaObjectOrList is None:
             return
 
-        if isinstance(audioObjectOrList, list):
-            audioList = audioObjectOrList
+        if isinstance(mediaObjectOrList, list):
+            mediaList = mediaObjectOrList
         else:
-            audioList = [audioObjectOrList]
+            mediaList = [mediaObjectOrList]
 
-        for audio in audioList:
-            if audio is not None and len(audio['fields']) > 0:
+        for media in mediaList:
+            if media is not None and len(media['fields']) > 0:
                 try:
-                    data = util.download(audio['url'])
-                    skipHash = audio.get('skipHash')
+                    data = util.download(media['url'])
+                    skipHash = media.get('skipHash')
                     if skipHash is None:
                         skip = False
                     else:
@@ -544,14 +550,17 @@ class AnkiConnect:
                         skip = skipHash == m.hexdigest()
 
                     if not skip:
-                        audioFilename = self.media().writeData(audio['filename'], data)
-                        for field in audio['fields']:
+                        mediaFilename = self.media().writeData(media['filename'], data)
+                        for field in media['fields']:
                             if field in ankiNote:
-                                ankiNote[field] += u'[sound:{}]'.format(audioFilename)
+                                if mediaType is util.MediaType.Picture:
+                                    ankiNote[field] += u'<div><img src="{}"><br></div>'.format(mediaFilename)
+                                elif mediaType is util.MediaType.Audio or mediaType is util.MediaType.Video:
+                                    ankiNote[field] += u'[sound:{}]'.format(mediaFilename)
 
                 except Exception as e:
                     errorMessage = str(e).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                    for field in audio['fields']:
+                    for field in media['fields']:
                         if field in ankiNote:
                             ankiNote[field] += errorMessage
 
@@ -575,7 +584,13 @@ class AnkiConnect:
                 ankiNote[name] = value
 
         audioObjectOrList = note.get('audio')
-        self.addAudio(ankiNote, audioObjectOrList)
+        self.addMedia(ankiNote, audioObjectOrList, util.MediaType.Audio)
+
+        videoObjectOrList = note.get('video')
+        self.addMedia(ankiNote, videoObjectOrList, util.MediaType.Video)
+
+        pictureObjectOrList = note.get('picture')
+        self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
 
         ankiNote.flush()
 

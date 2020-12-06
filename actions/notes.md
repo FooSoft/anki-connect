@@ -5,11 +5,11 @@
     Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
     the created note created on success, and `null` on failure.
 
-    AnkiConnect can download audio files and embed them in newly created notes. The corresponding `audio` note member is
-    optional and can be omitted. If you choose to include it, it should contain a single object or an array of objects
+    AnkiConnect can download audio, video, and picture files and embed them in newly created notes. The corresponding `audio`, `video`, and `picture` note members are
+    optional and can be omitted. If you choose to include any of them, they should contain a single object or an array of objects
     with mandatory `url` and `filename` fields. The `skipHash` field can be optionally provided to skip the inclusion of
     downloaded files with an MD5 hash that matches the provided value. This is useful for avoiding the saving of error
-    pages and stub files. The `fields` member is a list of fields that should play audio when the card is displayed in
+    pages and stub files. The `fields` member is a list of fields that should play audio or video, or show a picture when the card is displayed in
     Anki. The `allowDuplicate` member inside `options` group can be set to true to enable adding duplicate cards.
     Normally duplicate cards can not be added and trigger exception.
 
@@ -50,6 +50,22 @@
                     "skipHash": "7e2c2f954ef6051373ba916f000168dc",
                     "fields": [
                         "Front"
+                    ]
+                }],
+                "video": [{
+                    "url": "https://cdn.videvo.net/videvo_files/video/free/2015-06/small_watermarked/Contador_Glam_preview.mp4",
+                    "filename": "countdown.mp4",
+                    "skipHash": "4117e8aab0d37534d9c8eac362388bbe",
+                    "fields": [
+                        "Back"
+                    ]
+                }],
+                "picture": [{
+                    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/A_black_cat_named_Tilly.jpg/220px-A_black_cat_named_Tilly.jpg",
+                    "filename": "black_cat.jpg",
+                    "skipHash": "8d6e4646dfae812bf39651b59d7429ce",
+                    "fields": [
+                        "Back"
                     ]
                 }]
             }
@@ -94,6 +110,22 @@
                         "skipHash": "7e2c2f954ef6051373ba916f000168dc",
                         "fields": [
                             "Front"
+                        ]
+                    }],
+                    "video": [{
+                        "url": "https://cdn.videvo.net/videvo_files/video/free/2015-06/small_watermarked/Contador_Glam_preview.mp4",
+                        "filename": "countdown.mp4",
+                        "skipHash": "4117e8aab0d37534d9c8eac362388bbe",
+                        "fields": [
+                            "Back"
+                        ]
+                    }],
+                    "picture": [{
+                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/A_black_cat_named_Tilly.jpg/220px-A_black_cat_named_Tilly.jpg",
+                        "filename": "black_cat.jpg",
+                        "skipHash": "8d6e4646dfae812bf39651b59d7429ce",
+                        "fields": [
+                            "Back"
                         ]
                     }]
                 }
@@ -148,8 +180,8 @@
 
 *   **updateNoteFields**
 
-    Modify the fields of an exist note. You can also include audio files which will be added to the note with an
-    optional `audio` property. Please see the documentation for `addNote` for an explanation of objects in the `audio` array.
+    Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
+    optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
 
     *Sample request*:
     ```json
