@@ -475,7 +475,7 @@ class AnkiConnect:
         if data:
             self.deleteMediaFile(filename)
             self.media().writeData(filename, base64.b64decode(data))
-        elif file:
+        elif path:
             self.deleteMediaFile(filename)
             with open(path, 'rb') as f:
                 data = f.read()

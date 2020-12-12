@@ -37,7 +37,7 @@
         "version": 6,
         "params": {
             "filename": "_hello.txt",
-            "file": "/path/to/file"
+            "path": "/path/to/file"
         }
     }
     ```
