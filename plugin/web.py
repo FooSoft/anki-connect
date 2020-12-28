@@ -46,13 +46,13 @@ class WebClient:
             return False
 
         rlist, wlist = select.select([self.sock], [self.sock], [], 0)[:2]
-        self.sock.settimeout(1.0)
+        self.sock.settimeout(5.0)
 
         if rlist:
             while True:
                 try:
                     msg = self.sock.recv(recvSize)
-                except: #ConnectionResetError or socket.timeout
+                except (ConnectionResetError, socket.timeout):
                     self.close()
                     return False
                 if not msg:
