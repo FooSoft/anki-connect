@@ -19,7 +19,6 @@ import socket
 
 from . import web, util
 
-
 #
 # WebRequest
 #
@@ -47,27 +46,38 @@ class WebClient:
             return False
 
         rlist, wlist = select.select([self.sock], [self.sock], [], 0)[:2]
+        self.sock.settimeout(5.0)
 
         if rlist:
-            msg = self.sock.recv(recvSize)
-            if not msg:
-                self.close()
-                return False
+            while True:
+                try:
+                    msg = self.sock.recv(recvSize)
+                except (ConnectionResetError, socket.timeout):
+                    self.close()
+                    return False
+                if not msg:
+                    self.close()
+                    return False
+                self.readBuff += msg
 
-            self.readBuff += msg
+                req, length = self.parseRequest(self.readBuff)
+                if req is not None:
+                    self.readBuff = self.readBuff[length:]
+                    self.writeBuff += self.handler(req)
+                    break
 
-            req, length = self.parseRequest(self.readBuff)
-            if req is not None:
-                self.readBuff = self.readBuff[length:]
-                self.writeBuff += self.handler(req)
+
 
         if wlist and self.writeBuff:
-            length = self.sock.send(self.writeBuff)
-            self.writeBuff = self.writeBuff[length:]
-            if not self.writeBuff:
+            try:
+                length = self.sock.send(self.writeBuff)
+                self.writeBuff = self.writeBuff[length:]
+                if not self.writeBuff:
+                    self.close()
+                    return False
+            except:
                 self.close()
                 return False
-
         return True
 
 
@@ -200,3 +210,4 @@ class WebServer:
             client.close()
 
         self.clients = []
+        
