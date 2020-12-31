@@ -594,7 +594,6 @@ class AnkiConnect:
     def clearUnusedTags(self):
         collection = self.collection()
         collection.tags.registerNotes()
-        return True
 
     @util.api()
     def replaceTags(self, notes, tag_to_replace, replace_with_tag):
@@ -608,7 +607,6 @@ class AnkiConnect:
             self.window().requireReset()
             self.window().progress.finish()
             self.window().reset()
-        return False
 
     @util.api()
     def replaceTagsInAllCards(self, tag_to_replace, replace_with_tag):

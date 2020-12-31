@@ -286,12 +286,12 @@
 
 *   **clearUnusedTags**
 
-    Clears all the unusedgit  for the current user.
+    Clears all the unused tags in the carsd for the current user.
 
     *Sample request*:
     ```json
     {
-        "action": "getTags",
+        "action": "clearUnusedTags",
         "version": 6
     }
     ```
@@ -299,7 +299,56 @@
     *Sample result*:
     ```json
     {
-        "result": ["european-languages", "idioms"],
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **replaceTags**
+
+    Replace tags in notes by note ID.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "replaceTags",
+        "version": 6,
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tag_to_replace": "european-languages",
+            "replace_with_tag": "french-languages"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **replaceTagsInAllCards**
+
+    Replace tags in all the notes for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "replaceTagsInAllCards",
+        "version": 6,
+        "params": {
+            "tag_to_replace": "european-languages",
+            "replace_with_tag": "french-languages"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
         "error": null
     }
     ```
