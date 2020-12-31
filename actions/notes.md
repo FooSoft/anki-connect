@@ -286,7 +286,7 @@
 
 *   **clearUnusedTags**
 
-    Clears all the unused tags in the carsd for the current user.
+    Clears all the unused tags in the cards for the current user.
 
     *Sample request*:
     ```json
