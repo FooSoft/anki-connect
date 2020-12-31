@@ -284,6 +284,26 @@
     }
     ```
 
+*   **clearUnusedTags**
+
+    Clears all the unusedgit  for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getTags",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["european-languages", "idioms"],
+        "error": null
+    }
+    ```
+
 *   **findNotes**
 
     Returns an array of note IDs for a given query. Same query syntax as `guiBrowse`.
