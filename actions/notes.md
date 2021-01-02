@@ -286,7 +286,7 @@
 
 *   **clearUnusedTags**
 
-    Clears all the unused tags in the cards for the current user.
+    Clears all the unused tags in the notes for the current user.
 
     *Sample request*:
     ```json
@@ -329,7 +329,7 @@
     }
     ```
 
-*   **replaceTagsInAllCards**
+*   **replaceTagsInAllNotes**
 
     Replace tags in all the notes for the current user.
 

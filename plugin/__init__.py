@@ -614,6 +614,41 @@ class AnkiConnect:
     @util.api()
     def getTags(self):
         return self.collection().tags.all()
+
+    @util.api()
+    def clearUnusedTags(self):
+        self.collection().tags.registerNotes()     
+    
+    @util.api()
+    def replaceTags(self, notes, tag_to_replace, replace_with_tag):
+        if self.collection() is not None:
+            self.window().progress.start()
+            for nid in notes:
+                note = self.collection().getNote(nid)
+                if note.hasTag(tag_to_replace):
+                    note.delTag(tag_to_replace)
+                    note.addtag(replace_with_tag)
+                    note.flush()
+            self.window().requireReset()
+            self.window().progress.finish()
+            self.window().reset()
+
+    @util.api()
+    def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag):
+        collection = self.collection()
+        if collection is not None:
+            nids = collection.db.list('select id from notes')
+            self.window().progress.start()
+            for nid in nids:
+                note = collection.getNote(nid)
+                if note.hasTag(tag_to_replace):
+                    note.delTag(tag_to_replace)
+                    note.addtag(replace_with_tag)
+                    note.flush()
+            self.window().requireReset()
+            self.window().progress.finish()
+            self.window().reset()
+        return False     
     
     @util.api()
     def setEaseFactors(self, cards, easeFactors):
