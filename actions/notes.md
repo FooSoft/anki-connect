@@ -284,6 +284,75 @@
     }
     ```
 
+*   **clearUnusedTags**
+
+    Clears all the unused tags in the notes for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "clearUnusedTags",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **replaceTags**
+
+    Replace tags in notes by note ID.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "replaceTags",
+        "version": 6,
+        "params": {
+            "notes": [1483959289817, 1483959291695],
+            "tag_to_replace": "european-languages",
+            "replace_with_tag": "french-languages"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **replaceTagsInAllNotes**
+
+    Replace tags in all the notes for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "replaceTagsInAllCards",
+        "version": 6,
+        "params": {
+            "tag_to_replace": "european-languages",
+            "replace_with_tag": "french-languages"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 *   **findNotes**
 
     Returns an array of note IDs for a given query. Same query syntax as `guiBrowse`.
