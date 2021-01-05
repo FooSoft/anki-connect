@@ -1085,7 +1085,12 @@ class AnkiConnect:
         finally:
             self.stopEditing()
 
-
+    @util.api()
+    def removeEmptyNotes(self):
+        for model in self.collection().models.all():
+            if self.collection().models.useCount(model) == 0:
+                self.collection().models.rem(model)
+        self.window().requireReset()
 
 
     @util.api()

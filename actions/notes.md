@@ -433,3 +433,24 @@
         "error": null
     }
     ```
+
+*   **removeEmptyNotes**
+
+    Removes all the empty notes for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "removeEmptyNotes",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    
