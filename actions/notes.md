@@ -355,7 +355,7 @@
 
 *   **findNotes**
 
-    Returns an array of note IDs for a given query. Same query syntax as `guiBrowse`.
+    Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/#/searching).
 
     *Sample request*:
     ```json

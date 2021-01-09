@@ -3,7 +3,7 @@
 *   **guiBrowse**
 
     Invokes the *Card Browser* dialog and searches for a given query. Returns an array of identifiers of the cards that
-    were found.
+    were found. Query syntax is [documented here](https://docs.ankiweb.net/#/searching).
 
     *Sample request*:
     ```json
