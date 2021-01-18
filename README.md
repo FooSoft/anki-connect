@@ -161,3 +161,18 @@ corresponding to when the API was available for use.
 *   [Models](https://github.com/FooSoft/anki-connect/blob/master/actions/models.md)
 *   [Notes](https://github.com/FooSoft/anki-connect/blob/master/actions/notes.md)
 *   [Statistics](https://github.com/FooSoft/anki-connect/blob/master/actions/statistics.md)
+
+### Hey, could you add a new action to support $FEATURE?
+
+The primary goal for AnkiConnect was to support real-time flash card creation from the
+[Yomichan](https://foosoft.net/projects/yomichan/) browser extension. The current API provides all the required actions
+to make this happen. I recognise that the role of AnkiConnect has evolved from this original vision, and I am happy to
+review new feature requests.
+
+With that said, *this project operates on a self-serve model*. If you would like a new feature, create a PR. I'll review
+it and if it looks good, it will be merged in. *Requests to add new features without accompanying PRs will not be
+serviced*. Make sure that your PRs meet the following criteria:
+
+*   Attempt to match style of the surrounding code.
+*   Have accompanying documentation with examples.
+*   Are conceivably useful in other applications.
