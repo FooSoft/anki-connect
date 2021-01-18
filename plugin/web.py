@@ -1,4 +1,4 @@
-# Copyright 2016-2020 Alex Yatskov
+# Copyright 2016-2021 Alex Yatskov
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@ import json
 import select
 import socket
 
-from . import web, util
+from . import util
 
 #
 # WebRequest
@@ -210,4 +210,3 @@ class WebServer:
             client.close()
 
         self.clients = []
-        
