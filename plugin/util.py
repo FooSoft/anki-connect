@@ -24,10 +24,11 @@ import enum
 # Utilities
 #
 
-class MediaType (enum.Enum):
+class MediaType(enum.Enum):
     Audio = 1
     Video = 2
     Picture = 3
+
 
 def download(url):
     client = anki.sync.AnkiRequestsClient()
@@ -49,20 +50,18 @@ def api(*versions):
     return decorator
 
 
-def getQuestion(card):
+def cardQuestion(card):
     if getattr(card, 'question', None) is None:
-        question = card._getQA()['q']
-    else:
-        question = card.question(),
-    return question
+        return card._getQA()['q']
+
+    return card.question(),
 
 
-def getAnswer(card):
+def cardAnswer(card):
     if getattr(card, 'answer', None) is None:
-        answer = card._getQA()['a']
-    else:
-        answer = card.answer()
-    return answer
+        return card._getQA()['a']
+
+    return card.answer()
 
 
 def setting(key):
