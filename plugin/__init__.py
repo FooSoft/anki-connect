@@ -1006,7 +1006,7 @@ class AnkiConnect:
     @util.api()
     def getLatestReviewID(self, deck):
         return self.database().scalar(
-            "select max(id) from revlog where cid in (select id from cards where did=?)",
+            'select max(id) from revlog where cid in (select id from cards where did=?)',
             self.decks().id(deck)
         ) or 0
 
@@ -1017,7 +1017,7 @@ class AnkiConnect:
         did = self.decks().id(data['deck'])
         self.decks().flush()
         model_manager = self.collection().models
-        for _, card in data["cards"].items():
+        for _, card in data['cards'].items():
             self.database().execute(
                 'replace into cards (id, nid, did, ord, type, queue, due, ivl, factor, reps, lapses, left, '
                 'mod, usn, odue, odid, flags, data) '
@@ -1169,8 +1169,8 @@ class AnkiConnect:
                     self.modelHasChanged = True
                     super().__init__(mw)
 
-                    self.addButton.setText("Add and Close")
-                    self.addButton.setShortcut(aqt.qt.QKeySequence("Ctrl+Return"))
+                    self.addButton.setText('Add and Close')
+                    self.addButton.setShortcut(aqt.qt.QKeySequence('Ctrl+Return'))
 
                 def _addCards(self):
                     super()._addCards()
