@@ -14,10 +14,61 @@ class TestNotes(unittest.TestCase):
 
 
     def runTest(self):
+        options = {
+            'allowDuplicate': True
+        }
+
+        note1 = {
+            'deckName': 'test',
+            'modelName': 'Basic',
+            'fields': {'Front': 'front1', 'Back': 'back1'},
+            'tags': ['tag1'],
+            'options': options
+        }
+
+        note2 = {
+            'deckName': 'test',
+            'modelName': 'Basic',
+            'fields': {'Front': 'front1', 'Back': 'back1'},
+            'tags': ['tag1']
+        }
+
+        notes1 = [
+            {
+                'deckName': 'test',
+                'modelName': 'Basic',
+                'fields': {'Front': 'front3', 'Back': 'back3'},
+                'tags': ['tag'],
+                'options': options
+            },
+            {
+                'deckName': 'test',
+                'modelName': 'Basic',
+                'fields': {'Front': 'front4', 'Back': 'back4'},
+                'tags': ['tag'],
+                'options': options
+            }
+        ]
+
+        notes2 = [
+            {
+                'deckName': 'test',
+                'modelName': 'Basic',
+                'fields': {'Front': 'front3', 'Back': 'back3'},
+                'tags': ['tag']
+            },
+            {
+                'deckName': 'test',
+                'modelName': 'Basic',
+                'fields': {'Front': 'front4', 'Back': 'back4'},
+                'tags': ['tag']
+            }
+        ]
+
+
         # addNote
-        note = {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ['tag1']}
-        noteId = util.invoke('addNote', note=note)
-        self.assertRaises(Exception, lambda: util.invoke('addNote', note=note))
+        noteId = util.invoke('addNote', note=note1)
+        self.assertRaises(Exception, lambda: util.invoke('addNote', note=note2))
 
         # addTags
         util.invoke('addTags', notes=[noteId], tags='tag2')
@@ -53,36 +104,31 @@ class TestNotes(unittest.TestCase):
         self.assertEqual(noteInfo['fields']['Front']['value'], 'front2')
         self.assertEqual(noteInfo['fields']['Back']['value'], 'back2')
 
-        notes = [
-            {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front3', 'Back': 'back3'}, 'tags': ['tag']},
-            {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front4', 'Back': 'back4'}, 'tags': ['tag']}
-        ]
-
         # canAddNotes (part 1)
-        noteStates = util.invoke('canAddNotes', notes=notes)
-        self.assertEqual(len(noteStates), len(notes))
+        noteStates = util.invoke('canAddNotes', notes=notes1)
+        self.assertEqual(len(noteStates), len(notes1))
         self.assertNotIn(False, noteStates)
 
         # addNotes (part 1)
-        noteIds = util.invoke('addNotes', notes=notes)
-        self.assertEqual(len(noteIds), len(notes))
+        noteIds = util.invoke('addNotes', notes=notes1)
+        self.assertEqual(len(noteIds), len(notes1))
         for noteId in noteIds:
             self.assertNotEqual(noteId, None)
 
         # canAddNotes (part 2)
-        noteStates = util.invoke('canAddNotes', notes=notes)
+        noteStates = util.invoke('canAddNotes', notes=notes2)
         self.assertNotIn(True, noteStates)
-        self.assertEqual(len(noteStates), len(notes))
+        self.assertEqual(len(noteStates), len(notes2))
 
         # addNotes (part 2)
-        noteIds = util.invoke('addNotes', notes=notes)
-        self.assertEqual(len(noteIds), len(notes))
+        noteIds = util.invoke('addNotes', notes=notes2)
+        self.assertEqual(len(noteIds), len(notes2))
         for noteId in noteIds:
             self.assertEqual(noteId, None)
 
         # findNotes
         noteIds = util.invoke('findNotes', query='deck:test')
-        self.assertEqual(len(noteIds), len(notes) + 1)
+        self.assertEqual(len(noteIds), len(notes1) + 1)
 
         # deleteNotes
         util.invoke('deleteNotes', notes=noteIds)

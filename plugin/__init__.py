@@ -667,7 +667,7 @@ class AnkiConnect:
             else:
                 couldSetEaseFactors.append(True)
 
-            ankiCard.factor = easeFactors[ind]
+            ankiCard.factor = easeFactors[i]
             ankiCard.flush()
 
         return couldSetEaseFactors

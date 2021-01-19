@@ -175,4 +175,5 @@ serviced*. Make sure that your PRs meet the following criteria:
 
 *   Attempt to match style of the surrounding code.
 *   Have accompanying documentation with examples.
-*   Are conceivably useful in other applications.
+*   Have accompanying tests that verify operation.
+*   Implement features useful in other applications.

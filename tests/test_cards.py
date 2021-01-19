@@ -7,7 +7,15 @@ import util
 class TestCards(unittest.TestCase):
     def setUp(self):
         util.invoke('createDeck', deck='test')
-        note = {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ['tag1']}
+        note = {
+            'deckName': 'test',
+            'modelName': 'Basic',
+            'fields': {'Front': 'front1', 'Back': 'back1'},
+            'tags': ['tag1'],
+            'options': {
+                'allowDuplicate': True
+            }
+        }
         self.noteId = util.invoke('addNote', note=note)
 
 

@@ -44,7 +44,15 @@ class TestMisc(unittest.TestCase):
         os.close(fd)
         os.unlink(newname)
         util.invoke('createDeck', deck=deckName)
-        note = {'deckName': deckName, 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ''}
+        note = {
+            'deckName': deckName,
+            'modelName': 'Basic',
+            'fields': {'Front': 'front1', 'Back': 'back1'},
+            'tags': '',
+            'options': {
+                'allowDuplicate': True
+            }
+        }
         noteId = util.invoke('addNote', note=note)
         util.invoke('exportPackage', deck=deckName, path=newname)
         util.invoke('deleteDecks', decks=[deckName], cardsToo=True)
@@ -53,7 +61,7 @@ class TestMisc(unittest.TestCase):
         self.assertIn(deckName, deckNames)
 
         # reloadCollection
-        util.invoke("reloadCollection")
+        util.invoke('reloadCollection')
 
 
 if __name__ == '__main__':

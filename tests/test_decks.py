@@ -68,27 +68,27 @@ class TestDecks(unittest.TestCase):
         self.assertFalse(deckConfigId)
 
         # updateCompleteDeck
-        util.invoke("updateCompleteDeck", data={
-            "deck": "test3",
-            "cards": {
-                "12": {
-                    "id": 12, "nid": 23, "ord": 0,  "type": 0, "queue": 0,
-                    "due": 1186031, "factor": 0, "ivl": 0, "reps": 0, "lapses": 0, "left": 0
+        util.invoke('updateCompleteDeck', data={
+            'deck': 'test3',
+            'cards': {
+                '12': {
+                    'id': 12, 'nid': 23, 'ord': 0,  'type': 0, 'queue': 0,
+                    'due': 1186031, 'factor': 0, 'ivl': 0, 'reps': 0, 'lapses': 0, 'left': 0
                 }
             },
-            "notes": {
-                "23": {
-                    "id": 23, "mid": 34, "fields": ["frontValue", "backValue"], "tags": ["aTag"]
+            'notes': {
+                '23': {
+                    'id': 23, 'mid': 34, 'fields': ['frontValue', 'backValue'], 'tags': ['aTag']
                 }
             },
-            "models": {
-                "34": {
-                    "id": 34, "fields": ["Front", "Back"], "templateNames": ["Card 1"], "name": "anotherModel",
+            'models': {
+                '34': {
+                    'id': 34, 'fields': ['Front', 'Back'], 'templateNames': ['Card 1'], 'name': 'anotherModel',
                 }
             }
         })
-        deckNames = util.invoke("deckNames")
-        self.assertIn("test3", deckNames)
+        deckNames = util.invoke('deckNames')
+        self.assertIn('test3', deckNames)
         cardIDs = util.invoke('findCards', query='deck:test3')
         self.assertEqual(len(cardIDs), 1)
         self.assertEqual(cardIDs[0], 12)
