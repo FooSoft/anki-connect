@@ -33,11 +33,12 @@ class MediaType(enum.Enum):
 def download(url):
     client = anki.sync.AnkiRequestsClient()
     client.timeout = setting('webTimeout') / 1000
+
     resp = client.get(url)
-    if resp.status_code == 200:
-        return client.streamContent(resp)
-    else:
+    if resp.status_code != 200:
         raise Exception('{} download failed with return code {}'.format(url, resp.status_code))
+
+    client.streamContent(resp)
 
 
 def api(*versions):
