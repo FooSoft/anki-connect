@@ -55,7 +55,7 @@ def cardQuestion(card):
     if getattr(card, 'question', None) is None:
         return card._getQA()['q']
 
-    return card.question(),
+    return card.question()
 
 
 def cardAnswer(card):
