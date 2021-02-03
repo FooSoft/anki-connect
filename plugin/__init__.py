@@ -950,7 +950,7 @@ class AnkiConnect:
         if updatedModels == len(ankiModel):
             return "Found and replaced in {0} models".format(updatedModels)
         else:
-            return "Found and replaced in {0} out of {1} models".format(updatedModels, len(ankiModel)) 
+            return "Found and replaced in {0} of {1} models".format(updatedModels, len(ankiModel)) 
 
 
     @util.api()
