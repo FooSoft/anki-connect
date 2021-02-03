@@ -919,7 +919,7 @@ class AnkiConnect:
 
 
     @util.api()
-    def findAndReplaceInModels(self, modelName, findText, replaceText, qfmt = True, afmt = True, css = True):
+    def findAndReplaceInModels(self, modelName, findText, replaceText, Front = True, Back = True, css = True):
         if modelName == 'all_models':
             ankiModel = self.collection().models.allNames()
         else:
@@ -937,10 +937,10 @@ class AnkiConnect:
             for tmpls in model.get('tmpls'):
                 for key, value in tmpls.items():
                     if key in ('qfmt', 'afmt'):
-                        if qfmt and key == 'qfmt' and findText in value:
+                        if Front and key == 'qfmt' and findText in value:
                             checkForText = True
                             tmpls[key] = value.replace(findText, replaceText)
-                        if afmt and key == 'afmt' and findText in value:
+                        if Back and key == 'afmt' and findText in value:
                             checkForText = True
                             tmpls[key] = value.replace(findText, replaceText)                       
             self.collection().models.save(model, True)

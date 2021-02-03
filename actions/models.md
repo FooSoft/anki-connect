@@ -309,3 +309,33 @@
         "error": null
     }
     ```
+
+*   **findAndReplaceInModels**
+
+    Find and replace string in existing model by model name or all models by name - "all_models". Customise to replace in Front, Back or css by setting to true/false.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "findAndReplaceInModels",
+        "version": 6,
+        "params": {
+            "model": {
+                "modelName": "all_models",
+                "findText": "text_to_replace",
+                "replaceText": "replace_with_text",
+                "Front": true,
+                "Back": true,
+                "css": true
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": "Found and replaced.",
+        "error": null
+    }
+    ```
