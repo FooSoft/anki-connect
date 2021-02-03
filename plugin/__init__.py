@@ -919,6 +919,41 @@ class AnkiConnect:
 
 
     @util.api()
+    def findAndReplaceInModels(self, modelName, findText, replaceText, qfmt = True, afmt = True, css = True):
+        if modelName == 'all_models':
+            ankiModel = self.collection().models.allNames()
+        else:
+            model = self.collection().models.byName(modelName)
+            if model is None:
+                raise Exception('model was not found: {}'.format(modelName))
+            ankiModel = [model]
+        updatedModels = 0    
+        for model in ankiModel:
+            model = self.collection().models.byName(modelName)
+            checkForText = False
+            if css and findText in model['css']:
+                checkForText = True
+                model['css'] = model['css'].replace(findText, replaceText) 
+            for tmpls in model.get('tmpls'):
+                for key, value in tmpls.items():
+                    if key in ('qfmt', 'afmt'):
+                        if qfmt and key == 'qfmt' and findText in value:
+                            checkForText = True
+                            tmpls[key] = value.replace(findText, replaceText)
+                        if afmt and key == 'afmt' and findText in value:
+                            checkForText = True
+                            tmpls[key] = value.replace(findText, replaceText)                       
+            self.collection().models.save(model, True)
+            self.collection().models.flush()
+            if checkForText:
+                updatedModels += 1
+        if updatedModels == len(ankiModel):
+            return "Found and replaced in {0} models".format(updatedModels)
+        else:
+            return "Found and replaced in {0} out of {1} models".format(updatedModels, len(ankiModel)) 
+
+
+    @util.api()
     def deckNameFromId(self, deckId):
         deck = self.collection().decks.get(deckId)
         if deck is None:
