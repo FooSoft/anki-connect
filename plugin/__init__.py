@@ -304,7 +304,17 @@ class AnkiConnect:
             cur_profile = self.window().pm.name
             if cur_profile != name:
                 self.window().unloadProfileAndShowProfileManager()
-                self.loadProfile(name)
+
+                def waiter():
+                    # This function waits until main window is closed
+                    # It's needed cause sync can take quite some time
+                    # And if we call loadProfile until sync is ended things will go wrong
+                    if self.window().isVisible():
+                        QTimer.singleShot(1000, waiter)
+                    else:
+                        self.loadProfile(name)
+
+                waiter()
         else:
             self.window().pm.load(name)
             self.window().loadProfile()
