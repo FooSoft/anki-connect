@@ -927,7 +927,7 @@ class AnkiConnect:
             if model is None:
                 raise Exception('model was not found: {}'.format(modelName))
             ankiModel = [model]
-        updatedModels = 0    
+        updatedModels = 0
         for model in ankiModel:
             model = self.collection().models.byName(modelName)
             checkForText = False
@@ -945,7 +945,7 @@ class AnkiConnect:
             self.collection().models.flush()
             if checkForText:
                 updatedModels += 1
-        return updatedModels        
+        return updatedModels
 
 
     @util.api()
