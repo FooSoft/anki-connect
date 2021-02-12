@@ -919,7 +919,7 @@ class AnkiConnect:
 
 
     @util.api()
-    def findAndReplaceInModels(self, modelName='all_models', findText, replaceText, front=True, back=True, css=True):
+    def findAndReplaceInModels(self, modelName='all_models', findText='', replaceText='', front=True, back=True, css=True):
         if modelName == 'all_models':
             ankiModel = self.collection().models.allNames()
         else:
