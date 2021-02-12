@@ -63,4 +63,4 @@ class TestModels(unittest.TestCase):
         self.assertEqual({'css': REPLACE_WITH_TEXT}, new_css)        
 
 if __name__ == '__main__':
-    unittest.main(AnkiConnect.findAndReplaceInModels())
+    unittest.main()
