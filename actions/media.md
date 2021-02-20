@@ -20,7 +20,7 @@
     *Sample result*:
     ```json
     {
-        "result": null,
+        "result": "_hello.txt",
         "error": null
     }
     ```
@@ -45,7 +45,7 @@
     *Sample result*:
     ```json
     {
-        "result": null,
+        "result": "_hello.txt",
         "error": null
     }
     ```
@@ -65,7 +65,7 @@
     *Sample result*:
     ```json
     {
-        "result": null,
+        "result": "_hello.txt",
         "error": null
     }
     ```
