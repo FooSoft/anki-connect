@@ -184,6 +184,7 @@ class WebServer:
             ['HTTP/1.1 200 OK', None],
             ['Content-Type', 'text/json'],
             ['Access-Control-Allow-Origin', corsOrigin],
+            ['Access-Control-Allow-Headers', '*'],
             ['Content-Length', str(len(body))]
         ]
 
