@@ -306,3 +306,49 @@
         "error": null
     }
     ```
+
+*   **forgetCards**
+
+    Forget cards, making the cards new again.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "forgetCards",
+        "version": 6,
+        "params": {
+            "cards": [1498938915662, 1502098034048]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **relearnCards**
+
+    Make cards be "relearning".
+
+    *Sample request*:
+    ```json
+    {
+        "action": "relearnCards",
+        "version": 6,
+        "params": {
+            "cards": [1498938915662, 1502098034048]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
