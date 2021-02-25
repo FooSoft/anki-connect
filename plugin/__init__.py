@@ -304,7 +304,17 @@ class AnkiConnect:
             cur_profile = self.window().pm.name
             if cur_profile != name:
                 self.window().unloadProfileAndShowProfileManager()
-                self.loadProfile(name)
+
+                def waiter():
+                    # This function waits until main window is closed
+                    # It's needed cause sync can take quite some time
+                    # And if we call loadProfile until sync is ended things will go wrong
+                    if self.window().isVisible():
+                        QTimer.singleShot(1000, waiter)
+                    else:
+                        self.loadProfile(name)
+
+                waiter()
         else:
             self.window().pm.load(name)
             self.window().loadProfile()
@@ -474,21 +484,31 @@ class AnkiConnect:
 
 
     @util.api()
-    def storeMediaFile(self, filename, data=None, path=None, url=None):
+    def storeMediaFile(self, filename, data=None, path=None, url=None, skipHash=None):
         if data:
             self.deleteMediaFile(filename)
-            self.media().writeData(filename, base64.b64decode(data))
+            mediaData = base64.b64decode(data)
         elif path:
             self.deleteMediaFile(filename)
             with open(path, 'rb') as f:
-                data = f.read()
-            self.media().writeData(filename, data)
+                mediaData = f.read()
         elif url:
             self.deleteMediaFile(filename)
-            downloadedData = util.download(url)
-            self.media().writeData(filename, downloadedData)
+            mediaData = util.download(url)
         else:
             raise Exception('You must either provide a "data" or a "url" field.')
+
+        if skipHash is None:
+            skip = False
+        else:
+            m = hashlib.md5()
+            m.update(data)
+            skip = skipHash == m.hexdigest()
+
+        if skip:
+            return None
+        return self.media().writeData(filename, mediaData)
+
 
     @util.api()
     def retrieveMediaFile(self, filename):
@@ -548,17 +568,13 @@ class AnkiConnect:
         for media in mediaList:
             if media is not None and len(media['fields']) > 0:
                 try:
-                    data = util.download(media['url'])
-                    skipHash = media.get('skipHash')
-                    if skipHash is None:
-                        skip = False
-                    else:
-                        m = hashlib.md5()
-                        m.update(data)
-                        skip = skipHash == m.hexdigest()
+                    mediaFilename = self.storeMediaFile(media['filename'],
+                                                        data=media.get('data'),
+                                                        path=media.get('path'),
+                                                        url=media.get('url'),
+                                                        skipHash=media.get('skipHash'))
 
-                    if not skip:
-                        mediaFilename = self.media().writeData(media['filename'], data)
+                    if mediaFilename is not None:
                         for field in media['fields']:
                             if field in ankiNote:
                                 if mediaType is util.MediaType.Picture:
