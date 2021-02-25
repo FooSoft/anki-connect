@@ -38,7 +38,7 @@ def download(url):
     if resp.status_code != 200:
         raise Exception('{} download failed with return code {}'.format(url, resp.status_code))
 
-    client.streamContent(resp)
+    return client.streamContent(resp)
 
 
 def api(*versions):

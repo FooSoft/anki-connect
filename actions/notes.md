@@ -7,9 +7,10 @@
 
     AnkiConnect can download audio, video, and picture files and embed them in newly created notes. The corresponding `audio`, `video`, and `picture` note members are
     optional and can be omitted. If you choose to include any of them, they should contain a single object or an array of objects
-    with mandatory `url` and `filename` fields. The `skipHash` field can be optionally provided to skip the inclusion of
-    downloaded files with an MD5 hash that matches the provided value. This is useful for avoiding the saving of error
-    pages and stub files. The `fields` member is a list of fields that should play audio or video, or show a picture when the card is displayed in
+    with the mandatory `filename` field and one of `data`, `path` or `url`. Refer to the documentation of `storeMediaFile` for an explanation of these fields.
+    The `skipHash` field can be optionally provided to skip the inclusion of files with an MD5 hash that matches the provided value.
+    This is useful for avoiding the saving of error pages and stub files.
+    The `fields` member is a list of fields that should play audio or video, or show a picture when the card is displayed in
     Anki. The `allowDuplicate` member inside `options` group can be set to true to enable adding duplicate cards.
     Normally duplicate cards can not be added and trigger exception.
 
