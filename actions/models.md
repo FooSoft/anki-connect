@@ -321,7 +321,7 @@
         "version": 6,
         "params": {
             "model": {
-                "modelName": "Custom",
+                "modelName": "",
                 "findText": "text_to_replace",
                 "replaceText": "replace_with_text",
                 "front": true,

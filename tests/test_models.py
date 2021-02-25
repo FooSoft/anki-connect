@@ -60,7 +60,7 @@ class TestModels(unittest.TestCase):
         # findAndReplaceInModels: find and replace text in all models or model by name
         util.invoke('findAndReplaceInModels', modelName=MODEL_1_NAME, findText=TEXT_TO_REPLACE, replaceText=REPLACE_WITH_TEXT, front=True, back=True, css=True)
         new_css = util.invoke('modelStyling', modelName=MODEL_1_NAME)
-        self.assertEqual({'css': REPLACE_WITH_TEXT}, new_css)        
+        self.assertEqual({'css': REPLACE_WITH_TEXT}, new_css)
 
 if __name__ == '__main__':
     unittest.main()
