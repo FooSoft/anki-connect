@@ -502,7 +502,7 @@ class AnkiConnect:
             skip = False
         else:
             m = hashlib.md5()
-            m.update(data)
+            m.update(mediaData)
             skip = skipHash == m.hexdigest()
 
         if skip:
