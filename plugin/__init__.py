@@ -337,6 +337,11 @@ class AnkiConnect:
     def getNumCardsReviewedToday(self):
         return self.database().scalar('select count() from revlog where id > ?', (self.scheduler().dayCutoff - 86400) * 1000)
 
+    @util.api()
+    def getNumCardsReviewedByDay(self):
+        return self.database().all("select date(id/1000 - ?, 'unixepoch', 'localtime') as day, count() from revlog group by day order by day desc",
+                                    int(time.strftime("%H", time.localtime(self.scheduler().dayCutoff))) * 3600)
+
 
     @util.api()
     def getCollectionStatsHTML(self, wholeCollection=True):
