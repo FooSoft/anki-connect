@@ -35,6 +35,7 @@ import aqt
 
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
+from anki.rsbackend import NotFoundError
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
 from . import web, util
@@ -599,8 +600,9 @@ class AnkiConnect:
 
     @util.api()
     def updateNoteFields(self, note):
-        ankiNote = self.collection().getNote(note['id'])
-        if ankiNote is None:
+        try:
+            ankiNote = self.collection().getNote(note['id'])
+        except NotFoundError:
             raise Exception('note was not found: {}'.format(note['id']))
 
         for name, value in note['fields'].items():
