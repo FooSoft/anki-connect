@@ -20,6 +20,29 @@
     }
     ```
 
+*   **getNumCardsReviewedByDay**
+
+    Gets the number of cards reviewed as a list of pairs of `(dateString, number)`
+
+    *Sample request*:
+    ```json
+     {
+        "action": "getNumCardsReviewedByDay",
+        "version": 6,
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result":  [
+            ['2021-02-28', 124],
+            ['2021-02-27', 261]
+        ],
+        "error": null
+    }
+    ```
+
 *   **getCollectionStatsHTML**
 
     Gets the collection statistics report
