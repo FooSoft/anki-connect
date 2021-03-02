@@ -1027,8 +1027,8 @@ class AnkiConnect:
                     'lapses': card.lapses,
                     'left': card.left,
                 })
-            except TypeError as e:
-                # Anki will give a TypeError if the card ID does not exist.
+            except NotFoundError:
+                # Anki will give a NotFoundError if the card ID does not exist.
                 # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.
@@ -1129,8 +1129,8 @@ class AnkiConnect:
                     'modelName': model['name'],
                     'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
                 })
-            except TypeError as e:
-                # Anki will give a TypeError if the note ID does not exist.
+            except NotFoundError:
+                # Anki will give a NotFoundError if the note ID does not exist.
                 # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.
