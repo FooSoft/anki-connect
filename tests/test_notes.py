@@ -91,12 +91,16 @@ class TestNotes(unittest.TestCase):
         util.invoke('removeTags', notes=[noteId], tags='tag2')
 
         # updateNoteFields
+        incorrectId = 1234
+        noteUpdateIncorrectId = {'id': incorrectId, 'fields': {'Front': 'front2', 'Back': 'back2'}}
+        self.assertRaises(Exception, lambda: util.invoke('updateNoteFields', note=noteUpdateIncorrectId))
         noteUpdate = {'id': noteId, 'fields': {'Front': 'front2', 'Back': 'back2'}}
         util.invoke('updateNoteFields', note=noteUpdate)
 
         # notesInfo (part 2)
-        noteInfos = util.invoke('notesInfo', notes=[noteId])
-        self.assertEqual(len(noteInfos), 1)
+        noteInfos = util.invoke('notesInfo', notes=[noteId, incorrectId])
+        self.assertEqual(len(noteInfos), 2)
+        self.assertDictEqual(noteInfos[1], dict())  # Test that returns empty dict if incorrect id was passed
         noteInfo = noteInfos[0]
         self.assertSetEqual(set(noteInfo['tags']), {'tag1'})
         self.assertIn('tag1', noteInfo['tags'])
