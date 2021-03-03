@@ -94,18 +94,18 @@
         "error": null
     }
     ```
+    
+*   **suspended**
 
-*   **areSuspended**
-
-    Returns an array indicating whether each of the given cards is suspended (in the same order).
-
+    Check if card is suspended by its ID. Returns `true` if suspended, `false` otherwise.
+    
     *Sample request*:
     ```json
     {
-        "action": "areSuspended",
+        "action": "suspended",
         "version": 6,
         "params": {
-            "cards": [1483959291685, 1483959293217]
+            "card": 1483959293217
         }
     }
     ```
@@ -113,7 +113,31 @@
     *Sample result*:
     ```json
     {
-        "result": [false, true],
+        "result": true,
+        "error": null
+    }
+    ```
+
+*   **areSuspended**
+
+    Returns an array indicating whether each of the given cards is suspended (in the same order). If card doesn't
+    exist returns `null`.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "areSuspended",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217, 1234567891234]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [false, true, null],
         "error": null
     }
     ```
