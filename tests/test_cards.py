@@ -24,6 +24,8 @@ class TestCards(unittest.TestCase):
 
 
     def runTest(self):
+        incorrectId = 1234
+
         # findCards
         cardIds = util.invoke('findCards', query='deck:test')
         self.assertEqual(len(cardIds), 1)
@@ -33,18 +35,24 @@ class TestCards(unittest.TestCase):
         easeFactors = [EASE_TO_TRY for card in cardIds]
         couldGetEaseFactors = util.invoke('setEaseFactors', cards=cardIds, easeFactors=easeFactors)
         self.assertEqual([True for card in cardIds], couldGetEaseFactors)
+        couldGetEaseFactors = util.invoke('setEaseFactors', cards=[incorrectId], easeFactors=[EASE_TO_TRY])
+        self.assertEqual([False], couldGetEaseFactors)
 
         # getEaseFactors
         easeFactorsFound = util.invoke('getEaseFactors', cards=cardIds)
         self.assertEqual(easeFactors, easeFactorsFound)
+        easeFactorsFound = util.invoke('getEaseFactors', cards=[incorrectId])
+        self.assertEqual([None], easeFactorsFound)
 
         # suspend
         util.invoke('suspend', cards=cardIds)
+        self.assertRaises(Exception, lambda: util.invoke('suspend', cards=[incorrectId]))
 
         # areSuspended (part 1)
         suspendedStates = util.invoke('areSuspended', cards=cardIds)
         self.assertEqual(len(cardIds), len(suspendedStates))
         self.assertNotIn(False, suspendedStates)
+        self.assertEqual([None], util.invoke('areSuspended', cards=[incorrectId]))
 
         # unsuspend
         util.invoke('unsuspend', cards=cardIds)
@@ -73,6 +81,9 @@ class TestCards(unittest.TestCase):
         self.assertEqual(len(cardsInfo), len(cardIds))
         for i, cardInfo in enumerate(cardsInfo):
             self.assertEqual(cardInfo['cardId'], cardIds[i])
+        cardsInfo = util.invoke('cardsInfo', cards=[incorrectId])
+        self.assertEqual(len(cardsInfo), 1)
+        self.assertDictEqual(cardsInfo[0], dict())
 
 
 if __name__ == '__main__':
