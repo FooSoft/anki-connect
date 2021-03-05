@@ -32,9 +32,12 @@ import anki
 import anki.exporting
 import anki.storage
 import aqt
+from anki.cards import Card
 
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
+from anki.notes import Note
+from anki.rsbackend import NotFoundError
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
 from . import web, util
@@ -280,6 +283,17 @@ class AnkiConnect:
 
         return 0
 
+    def getCard(self, card_id: int) -> Card:
+        try:
+            return self.collection().getCard(card_id)
+        except NotFoundError:
+            raise NotFoundError('Card was not found: {}'.format(card_id))
+
+    def getNote(self, note_id: int) -> Note:
+        try:
+            return self.collection().getNote(note_id)
+        except NotFoundError:
+            raise NotFoundError('Note was not found: {}'.format(note_id))
 
     #
     # Miscellaneous
@@ -599,9 +613,7 @@ class AnkiConnect:
 
     @util.api()
     def updateNoteFields(self, note):
-        ankiNote = self.collection().getNote(note['id'])
-        if ankiNote is None:
-            raise Exception('note was not found: {}'.format(note['id']))
+        ankiNote = self.getNote(note['id'])
 
         for name, value in note['fields'].items():
             if name in ankiNote:
@@ -646,10 +658,14 @@ class AnkiConnect:
         self.window().progress.start()
 
         for nid in notes:
-            note = self.collection().getNote(nid)
+            try:
+                note = self.getNote(nid)
+            except NotFoundError:
+                continue
+
             if note.hasTag(tag_to_replace):
                 note.delTag(tag_to_replace)
-                note.addtag(replace_with_tag)
+                note.addTag(replace_with_tag)
                 note.flush()
 
         self.window().requireReset()
@@ -661,11 +677,12 @@ class AnkiConnect:
     def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag):
         self.window().progress.start()
 
+        collection = self.collection()
         for nid in collection.db.list('select id from notes'):
-            note = collection.getNote(nid)
+            note = self.getNote(nid)
             if note.hasTag(tag_to_replace):
                 note.delTag(tag_to_replace)
-                note.addtag(replace_with_tag)
+                note.addTag(replace_with_tag)
                 note.flush()
 
         self.window().requireReset()
@@ -677,12 +694,13 @@ class AnkiConnect:
     def setEaseFactors(self, cards, easeFactors):
         couldSetEaseFactors = []
         for i, card in enumerate(cards):
-            ankiCard = self.collection().getCard(card)
-            if ankiCard is None:
+            try:
+                ankiCard = self.getCard(card)
+            except NotFoundError:
                 couldSetEaseFactors.append(False)
-            else:
-                couldSetEaseFactors.append(True)
+                continue
 
+            couldSetEaseFactors.append(True)
             ankiCard.factor = easeFactors[i]
             ankiCard.flush()
 
@@ -693,7 +711,12 @@ class AnkiConnect:
     def getEaseFactors(self, cards):
         easeFactors = []
         for card in cards:
-            ankiCard = self.collection().getCard(card)
+            try:
+                ankiCard = self.getCard(card)
+            except NotFoundError:
+                easeFactors.append(None)
+                continue
+
             easeFactors.append(ankiCard.factor)
 
         return easeFactors
@@ -726,7 +749,7 @@ class AnkiConnect:
 
     @util.api()
     def suspended(self, card):
-        card = self.collection().getCard(card)
+        card = self.getCard(card)
         return card.queue == -1
 
 
@@ -734,7 +757,10 @@ class AnkiConnect:
     def areSuspended(self, cards):
         suspended = []
         for card in cards:
-            suspended.append(self.suspended(card))
+            try:
+                suspended.append(self.suspended(card))
+            except NotFoundError:
+                suspended.append(None)
 
         return suspended
 
@@ -994,7 +1020,7 @@ class AnkiConnect:
         result = []
         for cid in cards:
             try:
-                card = self.collection().getCard(cid)
+                card = self.getCard(cid)
                 model = card.model()
                 note = card.note()
                 fields = {}
@@ -1025,8 +1051,8 @@ class AnkiConnect:
                     'lapses': card.lapses,
                     'left': card.left,
                 })
-            except TypeError as e:
-                # Anki will give a TypeError if the card ID does not exist.
+            except NotFoundError:
+                # Anki will give a NotFoundError if the card ID does not exist.
                 # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.
@@ -1127,7 +1153,7 @@ class AnkiConnect:
         result = []
         for nid in notes:
             try:
-                note = self.collection().getNote(nid)
+                note = self.getNote(nid)
                 model = note.model()
 
                 fields = {}
@@ -1143,8 +1169,8 @@ class AnkiConnect:
                     'modelName': model['name'],
                     'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
                 })
-            except TypeError as e:
-                # Anki will give a TypeError if the note ID does not exist.
+            except NotFoundError:
+                # Anki will give a NotFoundError if the note ID does not exist.
                 # Best behavior is probably to add an 'empty card' to the
                 # returned result, so that the items of the input and return
                 # lists correspond.

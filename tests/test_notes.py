@@ -91,15 +91,22 @@ class TestNotes(unittest.TestCase):
         util.invoke('removeTags', notes=[noteId], tags='tag2')
 
         # updateNoteFields
+        incorrectId = 1234
+        noteUpdateIncorrectId = {'id': incorrectId, 'fields': {'Front': 'front2', 'Back': 'back2'}}
+        self.assertRaises(Exception, lambda: util.invoke('updateNoteFields', note=noteUpdateIncorrectId))
         noteUpdate = {'id': noteId, 'fields': {'Front': 'front2', 'Back': 'back2'}}
         util.invoke('updateNoteFields', note=noteUpdate)
 
+        # replaceTags
+        util.invoke('replaceTags', notes=[noteId, incorrectId], tag_to_replace='tag1', replace_with_tag='new_tag')
+
         # notesInfo (part 2)
-        noteInfos = util.invoke('notesInfo', notes=[noteId])
-        self.assertEqual(len(noteInfos), 1)
+        noteInfos = util.invoke('notesInfo', notes=[noteId, incorrectId])
+        self.assertEqual(len(noteInfos), 2)
+        self.assertDictEqual(noteInfos[1], dict())  # Test that returns empty dict if incorrect id was passed
         noteInfo = noteInfos[0]
-        self.assertSetEqual(set(noteInfo['tags']), {'tag1'})
-        self.assertIn('tag1', noteInfo['tags'])
+        self.assertSetEqual(set(noteInfo['tags']), {'new_tag'})
+        self.assertIn('new_tag', noteInfo['tags'])
         self.assertNotIn('tag2', noteInfo['tags'])
         self.assertEqual(noteInfo['fields']['Front']['value'], 'front2')
         self.assertEqual(noteInfo['fields']['Back']['value'], 'back2')
@@ -114,6 +121,15 @@ class TestNotes(unittest.TestCase):
         self.assertEqual(len(noteIds), len(notes1))
         for noteId in noteIds:
             self.assertNotEqual(noteId, None)
+
+        # replaceTagsInAllNotes
+        currentTag = notes1[0]['tags'][0]
+        new_tag = 'new_tag'
+        util.invoke('replaceTagsInAllNotes', tag_to_replace=currentTag, replace_with_tag=new_tag)
+        noteInfos = util.invoke('notesInfo', notes=noteIds)
+        for noteInfo in noteInfos:
+            self.assertIn(new_tag, noteInfo['tags'])
+            self.assertNotIn(currentTag, noteInfo['tags'])
 
         # canAddNotes (part 2)
         noteStates = util.invoke('canAddNotes', notes=notes2)
