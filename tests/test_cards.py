@@ -74,6 +74,11 @@ class TestCards(unittest.TestCase):
         for i, cardInfo in enumerate(cardsInfo):
             self.assertEqual(cardInfo['cardId'], cardIds[i])
 
+        # forgetCards
+        util.invoke('forgetCards', cards=cardIds)
+
+        # relearnCards
+        util.invoke('relearnCards', cards=cardIds)
 
 if __name__ == '__main__':
     unittest.main()

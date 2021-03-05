@@ -1036,6 +1036,22 @@ class AnkiConnect:
 
 
     @util.api()
+    def forgetCards(self, cards):
+        self.startEditing()
+        scids = anki.utils.ids2str(cards)
+        self.collection().db.execute('update cards set type=0, queue=0, left=0, ivl=0, due=0, odue=0, factor=0 where id in ' + scids)
+        self.stopEditing()
+
+
+    @util.api()
+    def relearnCards(self, cards):
+        self.startEditing()
+        scids = anki.utils.ids2str(cards)
+        self.collection().db.execute('update cards set type=3, queue=1 where id in ' + scids)
+        self.stopEditing()
+            
+
+    @util.api()
     def cardReviews(self, deck, startID):
         return self.database().all(
             'select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog ''where id>? and cid in (select id from cards where did=?)',
