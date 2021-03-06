@@ -28,6 +28,10 @@ class TestStats(unittest.TestCase):
         result = util.invoke('getNumCardsReviewedToday')
         self.assertIsInstance(result, int)
 
+        # getNumCardsReviewedByDay
+        result = util.invoke('getNumCardsReviewedByDay')
+        self.assertIsInstance(result, list)
+
         # collectionStats
         result = util.invoke('getCollectionStatsHTML')
         self.assertIsInstance(result, str)
