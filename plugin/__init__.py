@@ -339,7 +339,7 @@ class AnkiConnect:
 
     @util.api()
     def getNumCardsReviewedByDay(self):
-        return self.database().all("select date(id/1000 - ?, 'unixepoch', 'localtime') as day, count() from revlog group by day order by day desc",
+        return self.database().all('select date(id/1000 - ?, "unixepoch", "localtime") as day, count() from revlog group by day order by day desc',
                                     int(time.strftime("%H", time.localtime(self.scheduler().dayCutoff))) * 3600)
 
 
