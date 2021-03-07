@@ -37,8 +37,12 @@ from anki.cards import Card
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
-from anki.rsbackend import NotFoundError
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
+
+try:
+    from anki.rsbackend import NotFoundError
+except:
+    NotFoundError = Exception
 
 from . import web, util
 
