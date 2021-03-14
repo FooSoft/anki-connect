@@ -210,8 +210,10 @@ class AnkiConnect:
             ankiNote.tags = note['tags']
 
         for name, value in note['fields'].items():
-            if name in ankiNote:
-                ankiNote[name] = value
+            for ankiName in ankiNote.keys():
+                if name.lower() == ankiName.lower():
+                    ankiNote[ankiName] = value
+                    break
 
         allowDuplicate = False
         duplicateScope = None
