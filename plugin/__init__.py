@@ -667,35 +667,17 @@ class AnkiConnect:
     @util.api()
     def replaceTags(self, notes, tag_to_replace, replace_with_tag):
         self.window().progress.start()
-
+        if not notes:
+            notes = self.collection().db.list('select id from notes')
         for nid in notes:
             try:
-                note = self.getNote(nid)
+                note = self.getNote(int(nid))
             except NotFoundError:
                 continue
-
             if note.hasTag(tag_to_replace):
                 note.delTag(tag_to_replace)
                 note.addTag(replace_with_tag)
                 note.flush()
-
-        self.window().requireReset()
-        self.window().progress.finish()
-        self.window().reset()
-
-
-    @util.api()
-    def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag):
-        self.window().progress.start()
-
-        collection = self.collection()
-        for nid in collection.db.list('select id from notes'):
-            note = self.getNote(nid)
-            if note.hasTag(tag_to_replace):
-                note.delTag(tag_to_replace)
-                note.addTag(replace_with_tag)
-                note.flush()
-
         self.window().requireReset()
         self.window().progress.finish()
         self.window().reset()

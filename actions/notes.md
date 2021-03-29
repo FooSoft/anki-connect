@@ -307,7 +307,7 @@
 
 *   **replaceTags**
 
-    Replace tags in notes by note ID.
+    Replace tags in notes by note ID. Keep notes empty to replace in all notes.
 
     *Sample request*:
     ```json

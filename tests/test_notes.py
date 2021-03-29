@@ -125,7 +125,7 @@ class TestNotes(unittest.TestCase):
         # replaceTagsInAllNotes
         currentTag = notes1[0]['tags'][0]
         new_tag = 'new_tag'
-        util.invoke('replaceTagsInAllNotes', tag_to_replace=currentTag, replace_with_tag=new_tag)
+        util.invoke('replaceTags', notes=[], tag_to_replace=currentTag, replace_with_tag=new_tag)
         noteInfos = util.invoke('notesInfo', notes=noteIds)
         for noteInfo in noteInfos:
             self.assertIn(new_tag, noteInfo['tags'])
