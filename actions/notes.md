@@ -330,6 +330,30 @@
     }
     ```
 
+*   **replaceTagsInAllNotes**
+
+    Replace tags in all the notes for the current user.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "replaceTagsInAllNotes",
+        "version": 6,
+        "params": {
+            "tag_to_replace": "european-languages",
+            "replace_with_tag": "french-languages"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 *   **findNotes**
 
     Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/#/searching).

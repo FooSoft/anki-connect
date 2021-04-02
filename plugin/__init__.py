@@ -684,6 +684,11 @@ class AnkiConnect:
 
 
     @util.api()
+    def def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag):
+        self.replaceTags([], tag_to_replace, replace_with_tag)
+
+
+    @util.api()
     def setEaseFactors(self, cards, easeFactors):
         couldSetEaseFactors = []
         for i, card in enumerate(cards):
