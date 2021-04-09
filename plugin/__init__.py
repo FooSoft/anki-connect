@@ -14,6 +14,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import base64
+import glob
 import hashlib
 import inspect
 import json
@@ -547,6 +548,12 @@ class AnkiConnect:
                 return base64.b64encode(file.read()).decode('ascii')
 
         return False
+
+
+    @util.api()
+    def getMediaFilesNames(self, pattern='*'):
+        path = os.path.join(self.media().dir(), pattern)
+        return [os.path.basename(p) for p in glob.glob(path)]
 
 
     @util.api()
