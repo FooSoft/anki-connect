@@ -16,6 +16,9 @@ class TestMedia(unittest.TestCase):
         media = util.invoke('retrieveMediaFile', filename=filename)
         self.assertEqual(media, data)
 
+        names = util.invoke('getMediaFilesNames', pattern='_tes*.txt')
+        self.assertEqual(names, [filename])
+
         # deleteMediaFile
         util.invoke('deleteMediaFile', filename=filename)
 

@@ -93,6 +93,29 @@
     }
     ```
 
+*   **getMediaFilesNames**
+
+    Gets the names of media files matched the pattern. Returning all names by default.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getMediaFilesNames",
+        "version": 6,
+        "params": {
+            "pattern": "_hell*.txt"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["_hello.txt"],
+        "error": null
+    }
+    ```
+
 *   **deleteMediaFile**
 
     Deletes the specified file inside the media folder.
