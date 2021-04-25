@@ -34,6 +34,7 @@ import anki.exporting
 import anki.storage
 import aqt
 from anki.cards import Card
+from anki.consts import MODEL_CLOZE
 
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
@@ -821,7 +822,7 @@ class AnkiConnect:
 
 
     @util.api()
-    def createModel(self, modelName, inOrderFields, cardTemplates, css = None):
+    def createModel(self, modelName, inOrderFields, cardTemplates, css = None, isCloze = False):
         # https://github.com/dae/anki/blob/b06b70f7214fb1f2ce33ba06d2b095384b81f874/anki/stdmodels.py
         if len(inOrderFields) == 0:
             raise Exception('Must provide at least one field for inOrderFields')
@@ -835,6 +836,8 @@ class AnkiConnect:
 
         # Generate new Note
         m = mm.new(modelName)
+        if isCloze:
+            m['type'] = MODEL_CLOZE
 
         # Create fields and add them to Note
         for field in inOrderFields:
