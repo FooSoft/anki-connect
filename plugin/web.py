@@ -154,14 +154,6 @@ class WebServer:
 
 
     def handlerWrapper(self, req):
-        if len(req.body) == 0:
-            body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
-        else:
-            try:
-                params = json.loads(req.body.decode('utf-8'))
-                body = json.dumps(self.handler(params)).encode('utf-8')
-            except ValueError:
-                body = json.dumps(None).encode('utf-8')
 
         # handle multiple cors origins by checking the 'origin'-header against the allowed origin list from the config
         webCorsOriginList = util.setting('webCorsOriginList')
@@ -171,25 +163,47 @@ class WebServer:
         if webCorsOrigin:
             webCorsOriginList.append(webCorsOrigin)
 
+        allowed = False
         corsOrigin = 'http://localhost'
         allowAllCors = '*' in webCorsOriginList  # allow CORS for all domains
         
-        if allowAllCors :
+        if allowAllCors:
             corsOrigin = '*'
+            allowed = True
         elif b'origin' in req.headers:
             originStr = req.headers[b'origin'].decode()
             if originStr in webCorsOriginList :
                 corsOrigin = originStr
-
-        headers = [
-            ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json'],
-            ['Access-Control-Allow-Origin', corsOrigin],
-            ['Access-Control-Allow-Headers', '*'],
-            ['Content-Length', str(len(body))]
-        ]
+                allowed = True
+        else:
+            allowed = True
 
         resp = bytes()
+
+        if allowed :
+            if len(req.body) == 0:
+                body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
+            else:
+                try:
+                    params = json.loads(req.body.decode('utf-8'))
+                    body = json.dumps(self.handler(params)).encode('utf-8')
+                except ValueError:
+                    body = json.dumps(None).encode('utf-8')    
+                    
+            headers = [
+                ['HTTP/1.1 200 OK', None],
+                ['Content-Type', 'text/json'],
+                ['Access-Control-Allow-Origin', corsOrigin],
+                ['Access-Control-Allow-Headers', '*'],
+                ['Content-Length', str(len(body))]
+            ]
+        else :
+            headers = [
+                ['HTTP/1.1 403 Forbidden', None],
+                ['Access-Control-Allow-Origin', corsOrigin],
+                ['Access-Control-Allow-Headers', '*']
+            ]
+            body = ''.encode('utf-8');
 
         for key, value in headers:
             if value is None:
