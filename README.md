@@ -142,7 +142,7 @@ function invoke(action, version, params={}) {
     });
 }
 
-await invoke('createDeck', {deck: 'test1'});
+await invoke('createDeck', 6, {deck: 'test1'});
 const result = await invoke('deckNames', 6);
 console.log(`got list of decks: ${result}`);
 ```
