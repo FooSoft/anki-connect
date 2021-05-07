@@ -1,8 +1,12 @@
 # Miscellaneous Actions
 
-*   **version**
+*   **requestPermission**
 
-    Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
+    Request permission to use the API exposed by this plugin. Only request coming from origin listed in the
+    `webCorsOriginList` option are allowed to use the Api. Calling this method will display a popup asking the user
+    if he want to allow your origin to use the Api. This is the only method that can be called even if the origin of
+    the request isn't in the `webCorsOriginList` list. It also doesn't require the api key. Calling this method will
+    not display the popup if the origin is already trusted.
 
     This should be the first call you make to make sure that your application and AnkiConnect are able to communicate
     properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
@@ -11,18 +15,54 @@
     *Sample request*:
     ```json
     {
-        "action": "version",
+        "action": "requestPermission",
         "version": 6
     }
     ```
 
-    *Sample result*:
+    *Samples results*:
     ```json
     {
-        "result": 6,
+        "result": {
+            "permission": "granted",
+            "requireApiKey": false,
+            "version": 6
+        },
         "error": null
     }
     ```
+    ```json
+    {
+        "result": {
+            "permission": "denied"
+        },
+        "error": null
+    }
+    ```
+
+*   **version**
+
+Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
+
+This should be the second call you make to make sure that your application and AnkiConnect are able to communicate
+properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
+which are available in the reported AnkiConnect version or earlier, everything should work fine.
+
+*Sample request*:
+```json
+{
+    "action": "version",
+    "version": 6
+}
+```
+
+*Sample result*:
+```json
+{
+    "result": 6,
+    "error": null
+}
+```
 
 *   **sync**
 
