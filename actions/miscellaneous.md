@@ -44,10 +44,6 @@
 
 Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
 
-This should be the second call you make to make sure that your application and AnkiConnect are able to communicate
-properly with each other. New versions of AnkiConnect are backwards compatible; as long as you are using actions
-which are available in the reported AnkiConnect version or earlier, everything should work fine.
-
 *Sample request*:
 ```json
 {
