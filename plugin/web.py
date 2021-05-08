@@ -185,16 +185,25 @@ class WebServer:
             allowed = True
 
         resp = bytes()
+        paramsError = False
+        try:
+            params = json.loads(req.body.decode('utf-8'))
+        except ValueError:
+            body = json.dumps(None).encode('utf-8')
+            paramsError = True
 
-        if allowed :
+        if allowed or not paramsError and params.get('action', '') == 'requestPermission':
             if len(req.body) == 0:
                 body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
             else:
-                try:
-                    params = json.loads(req.body.decode('utf-8'))
-                    body = json.dumps(self.handler(params)).encode('utf-8')
-                except ValueError:
-                    body = json.dumps(None).encode('utf-8')    
+                if params.get('action', '') == 'requestPermission':
+                    params['params'] = params.get('params', {})
+                    params['params']['allowed'] = allowed
+                    params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
+                    if not allowed :
+                        corsOrigin = params['params']['origin']
+                        
+                body = json.dumps(self.handler(params)).encode('utf-8')
                     
             headers = [
                 ['HTTP/1.1 200 OK', None],
