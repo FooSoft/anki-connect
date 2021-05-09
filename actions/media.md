@@ -4,6 +4,8 @@
 
     Stores a file with the specified base64-encoded contents inside the media folder. Alternatively you can specify a
     absolute file path, or a url from where the file shell be downloaded. If more than one of `data`, `path` and `url` are provided, the `data` field will be used first, then `path`, and finally `url`. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are still synchronized to AnkiWeb.
+    Any existing file with the same name is deleted by default. Set `deleteExisting` to false to prevent that
+    by [letting Anki give the new file a non-conflicting name](https://github.com/ankitects/anki/blob/aeba725d3ea9628c73300648f748140db3fdd5ed/rslib/src/media/files.rs#L194).
 
     *Sample request*:
     ```json

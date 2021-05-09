@@ -10,14 +10,16 @@ class TestMedia(unittest.TestCase):
         data = 'test'
 
         # storeMediaFile
-        util.invoke('storeMediaFile', filename='_test.txt', data=data)
+        util.invoke('storeMediaFile', filename=filename, data=data)
+        filename2 = util.invoke('storeMediaFile', filename=filename, data='testtest', deleteExisting=False)
+        self.assertNotEqual(filename2, filename)
 
         # retrieveMediaFile (part 1)
         media = util.invoke('retrieveMediaFile', filename=filename)
         self.assertEqual(media, data)
 
         names = util.invoke('getMediaFilesNames', pattern='_tes*.txt')
-        self.assertEqual(names, [filename])
+        self.assertEqual(set(names), set([filename, filename2]))
 
         # deleteMediaFile
         util.invoke('deleteMediaFile', filename=filename)
