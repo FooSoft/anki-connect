@@ -660,7 +660,7 @@ class AnkiConnect:
                         for field in media['fields']:
                             if field in ankiNote:
                                 if mediaType is util.MediaType.Picture:
-                                    ankiNote[field] += u'<div><img src="{}"><br></div>'.format(mediaFilename)
+                                    ankiNote[field] += u'<img src="{}">'.format(mediaFilename)
                                 elif mediaType is util.MediaType.Audio or mediaType is util.MediaType.Video:
                                     ankiNote[field] += u'[sound:{}]'.format(mediaFilename)
 
