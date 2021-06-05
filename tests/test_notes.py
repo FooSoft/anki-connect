@@ -97,6 +97,13 @@ class TestNotes(unittest.TestCase):
         noteUpdate = {'id': noteId, 'fields': {'Front': 'front2', 'Back': 'back2'}}
         util.invoke('updateNoteFields', note=noteUpdate)
 
+        # updateNotesFields (part 1)
+        incorrectIds = [1234, 12345]
+        notesUpdateIncorrectIds = []
+        for incorrectId in incorrectIds:
+            notesUpdateIncorrectIds.append({'id': incorrectId, 'fields': {'Front': 'front2', 'Back': 'back2'}})
+        self.assertRaises(Exception, lambda: util.invoke('updateNotesFields', notes=notesUpdateIncorrectIds))
+
         # replaceTags
         util.invoke('replaceTags', notes=[noteId, incorrectId], tag_to_replace='tag1', replace_with_tag='new_tag')
 
@@ -122,6 +129,12 @@ class TestNotes(unittest.TestCase):
         for noteId in noteIds:
             self.assertNotEqual(noteId, None)
 
+        # updateNotesFields (part 2)
+        notesUpdate = []
+        for noteId in noteIds:
+            notesUpdate.append({'id': noteId, 'fields': {'Front': 'front2', 'Back': 'back2'}})
+        util.invoke('updateNotesFields', notes=notesUpdate)
+
         # replaceTagsInAllNotes
         currentTag = notes1[0]['tags'][0]
         new_tag = 'new_tag'
@@ -141,6 +154,12 @@ class TestNotes(unittest.TestCase):
         self.assertEqual(len(noteIds), len(notes2))
         for noteId in noteIds:
             self.assertEqual(noteId, None)
+
+        # updateNotesFields (part 3)
+        notesUpdate = []
+        for noteId in noteIds:
+            notesUpdate.append({'id': noteId, 'fields': {'Front': 'front2', 'Back': 'back2'}})
+        util.invoke('updateNotesFields', notes=notesUpdate)
 
         # findNotes
         noteIds = util.invoke('findNotes', query='deck:test')
