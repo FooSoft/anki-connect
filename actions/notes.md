@@ -217,6 +217,46 @@
     }
     ```
 
+*   **updateNotesFields**
+
+    Modify the fields of multiple existing notes. You can also include audio, video, or picture files which will be added to the note with an
+    optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateNotesFields",
+        "version": 6,
+        "params": {
+            "notes": [
+                {
+                    "id": 1514547547030,
+                    "fields": {
+                        "Front": "new front content",
+                        "Back": "new back content"
+                    },
+                    "audio": [{
+                        "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
+                        "filename": "yomichan_ねこ_猫.mp3",
+                        "skipHash": "7e2c2f954ef6051373ba916f000168dc",
+                        "fields": [
+                            "Front"
+                        ]
+                    }]
+                }
+            ]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 *   **addTags**
 
     Adds tags to notes by note ID.
