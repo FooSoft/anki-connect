@@ -700,6 +700,12 @@ class AnkiConnect:
 
 
     @util.api()
+    def updateNotesFields(self, notes):
+        for note in notes:
+            self.updateNoteFields(note)
+
+
+    @util.api()
     def addTags(self, notes, tags, add=True):
         self.startEditing()
         self.collection().tags.bulkAdd(notes, tags, add)
