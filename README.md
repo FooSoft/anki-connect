@@ -1407,23 +1407,23 @@ corresponding to when the API was available for use.
 
 *   **version**
 
-Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
+    Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
 
-*Sample request*:
-```json
-{
-    "action": "version",
-    "version": 6
-}
-```
+    *Sample request*:
+    ```json
+    {
+        "action": "version",
+        "version": 6
+    }
+    ```
 
-*Sample result*:
-```json
-{
-    "result": 6,
-    "error": null
-}
-```
+    *Sample result*:
+    ```json
+    {
+        "result": 6,
+        "error": null
+    }
+    ```
 
 *   **sync**
 
