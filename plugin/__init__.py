@@ -618,14 +618,7 @@ class AnkiConnect:
     def addNote(self, note):
         ankiNote = self.createNote(note)
 
-        audioObjectOrList = note.get('audio')
-        self.addMedia(ankiNote, audioObjectOrList, util.MediaType.Audio)
-
-        videoObjectOrList = note.get('video')
-        self.addMedia(ankiNote, videoObjectOrList, util.MediaType.Video)
-
-        pictureObjectOrList = note.get('picture')
-        self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
+        self.addMediaFromNote(ankiNote, note)
 
         collection = self.collection()
         self.startEditing()
@@ -636,6 +629,18 @@ class AnkiConnect:
         self.stopEditing()
 
         return ankiNote.id
+
+
+    def addMediaFromNote(self, ankiNote, note):
+        audioObjectOrList = note.get('audio')
+        self.addMedia(ankiNote, audioObjectOrList, util.MediaType.Audio)
+
+        videoObjectOrList = note.get('video')
+        self.addMedia(ankiNote, videoObjectOrList, util.MediaType.Video)
+
+        pictureObjectOrList = note.get('picture')
+        self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
+
 
 
     def addMedia(self, ankiNote, mediaObjectOrList, mediaType):
@@ -1372,7 +1377,9 @@ class AnkiConnect:
                 for name, value in note['fields'].items():
                     if name in ankiNote:
                         ankiNote[name] = value
-                editor.loadNote()
+
+            self.addMediaFromNote(ankiNote, note)
+            editor.loadNote()
 
             if 'tags' in note:
                 ankiNote.tags = note['tags']
@@ -1394,6 +1401,8 @@ class AnkiConnect:
                 for name, value in note['fields'].items():
                     if name in ankiNote:
                         ankiNote[name] = value
+
+            self.addMediaFromNote(ankiNote, note)
 
             if 'tags' in note:
                 ankiNote.tags = note['tags']
