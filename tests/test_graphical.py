@@ -14,12 +14,32 @@ class TestGui(unittest.TestCase):
 
         # guiAddCards with preset
         util.invoke('createDeck', deck='test')
-        note = {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'tags': ['tag1']}
+
+        note = {
+            'deckName': 'test',
+            'modelName': 'Basic',
+            'fields': {
+                'Front': 'front1',
+                'Back': 'back1'
+            },
+            'tags': ['tag1'],
+        }
         util.invoke('guiAddCards', note=note)
 
         # guiAddCards with preset and closeAfterAdding
-        noteWithOption = {'deckName': 'test', 'modelName': 'Basic', 'fields': {'Front': 'front1', 'Back': 'back1'}, 'options': { 'closeAfterAdding': True }, 'tags': ['tag1']}
-        util.invoke('guiAddCards', note=noteWithOption)
+        util.invoke('guiAddCards', note={
+            **note,
+            'options': { 'closeAfterAdding': True },
+        })
+
+        util.invoke('guiAddCards', note={
+            **note,
+            'picture': [{
+                'url': 'https://via.placeholder.com/150.png',
+                'filename': 'placeholder.png',
+                'fields': ['Front'],
+            }]
+        })
 
         # guiCurrentCard
         # util.invoke('guiCurrentCard')

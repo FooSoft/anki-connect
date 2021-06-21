@@ -976,6 +976,9 @@ corresponding to when the API was available for use.
     Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
     Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
 
+    Audio, video, and picture files can be embedded into the fields via the `audio`, `video`, and `picture` keys, respectively.
+    Refer to the documentation of `addNote` and `storeMediaFile` for an explanation of these fields.
+
     The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
     Invoking the action mutliple times with this option will create _multiple windows_.
 
@@ -999,7 +1002,14 @@ corresponding to when the API was available for use.
                 },
                 "tags": [
                   "countries"
-                ]
+                ],
+                "picture": [{
+                    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/EU-Romania.svg/285px-EU-Romania.svg.png",
+                    "filename": "romania.png",
+                    "fields": [
+                        "Extra"
+                    ]
+                }]
             }
         }
     }
