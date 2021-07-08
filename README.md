@@ -1957,11 +1957,13 @@ corresponding to when the API was available for use.
     Normally duplicate cards can not be added and trigger exception.
 
     The `duplicateScope` member inside `options` can be used to specify the scope for which duplicates are checked.
-    A value of `"deckName"` will only check for duplicates in the target deck; any other value will check the entire collection.
-    The `duplicateScopeOptions` object can be used to specify some additional settings. `duplicateScopeOptions.deckName`
-    will specify which deck to use for checking duplicates in. If undefined or `null`, the target deck will be used.
-    `duplicateScopeOptions.checkChildren` will change whether or not duplicate cards are checked in child decks;
-    the default value is `false`.
+    A value of `"deck"` will only check for duplicates in the target deck; any other value will check the entire collection.
+
+    The `duplicateScopeOptions` object can be used to specify some additional settings:
+
+    * `duplicateScopeOptions.deckName` will specify which deck to use for checking duplicates in. If undefined or `null`, the target deck will be used.
+    * `duplicateScopeOptions.checkChildren` will change whether or not duplicate cards are checked in child decks. The default value is `false`.
+    * `duplicateScopeOptions.checkAllModels` specifies whether duplicate checks are performed across all note types. The default value is `false`.
 
     *Sample request*:
     ```json
@@ -1981,7 +1983,8 @@ corresponding to when the API was available for use.
                     "duplicateScope": "deck",
                     "duplicateScopeOptions": {
                         "deckName": "Default",
-                        "checkChildren": false
+                        "checkChildren": false,
+                        "checkAllModels": false
                     }
                 },
                 "tags": [
