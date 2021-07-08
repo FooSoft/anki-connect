@@ -224,14 +224,15 @@ class AnkiConnect:
         duplicateScopeCheckChildren = False
 
         if 'options' in note:
-            if 'allowDuplicate' in note['options']:
-                allowDuplicate = note['options']['allowDuplicate']
+            options = note['options']
+            if 'allowDuplicate' in options:
+                allowDuplicate = options['allowDuplicate']
                 if type(allowDuplicate) is not bool:
                     raise Exception('option parameter "allowDuplicate" must be boolean')
-            if 'duplicateScope' in note['options']:
-                duplicateScope = note['options']['duplicateScope']
-            if 'duplicateScopeOptions' in note['options']:
-                duplicateScopeOptions = note['options']['duplicateScopeOptions']
+            if 'duplicateScope' in options:
+                duplicateScope = options['duplicateScope']
+            if 'duplicateScopeOptions' in options:
+                duplicateScopeOptions = options['duplicateScopeOptions']
                 if 'deckName' in duplicateScopeOptions:
                     duplicateScopeDeckName = duplicateScopeOptions['deckName']
                 if 'checkChildren' in duplicateScopeOptions:
