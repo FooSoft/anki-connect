@@ -222,6 +222,7 @@ class AnkiConnect:
         duplicateScope = None
         duplicateScopeDeckName = None
         duplicateScopeCheckChildren = False
+        duplicateScopeCheckAllModels = False
 
         if 'options' in note:
             options = note['options']
@@ -239,6 +240,10 @@ class AnkiConnect:
                     duplicateScopeCheckChildren = duplicateScopeOptions['checkChildren']
                     if type(duplicateScopeCheckChildren) is not bool:
                         raise Exception('option parameter "duplicateScopeOptions.checkChildren" must be boolean')
+                if 'checkAllModels' in duplicateScopeOptions:
+                    duplicateScopeCheckAllModels = duplicateScopeOptions['checkAllModels']
+                    if type(duplicateScopeCheckAllModels) is not bool:
+                        raise Exception('option parameter "duplicateScopeOptions.checkAllModels" must be boolean')
 
         duplicateOrEmpty = self.isNoteDuplicateOrEmptyInScope(
             ankiNote,
@@ -246,7 +251,8 @@ class AnkiConnect:
             collection,
             duplicateScope,
             duplicateScopeDeckName,
-            duplicateScopeCheckChildren
+            duplicateScopeCheckChildren,
+            duplicateScopeCheckAllModels
         )
 
         if duplicateOrEmpty == 1:
@@ -261,36 +267,67 @@ class AnkiConnect:
             raise Exception('cannot create note for unknown reason')
 
 
-    def isNoteDuplicateOrEmptyInScope(self, note, deck, collection, duplicateScope, duplicateScopeDeckName, duplicateScopeCheckChildren):
-        # 1 if first is empty; 2 if first is a duplicate, 0 otherwise.
-        if duplicateScope != 'deck':
+    def isNoteDuplicateOrEmptyInScope(
+        self,
+        note,
+        deck,
+        collection,
+        duplicateScope,
+        duplicateScopeDeckName,
+        duplicateScopeCheckChildren,
+        duplicateScopeCheckAllModels
+    ):
+        # Returns: 1 if first is empty, 2 if first is a duplicate, 0 otherwise.
+
+        # note.dupeOrEmpty returns if a note is a global duplicate with the specific model.
+        # This is used as the default check, and the rest of this function is manually
+        # checking if the note is a duplicate with additional options.
+        if duplicateScope != 'deck' and not duplicateScopeCheckAllModels:
             return note.dupeOrEmpty() or 0
 
-        # dupeOrEmpty returns if a note is a global duplicate
-        # the rest of the function checks to see if the note is a duplicate in the deck
+        # Primary field for uniqueness
         val = note.fields[0]
         if not val.strip():
             return 1
-
-        did = deck['id']
-        if duplicateScopeDeckName is not None:
-            deck2 = collection.decks.byName(duplicateScopeDeckName)
-            if deck2 is None:
-                # Invalid deck, so cannot be duplicate
-                return 0
-            did = deck2['id']
-
-        dids = {did: True}
-        if duplicateScopeCheckChildren:
-            for kv in collection.decks.children(did):
-                dids[kv[1]] = True
-
         csum = anki.utils.fieldChecksum(val)
-        for noteId in note.col.db.list('select id from notes where csum = ? and id != ? and mid = ?', csum, note.id or 0, note.mid):
-            for cardDeckId in note.col.db.list('select did from cards where nid = ?', noteId):
+
+        # Create dictionary of deck ids
+        dids = None
+        if duplicateScope == 'deck':
+            did = deck['id']
+            if duplicateScopeDeckName is not None:
+                deck2 = collection.decks.byName(duplicateScopeDeckName)
+                if deck2 is None:
+                    # Invalid deck, so cannot be duplicate
+                    return 0
+                did = deck2['id']
+
+            dids = {did: True}
+            if duplicateScopeCheckChildren:
+                for kv in collection.decks.children(did):
+                    dids[kv[1]] = True
+
+        # Build query
+        query = 'select id from notes where csum=?'
+        queryArgs = [csum]
+        if note.id:
+            query += ' and id!=?'
+            queryArgs.append(note.id)
+        if not duplicateScopeCheckAllModels:
+            query += ' and mid=?'
+            queryArgs.append(note.mid)
+
+        # Search
+        for noteId in note.col.db.list(query, *queryArgs):
+            if dids is None:
+                # Duplicate note exists in the collection
+                return 2
+            # Validate that a card exists in one of the specified decks
+            for cardDeckId in note.col.db.list('select did from cards where nid=?', noteId):
                 if cardDeckId in dids:
                     return 2
 
+        # Not a duplicate
         return 0
 
     def getCard(self, card_id: int) -> Card:
