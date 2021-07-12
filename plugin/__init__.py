@@ -1375,6 +1375,12 @@ class AnkiConnect:
         timer = QTimer()
         timer.timeout.connect(self.window().close)
         timer.start(1000) # 1s should be enough to allow the response to be sent.
+        
+        
+    @util.api()
+    def guiCheckDatabase(self):
+        self.window().onCheckDB()
+        return True
 
 
     @util.api()

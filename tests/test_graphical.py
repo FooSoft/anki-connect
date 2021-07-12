@@ -41,6 +41,9 @@ class TestGui(unittest.TestCase):
 
         # guiDeckBrowser
         util.invoke('guiDeckBrowser')
+        
+        # guiDatabaseCheck
+        util.invoke('guiDatabaseCheck')
 
         # guiExitAnki
         # util.invoke('guiExitAnki')
