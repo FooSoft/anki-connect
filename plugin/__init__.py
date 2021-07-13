@@ -363,7 +363,7 @@ class AnkiConnect:
             return {
                 "permission": "denied",
             }
-        
+
         msg = QMessageBox(None)
         msg.setWindowTitle("A website want to access to Anki")
         msg.setText(origin + " request permission to use Anki through AnkiConnect.\nDo you want to give it access ?")
@@ -1088,14 +1088,14 @@ class AnkiConnect:
             checkForText = False
             if css and findText in model['css']:
                 checkForText = True
-                model['css'] = model['css'].replace(findText, replaceText) 
+                model['css'] = model['css'].replace(findText, replaceText)
             for tmpls in model.get('tmpls'):
                 if front and findText in tmpls['qfmt']:
                     checkForText = True
                     tmpls['qfmt'] = tmpls['qfmt'].replace(findText, replaceText)
                 if back and findText in tmpls['afmt']:
                     checkForText = True
-                    tmpls['afmt'] = tmpls['afmt'].replace(findText, replaceText)                        
+                    tmpls['afmt'] = tmpls['afmt'].replace(findText, replaceText)
             self.collection().models.save(model, True)
             self.collection().models.flush()
             if checkForText:
@@ -1188,7 +1188,7 @@ class AnkiConnect:
         scids = anki.utils.ids2str(cards)
         self.collection().db.execute('update cards set type=3, queue=1 where id in ' + scids)
         self.stopEditing()
-            
+
 
     @util.api()
     def cardReviews(self, deck, startID):
@@ -1593,6 +1593,12 @@ class AnkiConnect:
         timer = QTimer()
         timer.timeout.connect(self.window().close)
         timer.start(1000) # 1s should be enough to allow the response to be sent.
+
+
+    @util.api()
+    def guiCheckDatabase(self):
+        self.window().onCheckDB()
+        return True
 
 
     @util.api()
