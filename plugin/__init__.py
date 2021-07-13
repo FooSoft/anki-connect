@@ -550,12 +550,13 @@ class AnkiConnect:
         config['id'] = str(config['id'])
         config['mod'] = anki.utils.intTime()
         config['usn'] = collection.usn()
-
-        if config['id'] not in collection.decks.dconf:
+        if int(config['id']) not in [c['id'] for c in collection.decks.all_config()]:
             return False
-
-        collection.decks.dconf[config['id']] = config
-        collection.decks.changed = True
+        try:
+            collection.decks.save(config)
+            collection.decks.updateConf(config)
+        except:
+            return False
         return True
 
 
