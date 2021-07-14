@@ -149,6 +149,22 @@ const result = await invoke('deckNames', 6);
 console.log(`got list of decks: ${result}`);
 ```
 
+### Hey, could you add a new action to support $FEATURE?
+
+The primary goal for AnkiConnect was to support real-time flash card creation from the
+[Yomichan](https://foosoft.net/projects/yomichan/) browser extension. The current API provides all the required actions
+to make this happen. I recognise that the role of AnkiConnect has evolved from this original vision, and I am happy to
+review new feature requests.
+
+With that said, *this project operates on a self-serve model*. If you would like a new feature, create a PR. I'll review
+it and if it looks good, it will be merged in. *Requests to add new features without accompanying PRs will not be
+serviced*. Make sure that your PRs meet the following criteria:
+
+*   Attempt to match style of the surrounding code.
+*   Have accompanying documentation with examples.
+*   Have accompanying tests that verify operation.
+*   Implement features useful in other applications.
+
 ### Supported Actions
 
 Documentation for currently supported actions is split up by category and is referenced below. Note that deprecated APIs
@@ -878,7 +894,7 @@ corresponding to when the API was available for use.
 *   **updateCompleteDeck**
 
     Pastes all transmitted data into the database and reloads the collection.
-    You can send a deckName and corresponding cards, notes & models.
+    You can send a deckName and corresponding cards, notes and models.
     All cards are assumed to belong to the given deck.
     All notes referenced by given cards should be present.
     All models referenced by given notes should be present.
@@ -2565,19 +2581,3 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
-
-### Hey, could you add a new action to support $FEATURE?
-
-The primary goal for AnkiConnect was to support real-time flash card creation from the
-[Yomichan](https://foosoft.net/projects/yomichan/) browser extension. The current API provides all the required actions
-to make this happen. I recognise that the role of AnkiConnect has evolved from this original vision, and I am happy to
-review new feature requests.
-
-With that said, *this project operates on a self-serve model*. If you would like a new feature, create a PR. I'll review
-it and if it looks good, it will be merged in. *Requests to add new features without accompanying PRs will not be
-serviced*. Make sure that your PRs meet the following criteria:
-
-*   Attempt to match style of the surrounding code.
-*   Have accompanying documentation with examples.
-*   Have accompanying tests that verify operation.
-*   Implement features useful in other applications.
