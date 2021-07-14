@@ -194,7 +194,7 @@ class WebServer:
 
         if allowed or not paramsError and params.get('action', '') == 'requestPermission':
             if len(req.body) == 0:
-                body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
+                body = 'AnkiConnect - Customized by Michael Zhou for Learning Clues v.{}'.format(util.setting('apiVersion')).encode('utf-8')
             else:
                 if params.get('action', '') == 'requestPermission':
                     params['params'] = params.get('params', {})

@@ -73,7 +73,7 @@ def setting(key):
         'apiVersion': 6,
         'webBacklog': 5,
         'webBindAddress': os.getenv('ANKICONNECT_BIND_ADDRESS', '127.0.0.1'),
-        'webBindPort': 8765,
+        'webBindPort': 8766,
         'webCorsOrigin': os.getenv('ANKICONNECT_CORS_ORIGIN', None),
         'webCorsOriginList': ['http://localhost'],
         'ignoreOriginList': [],

@@ -42,6 +42,8 @@ from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
+from aqt import addcards
+
 try:
     from anki.rsbackend import NotFoundError
 except:
@@ -1430,6 +1432,10 @@ class AnkiConnect:
                 currentWindow.closeWithCallback(openNewWindow)
             else:
                 openNewWindow()
+
+            '''added code here'''
+            ac = addcards.AddCards()
+            ac._add_current_note()
 
             return ankiNote.id
 

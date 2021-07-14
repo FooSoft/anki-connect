@@ -14,7 +14,7 @@ The installation process is similar to other Anki plugins and can be accomplishe
 3.  Restart Anki when prompted to do so in order to complete the installation of AnkiConnect.
 
 Anki must be kept running in the background in order for other applications to be able to use AnkiConnect. You can
-verify that AnkiConnect is running at any time by accessing `localhost:8765` in your browser. If the server is running,
+verify that AnkiConnect is running at any time by accessing `localhost:8766` in your browser. If the server is running,
 you will see the message `AnkiConnect` displayed in your browser window.
 
 ### Notes for Windows Users
@@ -81,7 +81,7 @@ included below as reference.
 #### Curl
 
 ```bash
-curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
+curl localhost:8766 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
 ```
 
 #### Python
@@ -95,7 +95,7 @@ def request(action, **params):
 
 def invoke(action, **params):
     requestJson = json.dumps(request(action, **params)).encode('utf-8')
-    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8766', requestJson)))
     if len(response) != 2:
         raise Exception('response has an unexpected number of fields')
     if 'error' not in response:
@@ -139,7 +139,7 @@ function invoke(action, version, params={}) {
             }
         });
 
-        xhr.open('POST', 'http://127.0.0.1:8765');
+        xhr.open('POST', 'http://127.0.0.1:8766');
         xhr.send(JSON.stringify({action, version, params}));
     });
 }
