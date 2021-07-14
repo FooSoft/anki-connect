@@ -1230,6 +1230,26 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **guiCheckDatabase**
+
+    Requests a database check, but returns immediately without waiting for the check to complete. Therefore, the action will always return `true` even if errors are detected during the database check.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "guiCheckDatabase",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
 #### Media Actions
 
 *   **storeMediaFile**
