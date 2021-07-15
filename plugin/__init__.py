@@ -562,37 +562,40 @@ class AnkiConnect:
 
     @util.api()
     def setDeckConfigId(self, decks, configId):
-        configId = str(configId)
+        configId = int(configId)
         for deck in decks:
             if not deck in self.deckNames():
                 return False
 
         collection = self.collection()
-        if configId not in collection.decks.dconf:
-            return False
 
         for deck in decks:
-            did = str(collection.decks.id(deck))
-            aqt.mw.col.decks.decks[did]['conf'] = configId
+            try:
+                did = str(collection.decks.id(deck))
+                deck_dict = aqt.mw.col.decks.decks[did]
+                deck_dict['conf'] = configId
+                collection.decks.save(deck_dict)
+            except:
+                return False
 
         return True
 
 
     @util.api()
     def cloneDeckConfigId(self, name, cloneFrom='1'):
-        configId = str(cloneFrom)
-        if configId not in self.collection().decks.dconf:
+        configId = int(cloneFrom)
+        collection = self.collection()
+        if configId not in [c['id'] for c in collection.decks.all_config()]:
             return False
 
-        config = self.collection().decks.getConf(configId)
-        return self.collection().decks.confId(name, config)
+        config = collection.decks.getConf(configId)
+        return collection.decks.confId(name, config)
 
 
     @util.api()
     def removeDeckConfigId(self, configId):
-        configId = str(configId)
         collection = self.collection()
-        if configId not in collection.decks.dconf:
+        if int(configId) not in [c['id'] for c in collection.decks.all_config()]:
             return False
 
         collection.decks.remConf(configId)
