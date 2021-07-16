@@ -23,7 +23,7 @@ Windows users may see a firewall nag dialog box appear on Anki startup. This occ
 HTTP server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for
 this plugin to function correctly.
 
-### Notes for Mac OS X Users
+### Notes for macOS Users
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
@@ -42,7 +42,7 @@ foreground, App Nap should be disabled for Anki:
 ## Application Interface for Developers
 
 AnkiConnect exposes internal Anki features to external applications via an easy to use API. After being installed, this
-plugin will start an HTTP sever on port 8765 whenever Anki is launched. Other applications (including browser
+plugin will start an HTTP server on port 8765 whenever Anki is launched. Other applications (including browser
 extensions) can then communicate with it via HTTP requests.
 
 By default, AnkiConnect will only bind the HTTP server to the `127.0.0.1` IP address, so that you will only be able to
