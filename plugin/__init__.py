@@ -42,7 +42,7 @@ from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
-from aqt import addcards
+#from aqt import addcards
 
 try:
     from anki.rsbackend import NotFoundError
@@ -1338,7 +1338,13 @@ class AnkiConnect:
                     self.addButton.setShortcut(aqt.qt.QKeySequence('Ctrl+Return'))
 
                 def _addCards(self):
+                    self.silentlyClose = True
+                    # super()._addCards() LEGACY COMMAND
                     super()._addCards()
+
+                    aqt.dialogs.markClosed(windowName)
+
+                    '''silentlyClose works here, need to go deeper and call a database command'''
 
                     # if adding was successful it must mean it was added to the history of the window
                     if len(self.history):
@@ -1432,10 +1438,23 @@ class AnkiConnect:
                 currentWindow.closeWithCallback(openNewWindow)
             else:
                 openNewWindow()
+            
+            aqt.dialogs.closeAll()
 
-            '''added code here'''
-            ac = addcards.AddCards()
-            ac._add_current_note()
+            '''
+            added code here
+
+            ac = aqt.addcards.AddCards
+            ac._addCards()
+            aqt.dialogs.markClosed("AddCards")
+
+            added code here'''
+
+            '''silentlyClose = True
+
+            aqt.addcards.AddCards._addCards()
+
+            aqt.dialogs.markClosed(windowName) FAILED OUTSIDE No CloseAfterAdding Code'''
 
             return ankiNote.id
 
