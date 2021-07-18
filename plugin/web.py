@@ -157,15 +157,15 @@ class WebServer:
             origin = '*'
             allowed = True
         else:
-            origin = request.headers.get('origin')
-            allowed = origin in self.origins
-
-        if not allowed:
-            origin = 'http://127.0.0.1'
+            origin = request.headers.get('origin', 'http://127.0.0.1:')
+            for prefix in self.origins:
+                if origin.startswith(prefix):
+                    allowed = True
+                    break
 
         try:
-            call = json.loads(request.body)
-            if call:
+            if request.body:
+                call = json.loads(request.body)
                 call['allowed'] = allowed
                 call['origin'] = origin
                 body = json.dumps(self.handler(call))
@@ -182,7 +182,7 @@ class WebServer:
             ['Content-Length', len(body.encode('utf-8'))]
         ]
 
-        header = bytes()
+        header = ''
         for key, value in headers:
             header += f'{key}: {value}\r\n'
 

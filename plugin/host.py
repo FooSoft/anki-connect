@@ -13,19 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import PyQt5
+
 from . import web
 
 
 class ApiHost:
-    def __init__(self, origins, key, interval, address, port):
+    def __init__(self, origins, key, address, port):
         self.key = key
         self.modules = []
-
         self.server = web.WebServer(self.handler, origins)
         self.server.bindAndListen(address, port)
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.advance)
+
+    def run(self, interval):
+        self.timer = PyQt5.QtCore.QTimer()
+        self.timer.timeout.connect(self.server.advance)
         self.timer.start(interval)
 
 
@@ -46,7 +49,7 @@ class ApiHost:
             method = None
             for module in self.modules:
                 for methodName, methodInstance in inspect.getmembers(module, predicate=inspect.ismethod):
-                    if getattr(methodInstance, 'api', False):
+                    if methodName == action and getattr(methodInstance, 'api', False):
                         method = methodInstance
                         break
 
@@ -57,8 +60,3 @@ class ApiHost:
 
         except Exception as e:
             return {'error': str(e), 'result': None}
-
-
-def api(method):
-    setattr(method, 'api', True)
-    return decorator

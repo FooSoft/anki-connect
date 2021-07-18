@@ -83,7 +83,7 @@ def setting(key):
     try:
         return aqt.mw.addonManager.getConfig(__name__).get(key, defaults[key])
     except:
-        raise Exception('setting {} not found'.format(key))
+        raise Exception(f'setting {key} not found')
 
 
 #
