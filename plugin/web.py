@@ -19,6 +19,7 @@ import socket
 
 from . import util
 
+
 #
 # WebRequest
 #
@@ -65,8 +66,6 @@ class WebClient:
                     self.readBuff = self.readBuff[length:]
                     self.writeBuff += self.handler(req)
                     break
-
-
 
         if wlist and self.writeBuff:
             try:
@@ -154,7 +153,6 @@ class WebServer:
 
 
     def handlerWrapper(self, req):
-
         # handle multiple cors origins by checking the 'origin'-header against the allowed origin list from the config
         webCorsOriginList = util.setting('webCorsOriginList')
 
@@ -166,7 +164,7 @@ class WebServer:
         allowed = False
         corsOrigin = 'http://localhost'
         allowAllCors = '*' in webCorsOriginList  # allow CORS for all domains
-        
+
         if allowAllCors:
             corsOrigin = '*'
             allowed = True
@@ -175,7 +173,7 @@ class WebServer:
             if originStr in webCorsOriginList :
                 corsOrigin = originStr
                 allowed = True
-            elif 'http://localhost' in webCorsOriginList and ( 
+            elif 'http://localhost' in webCorsOriginList and (
             originStr == 'http://127.0.0.1' or originStr == 'https://127.0.0.1' or # allow 127.0.0.1 if localhost allowed
             originStr.startswith('http://127.0.0.1:') or originStr.startswith('http://127.0.0.1:') or
             originStr.startswith('chrome-extension://') or originStr.startswith('moz-extension://') ) : # allow chrome and firefox extension if localhost allowed
@@ -184,10 +182,9 @@ class WebServer:
         else:
             allowed = True
 
-        resp = bytes()
-        paramsError = False
         try:
             params = json.loads(req.body.decode('utf-8'))
+            paramsError = False
         except ValueError:
             body = json.dumps(None).encode('utf-8')
             paramsError = True
@@ -202,9 +199,9 @@ class WebServer:
                     params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
                     if not allowed :
                         corsOrigin = params['params']['origin']
-                        
+
                 body = json.dumps(self.handler(params)).encode('utf-8')
-                    
+
             headers = [
                 ['HTTP/1.1 200 OK', None],
                 ['Content-Type', 'text/json'],
@@ -219,6 +216,8 @@ class WebServer:
                 ['Access-Control-Allow-Headers', '*']
             ]
             body = ''.encode('utf-8');
+
+        resp = bytes()
 
         for key, value in headers:
             if value is None:
