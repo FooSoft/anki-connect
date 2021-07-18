@@ -56,11 +56,6 @@ from . import web, util
 
 class AnkiConnect:
     def __init__(self):
-        self.log = None
-        logPath = util.setting('apiLogPath')
-        if logPath is not None:
-            self.log = open(logPath, 'w')
-
         try:
             self.server = web.WebServer(self.handler)
             self.server.listen()
@@ -76,21 +71,11 @@ class AnkiConnect:
             )
 
 
-    def logEvent(self, name, data):
-        if self.log is not None:
-            self.log.write('[{}]\n'.format(name))
-            json.dump(data, self.log, indent=4, sort_keys=True)
-            self.log.write('\n\n')
-            self.log.flush()
-
-
     def advance(self):
         self.server.advance()
 
 
     def handler(self, request):
-        self.logEvent('request', request)
-
         name = request.get('action', '')
         version = request.get('version', 4)
         params = request.get('params', {})
@@ -131,7 +116,6 @@ class AnkiConnect:
         except Exception as e:
             reply['error'] = str(e)
 
-        self.logEvent('reply', reply)
         return reply
 
 
