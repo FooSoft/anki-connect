@@ -84,3 +84,48 @@ def setting(key):
         return aqt.mw.addonManager.getConfig(__name__).get(key, defaults[key])
     except:
         raise Exception('setting {} not found'.format(key))
+
+
+#
+# Anki Helpers
+#
+
+def window(self):
+    return aqt.mw
+
+
+def reviewer():
+    return window().reviewer
+
+
+def collection(self):
+    return window().col
+
+
+def decks(self):
+    return collection().decks
+
+
+def scheduler(self):
+    return collection().sched
+
+
+def database(self):
+    return collection().db
+
+
+def media(self):
+    return collection().media
+
+
+def deckNames():
+    return decks().allNames()
+
+
+class EditScope:
+    def __enter__(self):
+        window().requireReset()
+
+    def __exit__(self):
+        window().maybeReset()
+
