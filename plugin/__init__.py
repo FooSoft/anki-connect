@@ -42,8 +42,6 @@ from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
-#from aqt import addcards
-
 try:
     from anki.rsbackend import NotFoundError
 except:
