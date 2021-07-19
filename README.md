@@ -974,7 +974,7 @@ corresponding to when the API was available for use.
 *   **guiAddCards**
 
     Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
-    Invoking it multiple times closes the old window and _reopen the window_ with the new provided va
+    Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
     
     If you are looking to add Anki cards automatically without using the GUI, please see `AddNote`. For ease of use and code legibility, an `autoAdd` option is also available for `guiAddCards`.
 
