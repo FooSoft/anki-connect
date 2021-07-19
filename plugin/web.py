@@ -116,9 +116,8 @@ class WebClient:
 #
 
 class WebServer:
-    def __init__(self, handler, origins):
+    def __init__(self, handler):
         self.handler = handler
-        self.origins = origins
         self.clients = []
         self.socket = None
 
@@ -153,22 +152,9 @@ class WebServer:
 
 
     def handlerWrapper(self, request):
-        if '*' in self.origins:
-            origin = '*'
-            allowed = True
-        else:
-            origin = request.headers.get('origin', 'http://127.0.0.1:')
-            for prefix in self.origins:
-                if origin.startswith(prefix):
-                    allowed = True
-                    break
-
         try:
             if request.body:
-                call = json.loads(request.body)
-                call['allowed'] = allowed
-                call['origin'] = origin
-                body = json.dumps(self.handler(call))
+                body = json.dumps(self.handler(json.loads(request.body)))
             else:
                 body = 'AnkiConnect'
         except Exception as e:
@@ -177,8 +163,8 @@ class WebServer:
         headers = [
             ['HTTP/1.1 200 OK', None],
             ['Content-Type', 'text/json'],
-            ['Access-Control-Allow-Origin', origin],
-            ['Access-Control-Allow-Headers', '*'],
+            # ['Access-Control-Allow-Origin', origin],
+            # ['Access-Control-Allow-Headers', '*'],
             ['Content-Length', len(body.encode('utf-8'))]
         ]
 

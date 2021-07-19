@@ -17,8 +17,9 @@ from . import util
 
 
 @util.api
-def guiBrowse(self, query=None):
+def guiBrowse(query=None):
     print(query)
+    return 'hi'
     # browser = aqt.dialogs.open('Browser', self.window())
     # browser.activateWindow()
     #

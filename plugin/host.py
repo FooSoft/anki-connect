@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import inspect
 import PyQt5
 
 from . import web
@@ -20,9 +21,10 @@ from . import web
 
 class ApiHost:
     def __init__(self, origins, key, address, port):
+        self.origins = origins
         self.key = key
         self.modules = []
-        self.server = web.WebServer(self.handler, origins)
+        self.server = web.WebServer(self.handler)
         self.server.bindAndListen(address, port)
 
 
@@ -39,19 +41,36 @@ class ApiHost:
     def handler(self, call):
         action = call.get('action')
         params = call.get('params', {})
-        allowed = call.get('allowed', False)
-        key = call.get('key')
 
         try:
-            if key != self.key and action != 'requestPermission':
-                raise Exception('valid api key must be provided')
-
             for module in self.modules:
-                for methodName, methodInstance in inspect.getmembers(module, predicate=inspect.ismethod):
-                    if methodName == action and getattr(methodInstance, 'api', False):
-                        return {'error': None, 'result': methodInstance(**params)}
+                for funcName, funcInstance in inspect.getmembers(module, predicate=inspect.isfunction):
+                    if funcName == action and getattr(funcInstance, 'api', False):
+                        return {'error': None, 'result': funcInstance(**params)}
             else:
                 raise Exception('unsupported action')
 
         except Exception as e:
             return {'error': str(e), 'result': None}
+
+# if '*' in self.origins:
+#     origin = '*'
+#     allowed = True
+# else:
+#     origin = request.headers.get('origin', 'http://127.0.0.1:')
+#     for prefix in self.origins:
+#         if origin.startswith(prefix):
+#             allowed = True
+#             break
+#
+# try:
+#     if request.body:
+#         call = json.loads(request.body)
+#         call['allowed'] = allowed
+#         call['origin'] = origin
+#         body = json.dumps(self.handler(call))
+#     else:
+#         body = 'AnkiConnect'
+# except Exception as e:
+#     body = str(e)
+
