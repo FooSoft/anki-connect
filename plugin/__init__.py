@@ -1347,7 +1347,6 @@ class AnkiConnect:
                 def _addCards(self):
                     #added silentlyClose feature
                     self.silentlyClose = True
-                    # super()._addCards() LEGACY COMMAND
                     super()._addCards()
 
                     # if adding was successful it must mean it was added to the history of the window
