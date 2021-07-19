@@ -34,9 +34,9 @@ def query(key):
         raise Exception('setting {} not found'.format(key))
 
     if key == 'webCorsOriginList':
-        originOld = query('webCorsOrigin')
-        if originOld:
-            value.append(originOld)
+        origin = query('webCorsOrigin')
+        if origin:
+            value.append(origin)
 
         value += [
             'http://127.0.0.1:',

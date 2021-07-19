@@ -30,4 +30,3 @@ def guiBrowse(self, query=None):
     #         browser.onSearchActivated()
     #
     # return list(map(int, browser.model.cards))
-

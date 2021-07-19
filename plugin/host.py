@@ -46,15 +46,10 @@ class ApiHost:
             if key != self.key and action != 'requestPermission':
                 raise Exception('valid api key must be provided')
 
-            method = None
             for module in self.modules:
                 for methodName, methodInstance in inspect.getmembers(module, predicate=inspect.ismethod):
                     if methodName == action and getattr(methodInstance, 'api', False):
-                        method = methodInstance
-                        break
-
-            if method:
-                return {'error': None, 'result': methodInstance(**params)}
+                        return {'error': None, 'result': methodInstance(**params)}
             else:
                 raise Exception('unsupported action')
 
