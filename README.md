@@ -444,6 +444,36 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **cardsModTime**
+
+    Returns a list of objects containings for each card ID the modification time.
+    This function is about 15 times faster than executing `cardsInfo`.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "cardsModTime",
+        "version": 6,
+        "params": {
+            "cards": [1498938915662, 1502098034048]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [
+            {
+                "cardId": 1498938915662,
+                "mod": 1629454092
+            }
+        ],
+        "error": null
+    }
+    ```
+
+
 *   **cardsInfo**
 
     Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
