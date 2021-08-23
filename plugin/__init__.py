@@ -1167,7 +1167,7 @@ class AnkiConnect:
                     'reps': card.reps,
                     'lapses': card.lapses,
                     'left': card.left,
-                     'mod': card.mod,
+                    'mod': card.mod,
                 })
             except NotFoundError:
                 # Anki will give a NotFoundError if the card ID does not exist.
