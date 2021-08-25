@@ -685,6 +685,40 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+*   **createFilteredDeck**
+
+    Create a new filtered deck. Will not overwrite any deck that exists with the same name.
+    The parameter n_limit refer to the number of cards to gather,
+    reschedule to ticking the box "Reschedule based on my answers on this deck" from the gui,
+    sortOrder to the sorting order, but can either be the string corresponding to the sorting name
+    or a number from 0 to 8 corresponding to the index in the gui list.
+    Adding a second filter and changing the repeat number is not (yet) supported. 
+    Inspiration from the code was taken from the addon [batch create filtered decks](https://ankiweb.net/shared/info/1515706653)
+    The output is the number of the created deck (did).
+
+
+    *Sample request*:
+    ```json
+    {
+        "action": "createFilteredDeck",
+        "version": 6,
+        "params": {
+            "newDeckName": "Japanese::Tokyo_filtered",
+            "searchQuery": "is:due",
+            "n_limit": 50,
+            "reschedule": True,
+            "sortOrder": "Oldest seen first"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": 1519323742721,
+        "error": null
+    }
+    ```
 *   **changeDeck**
 
     Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.

@@ -504,6 +504,50 @@ class AnkiConnect:
 
 
     @util.api()
+    def createFilteredDeck(self, newDeckName="New filtered deck", searchQuery="", n_limit=50, reschedule=True, sortOrder=0):
+        # first checks if the deck name is not already taken
+        deckList = self.decks().allNames()
+        newDeckName = str(newDeckName)
+        if newDeckName in deckList:
+            return False  # deckname already taken
+
+        try:
+            sortOrder = int(sortOrder)
+        except ValueError:
+            sortOrder = str(sortOrder)
+            if sortOrder == "Oldest seen first":
+                sortOrder = 0
+            if sortOrder == "Random":
+                sortOrder = 1
+            if sortOrder == "Increasing intervals":
+                sortOrder = 2
+            if sortOrder == "Decreasing intervals":
+                sortOrder = 3
+            if sortOrder == "Most lapses":
+                sortOrder = 4
+            if sortOrder == "sortOrder added":
+                sortOrder = 5
+            if sortOrder == "sortOrder due":
+                sortOrder = 6
+            if sortOrder == "Latest added First":
+                sortOrder = 7
+            if sortOrder == "Relative overdueness":
+                sortOrder = 8
+        try:
+            sortOrder = int(sortOrder)
+        except ValueError:
+            return False # means that the input sortOrder was an incorrect string
+
+        did = self.collection().decks.newDyn(newDeckName)
+        d = self.collection().decks.current()
+        d["terms"] = [[str(searchQuery), int(n_limit), sortOrder]]
+        d["resched"] = reschedule
+        self.collection().decks.save(d)
+
+        return did
+
+
+    @util.api()
     def changeDeck(self, cards, deck):
         self.startEditing()
 
