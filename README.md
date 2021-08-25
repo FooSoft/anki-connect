@@ -997,7 +997,7 @@ corresponding to when the API was available for use.
 *   **guiBrowse**
 
     Invokes the *Card Browser* dialog and searches for a given query. Returns an array of identifiers of the cards that
-    were found. Query syntax is [documented here](https://docs.ankiweb.net/#/searching).
+    were found. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
 
     *Sample request*:
     ```json
@@ -2368,7 +2368,7 @@ corresponding to when the API was available for use.
 
 *   **findNotes**
 
-    Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/#/searching).
+    Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
 
     *Sample request*:
     ```json
