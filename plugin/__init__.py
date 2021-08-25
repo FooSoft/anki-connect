@@ -1167,6 +1167,7 @@ class AnkiConnect:
                     'reps': card.reps,
                     'lapses': card.lapses,
                     'left': card.left,
+                    'mod': card.mod,
                 })
             except NotFoundError:
                 # Anki will give a NotFoundError if the card ID does not exist.
@@ -1175,6 +1176,24 @@ class AnkiConnect:
                 # lists correspond.
                 result.append({})
 
+        return result
+
+    @util.api()
+    def cardsModTime(self, cards):
+        result = []
+        for cid in cards:
+            try:
+                card = self.getCard(cid)
+                result.append({
+                    'cardId': card.id,
+                    'mod': card.mod,
+                })
+            except NotFoundError:
+                # Anki will give a NotFoundError if the card ID does not exist.
+                # Best behavior is probably to add an 'empty card' to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
         return result
 
 
