@@ -1141,17 +1141,17 @@ class AnkiConnect:
                 model = card.model()
                 note = card.note()
                 fields = {}
-                fields_no_html = {}
-                #fields_no_html_no_media = {}
+                fields_strip_html = {}
+                #fields_strip_html_media = {}
 
                 for info in model['flds']:
                     order = info['ord']
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
-                    fields_no_html[name] = {'value':
+                    fields_strip_html[name] = {'value':
                         stripHTML(note.fields[order]),
                         'order': order}
-                    #fields_no_html_no_media[name] = {'value':
+                    #fields_strip_html_media[name] = {'value':
                     #   stripHTMLMedia(note.fields[order]),
                     #   'order': order}
 
@@ -1159,8 +1159,8 @@ class AnkiConnect:
                 result.append({
                     'cardId': card.id,
                     'fields': fields,
-                    'fields_no_html': fields_no_html,
-                    #'fields_no_html_no_media': fields_no_html_no_media,
+                    'fields_strip_html': fields_strip_html,
+                    #'fields_strip_html_media': fields_strip_html_media,
 
                     'fieldOrder': card.ord,
                     'question': util.cardQuestion(card),

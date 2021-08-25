@@ -504,7 +504,7 @@ corresponding to when the API was available for use.
                     "Front": {"value": "front content", "order": 0},
                     "Back": {"value": "back content", "order": 1}
                 },
-                "fields_no_html": {
+                "fields_strip_html": {
                     "Front": {"value": "front content", "order": 0},
                     "Back": {"value": "back content", "order": 1}
                 },
