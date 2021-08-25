@@ -666,6 +666,7 @@ corresponding to when the API was available for use.
 *   **createDeck**
 
     Create a new empty deck. Will not overwrite a deck that exists with the same name.
+    The output is the number of the created deck (did).
 
     *Sample request*:
     ```json
