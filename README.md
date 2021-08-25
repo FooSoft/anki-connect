@@ -476,7 +476,7 @@ corresponding to when the API was available for use.
 
 *   **cardsInfo**
 
-    Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
+    Returns a list of objects containing for each card ID the card fields, the card fields with HTML stripped, front and back sides including CSS, note
     type, the note that the card belongs to, and deck name, last modification timestamp as well as ease and interval.
 
     *Sample request*:
@@ -501,6 +501,10 @@ corresponding to when the API was available for use.
                 "modelName": "Basic",
                 "fieldOrder": 1,
                 "fields": {
+                    "Front": {"value": "front content", "order": 0},
+                    "Back": {"value": "back content", "order": 1}
+                },
+                "fields_no_html": {
                     "Front": {"value": "front content", "order": 0},
                     "Back": {"value": "back content", "order": 1}
                 },

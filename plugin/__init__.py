@@ -40,7 +40,7 @@ from anki.consts import MODEL_CLOZE
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
-from anki.utils import joinFields, intTime, guid64, fieldChecksum
+from anki.utils import joinFields, intTime, guid64, fieldChecksum, stripHTML, stripHTMLMedia
 
 try:
     from anki.rsbackend import NotFoundError
@@ -1141,14 +1141,27 @@ class AnkiConnect:
                 model = card.model()
                 note = card.note()
                 fields = {}
+                fields_no_html = {}
+                #fields_no_html_no_media = {}
+
                 for info in model['flds']:
                     order = info['ord']
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
+                    fields_no_html[name] = {'value':
+                        stripHTML(note.fields[order]),
+                        'order': order}
+                    #fields_no_html_no_media[name] = {'value':
+                    #   stripHTMLMedia(note.fields[order]),
+                    #   'order': order}
+
 
                 result.append({
                     'cardId': card.id,
                     'fields': fields,
+                    'fields_no_html': fields_no_html,
+                    #'fields_no_html_no_media': fields_no_html_no_media,
+
                     'fieldOrder': card.ord,
                     'question': util.cardQuestion(card),
                     'answer': util.cardAnswer(card),
