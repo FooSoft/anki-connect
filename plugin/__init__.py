@@ -74,7 +74,18 @@ class AnkiConnect:
                 'AnkiConnect',
                 'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(util.setting('webBindPort'))
             )
-        self.allowToRunDebugConsoleCmd = util.setting('allowToRunDebugConsoleCmd')
+        if util.setting('allowToRunDebugConsoleCmd') == "yes":
+            button = QMessageBox.critical(
+                    self.window(),
+                    "anki-connect warning",
+                    "anki-connect is currently set to accept remote python command,\
+are you sure you want to enable it? Clicking no will disable it until next startup.",
+                    buttons=QMessageBox.Yes | QMessageBox.No,
+                    defaultButton=QMessageBox.No)
+            if button != QMessageBox.Yes:
+                self.allowToRunDebugConsoleCmd = "no"
+            elif button == QMessageBox.Yes:
+                self.allowToRunDebugConsoleCmd = "yes"
 
 
     def logEvent(self, name, data):
