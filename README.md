@@ -1694,6 +1694,40 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **runConsoleCmd**
+
+    Runs python command just like if you ran it into anki's debug console and captures the output.
+    Given the security risk, this has to be enabled first by
+        * setting the corresponding option to "yes" in anki-connect settings
+        * passing as argument the token "I understand that calling this is a security risk!" 
+    Just like in anki's console, `pp()` can be used to pretty print, `pp(card())` returns the 
+    card being reviewed in anki and `pp(bcard())` returns the card being viewed in the browser.
+    The local environnement is not saved after `cmd` has been run.
+    `cmd` can either be a string, a multiline string or even a list of strings (each string 
+    containing a line of code).
+    Use at your own risks.
+
+    *Sample request*:
+
+    ```json
+    {
+        "action": "runConsoleCmd",
+        "version": 6,
+        "params": {
+            "cmd": "pp(card())",
+            "token": "I understand that calling this is a security risk!"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": "<anki.cards.Card object at 0x7f97#######> {'data': '', 'did': 157753######, 'due': 1###, 'factor': 0, 'flags': 0, 'id': 16238#####, 'ivl': 0, 'lapses': 0, 'left': 1###, 'mod': 16######, 'nid': 1623#####, 'odid': 0, 'odue': 0, 'ord': 0, 'queue': 3, 'reps': 2, 'type': 1, 'usn': 17902}\n",
+        "error": null
+    }
+    ```
+
 *   **reloadCollection**
 
     Tells anki to reload all data from the database.

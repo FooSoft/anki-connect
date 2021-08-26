@@ -74,6 +74,7 @@ class AnkiConnect:
                 'AnkiConnect',
                 'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(util.setting('webBindPort'))
             )
+        self.allowToRunDebugConsoleCmd = util.setting('allowToRunDebugConsoleCmd')
 
 
     def logEvent(self, name, data):
@@ -1702,6 +1703,47 @@ class AnkiConnect:
                 return True
 
         return False
+
+
+    @util.api()
+    def runConsoleCmd(self, cmd, token):
+        if token != "I understand that calling this is a security risk!":
+            raise Exception("Wrong token.")
+        if self.allowToRunDebugConsoleCmd.lower() != "yes":
+            raise Exception("To enable this function you must enable it in anki settings.")
+
+        # this whole function is adapted from anki/qt/aqt/main.py#L1531
+        # the function there manages the console and is
+        # called onDebugRet on August 26th 2021
+        import pprint
+        import traceback
+        import sys
+        from typing import (TextIO, cast)
+        pp = pprint.pprint
+        card = aqt.mw._debugCard
+        bcard = aqt.mw._debugBrowserCard
+
+        self._consoleOutput = ""
+        mw2 = self
+        class Stream:
+            def write(self, data):
+                mw2._consoleOutput += data
+
+        try:
+            self._oldStderr = sys.stderr
+            self._oldStdout = sys.stdout
+            s = cast(TextIO, Stream())
+            sys.stderr = s
+            sys.stdout = s
+            exec(cmd)
+        except Exception as e:
+            self._consoleOutput += traceback.format_exc()
+            raise Exception(f"Error: {e}")
+        finally:
+            sys.stderr = self._oldStderr
+            sys.stdout = self._oldStdout
+        return self._consoleOutput
+
 
 #
 # Entry

@@ -78,6 +78,7 @@ def setting(key):
         'webCorsOriginList': ['http://localhost'],
         'ignoreOriginList': [],
         'webTimeout': 10000,
+        'allowToRunDebugConsoleCmd': 'no'
     }
 
     try:
