@@ -689,9 +689,18 @@ corresponding to when the API was available for use.
 *   **createFilteredDeck**
 
     Create a new filtered deck. Will not overwrite any deck that exists with the same name.
-    * n_limit refer to the number of cards to gather
+    * gatherCount refer to the number of cards to gather
     * reschedule refers to ticking the box "Reschedule based on my answers on this deck" from the gui
-    * sortOrder to the sorting order, but can either be the string corresponding to the sorting name or a number from 0 to 8 corresponding to the index in the gui list.
+    * sortOrder to the sorting order according to the code below:
+        * 0 for "Oldest seen first"
+        * 1 for "Random"
+        * 2 for "Increasing intervals"
+        * 3 for "Decreasing intervals"
+        * 4 for "Most lapses"
+        * 5 for "Order added"
+        * 6 for "Order due"
+        * 7 for "Latest added first"
+        * 8 for "Relative overdueness"
     Adding a second filter and changing the repeat number is not (yet) supported. 
     Inspiration from the code was taken from the addon [batch create filtered decks](https://ankiweb.net/shared/info/1515706653)
     The output is the number of the created deck (did).
@@ -705,8 +714,8 @@ corresponding to when the API was available for use.
         "params": {
             "newDeckName": "Japanese::Tokyo_filtered",
             "searchQuery": "is:due",
-            "n_limit": 50,
-            "reschedule": True,
+            "gatherCount": 50,
+            "reschedule": true,
             "sortOrder": "Oldest seen first"
         }
     }
