@@ -1703,7 +1703,7 @@ corresponding to when the API was available for use.
         * passing as argument the token "I understand that calling this is a security risk!"
     Just like in anki's console, `pp()` can be used to pretty print, `pp(card())` returns the 
     card being reviewed in anki and `pp(bcard())` returns the card being viewed in the browser.
-    The local environnement is not saved after `cmd` has been run.
+    The local environnement is not lost between commands.
     `cmd` can either be a string, a multiline string or even a list of strings (each string 
     containing a line of code).
     Use at your own risks.
