@@ -2349,7 +2349,7 @@ corresponding to when the API was available for use.
     *Sample request*:
     ```json
     {
-        "action": "replaceTagsInAllCards",
+        "action": "replaceTagsInAllNotes",
         "version": 6,
         "params": {
             "tag_to_replace": "european-languages",
