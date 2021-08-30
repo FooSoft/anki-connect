@@ -74,7 +74,8 @@ class AnkiConnect:
                 'AnkiConnect',
                 'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(util.setting('webBindPort'))
             )
-        if util.setting('allowToRunDebugConsoleCmd') == "yes":
+        if util.setting('allowToRunDebugConsoleCmd') == "yes" \
+                and util.setting('allowToRunDebugConsoleCmd') != "always" :
             button = QMessageBox.critical(
                     self.window(),
                     "anki-connect warning",
@@ -1720,7 +1721,7 @@ are you sure you want to enable it? Clicking no will disable it until next start
     def runConsoleCmd(self, cmd, token):
         if token != "I understand that calling this is a security risk!":
             raise Exception("Wrong token.")
-        if self.allowToRunDebugConsoleCmd.lower() != "yes":
+        if self.allowToRunDebugConsoleCmd.lower() not in ["yes", "always"]:
             raise Exception("To enable this function you must enable it in anki settings.")
 
         # this whole function is adapted from anki/qt/aqt/main.py#L1531

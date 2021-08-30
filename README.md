@@ -1698,9 +1698,9 @@ corresponding to when the API was available for use.
 
     Runs python command just like if you ran it into anki's debug console and captures the output.
     Given the security risk, this has to be enabled first by
-        * setting the corresponding option to "yes" in anki-connect settings, then restarting anki
-        * pressing "Yes" in the popup asking confirmation (just after anki starts)
-        * passing as argument the token "I understand that calling this is a security risk!"
+        * setting the corresponding option to "yes" or "always" in anki-connect settings, then restarting anki
+        * If set to "yes", an popup when anki starts will ask you to confirm the autorization or disable it for the session (this is to avoid forgetting that you put it on). If set to "always", no warning will be given.
+        * Finally, when calling the API you must pass the following token as argument: "I understand that calling this is a security risk!"
     Just like in anki's console, `pp()` can be used to pretty print, `pp(card())` returns the 
     card being reviewed in anki and `pp(bcard())` returns the card being viewed in the browser.
     The local environnement is not lost between commands.
