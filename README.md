@@ -2474,7 +2474,7 @@ corresponding to when the API was available for use.
 *   **notesInfo**
 
     Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to
-    the note.
+    the note. Fetching informations about a large number of cards can be slow and freeze anki's interface, but python's Threading module can be used to query information in parallel batches and speed up the task.
 
     *Sample request*:
     ```json
