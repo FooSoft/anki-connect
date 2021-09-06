@@ -517,7 +517,7 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
 
     @util.api()
-    def createFilteredDeck(self, newDeckName='New filtered deck', searchQuery='', gatherCount=50, reschedule=True, sortOrder=0):
+    def createFilteredDeck(self, newDeckName='New filtered deck', searchQuery='', gatherCount=50, reschedule=True, sortOrder=0, createEmpty=False):
         # first checks if the deck name is not already taken
         deckList = self.decks().allNames()
         newDeckName = str(newDeckName)
@@ -529,6 +529,9 @@ are you sure you want to enable it? Clicking no will disable it until next start
         d['terms'] = [[str(searchQuery), int(gatherCount), sortOrder]]
         d['resched'] = reschedule
         self.collection().decks.save(d)
+        if createEmpty is False:
+            aqt.mw.col.sched.rebuild_filtered_deck(did)
+            aqt.mw.reset()
 
         return did
 

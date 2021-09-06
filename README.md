@@ -701,6 +701,7 @@ corresponding to when the API was available for use.
         * 6 for "Order due"
         * 7 for "Latest added first"
         * 8 for "Relative overdueness"
+    * createEmpty can be True or False, meaning the new deck will be already filled or not.
     Adding a second filter and changing the repeat number is not (yet) supported. 
     Inspiration from the code was taken from the addon [batch create filtered decks](https://ankiweb.net/shared/info/1515706653)
     The output is the number of the created deck (did).
