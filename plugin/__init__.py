@@ -854,6 +854,38 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
         return couldSetEaseFactors
 
+    @util.api()
+    def setSpecificValueOfCard(self, card, keys, newValues):
+        if isinstance(card, list):
+            print("card has to be int, not list")
+            return False
+
+        if not isinstance(keys, list) or not isinstance(newValues, list):
+            print("keys and newValues have to be lists.")
+            return False
+
+        if len(newValues) != len(keys):
+            print("Invalid list lengths.")
+            return False
+
+        for key in keys:
+            if key in ["did", "id", "ivl", "lapses", "left", "mod", "nid", "odid", "odue", "ord", "queue", "reps", "type", "usn"]:
+                print("This key is too dangerous to edit manually. Consider another approach.")
+                return False
+            if key not in ["data", "flags", "factor", "due"]:
+                print(f"Invalid key: {key}")
+                return False
+
+        result = []
+        try:
+            ankiCard = self.getCard(card)
+            for i, key in enumerate(keys):
+                setattr(ankiCard, key, newValues[i])
+            ankiCard.flush()
+            result.append(True)
+        except Exception as e:
+            result.append([False, str(e)])
+        return result
 
     @util.api()
     def getEaseFactors(self, cards):
