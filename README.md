@@ -95,7 +95,11 @@ def request(action, **params):
 
 def invoke(action, **params):
     requestJson = json.dumps(request(action, **params)).encode('utf-8')
-    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+    try:
+        response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+    except (ConnectionRefusedError, urllib.error.URLError) as e:
+       print(f"Error code '{e}': is Anki open and ankiconnect enabled?")
+       return False
     if len(response) != 2:
         raise Exception('response has an unexpected number of fields')
     if 'error' not in response:
