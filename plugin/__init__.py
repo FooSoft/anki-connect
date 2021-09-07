@@ -730,6 +730,7 @@ class AnkiConnect:
     def updateNoteFields(self, note):
         ankiNote = self.getNote(note['id'])
 
+        self.startEditing()
         for name, value in note['fields'].items():
             if name in ankiNote:
                 ankiNote[name] = value
@@ -744,6 +745,9 @@ class AnkiConnect:
         self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
 
         ankiNote.flush()
+
+        self.collection().autosave()
+        self.stopEditing()
 
 
     @util.api()
