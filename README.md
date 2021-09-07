@@ -748,7 +748,7 @@ corresponding to when the API was available for use.
             "searchQuery": "is:due",
             "gatherCount": 50,
             "reschedule": true,
-            "sortOrder": "Oldest seen first"
+            "sortOrder": 0
         }
     }
     ```
