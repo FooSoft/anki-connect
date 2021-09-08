@@ -1230,6 +1230,7 @@ are you sure you want to enable it? Clicking no will disable it until next start
                     'ord': card.ord,
                     'deckName': self.deckNameFromId(card.did),
                     'css': model['css'],
+                    'tags': note.tags,
                     'factor': card.factor,
                     #This factor is 10 times the ease percentage,
                     # so an ease of 310% would be reported as 3100
