@@ -837,7 +837,6 @@ are you sure you want to enable it? Clicking no will disable it until next start
         self.window().progress.finish()
         self.window().reset()
 
-
     @util.api()
     def setEaseFactors(self, cards, easeFactors):
         couldSetEaseFactors = []
