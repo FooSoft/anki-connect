@@ -235,9 +235,9 @@ corresponding to when the API was available for use.
 
 *   **setSpecificValueOfCard**
 
-    Sets specific value of a single card. Given the risk of wreaking havor in the database when changing some of the values of a card, only the column "data", "flags", "odue" and "factors" can currently be altered.
-    Explanation of the utility of each value can be found at [AnkiDroid's wiki](https://github.com/ankidroid/Anki-Android/wiki/Database-Structure).
-    This can be used to set a card's flag, change it's ease factor, change the review order in a filtered deck and change the column "data" (not currently used by anki).
+    Sets specific value of a single card. Given the risk of wreaking havor in the database when changing some of the values of a card, some of the keys require the argument "warning_check" set to True..
+    This can be used to set a card's flag, change it's ease factor, change the review order in a filtered deck and change the column "data" (not currently used by anki), and many other values.
+    The full list of values and explanation of their respective utility can be found at [AnkiDroid's wiki](https://github.com/ankidroid/Anki-Android/wiki/Database-Structure).
 
     *Sample request*:
     ```json

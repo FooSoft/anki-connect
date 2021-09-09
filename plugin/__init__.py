@@ -855,7 +855,8 @@ are you sure you want to enable it? Clicking no will disable it until next start
         return couldSetEaseFactors
 
     @util.api()
-    def setSpecificValueOfCard(self, card, keys, newValues):
+    def setSpecificValueOfCard(self, card, keys,
+                               newValues, warning_check=False):
         if isinstance(card, list):
             print("card has to be int, not list")
             return False
@@ -869,12 +870,10 @@ are you sure you want to enable it? Clicking no will disable it until next start
             return False
 
         for key in keys:
-            if key in ["did", "id", "ivl", "lapses", "left", "mod", "nid", "odid", "odue", "ord", "queue", "reps", "type", "usn"]:
-                print("This key is too dangerous to edit manually. Consider another approach.")
-                return False
-            if key not in ["data", "flags", "factor", "due"]:
-                print(f"Invalid key: {key}")
-                return False
+            if key in ["did", "id", "ivl", "lapses", "left", "mod", "nid",
+                       "odid", "odue", "ord", "queue", "reps", "type", "usn"]:
+                if warning_check is False:
+                    return False
 
         result = []
         try:
