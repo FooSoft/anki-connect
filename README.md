@@ -508,7 +508,7 @@ corresponding to when the API was available for use.
 *   **cardsInfo**
 
     Returns a list of objects containing for each card ID the card fields, the card fields with HTML stripped, front and back sides including CSS, note
-    type, the note that the card belongs to, and deck name, tags, last modification timestamp as well as ease and interval.
+    type, the note the card belongs to, and deck name, tags, last modification timestamp as well as ease, interval, due date and original due date.
 
     *Sample request*:
     ```json
@@ -547,6 +547,7 @@ corresponding to when the API was available for use.
                 "type": 0,
                 "queue": 0,
                 "due": 1,
+                "odue": 1,
                 "reps": 1,
                 "lapses": 0,
                 "left": 6,

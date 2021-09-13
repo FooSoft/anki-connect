@@ -1237,6 +1237,7 @@ are you sure you want to enable it? Clicking no will disable it until next start
                     'type': card.type,
                     'queue': card.queue,
                     'due': card.due,
+                    'odue': card.odue,
                     'reps': card.reps,
                     'lapses': card.lapses,
                     'left': card.left,
