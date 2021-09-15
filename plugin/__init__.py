@@ -1348,7 +1348,7 @@ class AnkiConnect:
             else:
                 browser.onSearchActivated()
 
-        return list(map(int, browser.model.cards))
+        return self.findCards(query)
 
 
     @util.api()
