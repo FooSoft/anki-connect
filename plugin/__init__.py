@@ -1782,7 +1782,7 @@ are you sure you want to enable it? Clicking no will disable it until next start
             s = cast(TextIO, Stream())
             sys.stderr = s
             sys.stdout = s
-            exec(cmd, locals(), globals())
+            exec(cmd, globals(), locals())
         except Exception as e:
             self._consoleOutput += traceback.format_exc()
             raise Exception(f"Error: {e}")
