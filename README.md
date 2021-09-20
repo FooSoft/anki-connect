@@ -81,7 +81,7 @@ included below as reference.
 #### Curl
 
 ```bash
-curl localhost:8765 -X POST -d "{\"action\": \"deckNames\", \"version\": 6}"
+curl localhost:8765 -X POST -d '{"action": "deckNames", "version": 6}'
 ```
 
 #### Python
