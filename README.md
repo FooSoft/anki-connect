@@ -1727,6 +1727,27 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **getCollectionCreationTime**
+
+    Get creation time of your anki collection. Used to calculate relative_overdueness for example.
+
+    *Sample request*:
+
+    ```json
+    {
+        "action": "getCollectionCreationTime",
+        "version": 6,
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": 153585230,
+        "error": null
+    }
+    ```
+
 *   **runConsoleCmd**
 
     Runs python command just like if you ran it into anki's debug console and captures the output.

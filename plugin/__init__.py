@@ -1753,6 +1753,14 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
 
     @util.api()
+    def getCollectionCreationTime(self):
+        try:
+            return aqt.mw.col.crt
+        except:
+            return False
+
+
+    @util.api()
     def runConsoleCmd(self, cmd, token):
         if token != "I understand that calling this is a security risk!":
             raise Exception("Wrong token.")
