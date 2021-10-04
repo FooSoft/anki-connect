@@ -942,6 +942,43 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
         return suspended
 
+    @util.api()
+    def bury(self, cards, bury=True):
+        for card in cards:
+            if self.buried(card) == bury:
+                cards.remove(card)
+
+        scheduler = self.scheduler()
+        self.startEditing()
+        if bury:
+            scheduler.buryCards(cards)
+        else:
+            scheduler.unburyCards(cards)
+        self.stopEditing()
+
+        return True
+
+    @util.api()
+    def unbury(self, cards):
+        self.bury(cards, False)
+
+    @util.api()
+    def buried(self, card):
+        card = self.getCard(card)
+        if card.queue in [-3, -2]:
+            return card.queue
+        else:
+            return False
+
+    @util.api()
+    def areBuried(self, cards):
+        buried = []
+        for card in cards:
+            try:
+                buried.append(self.buried(card))
+            except NotFoundError:
+                buried.append(None)
+        return buried
 
     @util.api()
     def areDue(self, cards):

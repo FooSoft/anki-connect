@@ -355,6 +355,100 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **bury**
+
+    Bury cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+    otherwise.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "bury",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
+*   **unbury**
+
+    Unbury cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+    otherwise.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "unbury",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
+*   **buried**
+
+    Check if card is buried by its ID. Returns `true` if suspended, `false` otherwise.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "suspended",
+        "version": 6,
+        "params": {
+            "card": 1483959293217
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+
+*   **areBuried**
+
+    Returns an array indicating whether each of the given cards is buried (in the same order). If card doesn't
+    exist returns `null`.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "areBuried",
+        "version": 6,
+        "params": {
+            "cards": [1483959291685, 1483959293217, 1234567891234]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [false, true, null],
+        "error": null
+    }
+    ```
 *   **areDue**
 
     Returns an array indicating whether each of the given cards is due (in the same order). *Note*: cards in the
