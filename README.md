@@ -2461,7 +2461,7 @@ corresponding to when the API was available for use.
 
 *   **addTags**
 
-    Adds tags to notes by note ID.
+    Adds tags to notes by note ID. If large amount of tags need to be set, the argument "batchmode" can be provided. Just pass "batchmode='open'" to notify the database that it will be modified, use "batchmode='ongoing'" while sending addTags requests, then tell the database to refresh using "batchmode='close'". Otherwise, the database is openend and closed each time.
 
     *Sample request*:
     ```json
@@ -2470,7 +2470,8 @@ corresponding to when the API was available for use.
         "version": 6,
         "params": {
             "notes": [1483959289817, 1483959291695],
-            "tags": "european-languages"
+            "tags": "european-languages",
+            "batchmode": None
         }
     }
     ```

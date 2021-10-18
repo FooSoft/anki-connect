@@ -780,15 +780,26 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
 
     @util.api()
-    def addTags(self, notes, tags, add=True):
-        self.startEditing()
-        self.collection().tags.bulkAdd(notes, tags, add)
-        self.stopEditing()
+    def addTags(self, notes=None, tags=None, add=True, batchmode=None):
+        if batchmode not in [None, "open", "ongoing", "close"]:
+            return False
+
+        if batchmode == "open":
+            self.startEditing()
+        elif batchmode == "ongoing":
+            self.collection().tags.bulkAdd(notes, tags, add)
+        elif batchmode == "close":
+            self.stopEditing()
+        elif batchmode is None:
+            self.startEditing()
+            self.collection().tags.bulkAdd(notes, tags, add)
+            self.stopEditing()
+        return True
 
 
     @util.api()
-    def removeTags(self, notes, tags):
-        return self.addTags(notes, tags, False)
+    def removeTags(self, notes=None, tags=None, batchmode=None):
+        return self.addTags(notes=notes, tags=tags, add=False, batchmode=batchmode)
 
 
     @util.api()
