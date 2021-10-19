@@ -1244,60 +1244,116 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
 
     @util.api()
-    def cardsInfo(self, cards):
+    def cardsInfo(self, cards, select="all"):
         result = []
-        for cid in cards:
-            try:
-                card = self.getCard(cid)
-                model = card.model()
-                note = card.note()
-                fields = {}
-                fields_strip_html = {}
+        if select == "all":
+            for cid in cards:
+                try:
+                    card = self.getCard(cid)
+                    model = card.model()
+                    note = card.note()
+                    fields = {}
+                    fields_strip_html = {}
 
-                for info in model['flds']:
-                    order = info['ord']
-                    name = info['name']
-                    fields[name] = {'value': note.fields[order], 'order': order}
-                    fields_strip_html[name] = {'value':
-                        stripHTML(note.fields[order]),
-                        # alternatively, anki.utils contains a
-                        # method called stripHTMLMedia
-                        'order': order}
+                    for info in model['flds']:
+                        order = info['ord']
+                        name = info['name']
+                        fields[name] = {'value': note.fields[order], 'order': order}
+                        fields_strip_html[name] = {'value':
+                            stripHTML(note.fields[order]),
+                            # alternatively, anki.utils contains a
+                            # method called stripHTMLMedia
+                            'order': order}
 
 
-                result.append({
-                    'cardId': card.id,
-                    'fields': fields,
-                    'fields_strip_html': fields_strip_html,
-                    'fieldOrder': card.ord,
-                    'question': util.cardQuestion(card),
-                    'answer': util.cardAnswer(card),
-                    'modelName': model['name'],
-                    'ord': card.ord,
-                    'deckName': self.deckNameFromId(card.did),
-                    'css': model['css'],
-                    'tags': note.tags,
-                    'factor': card.factor,
-                    #This factor is 10 times the ease percentage,
-                    # so an ease of 310% would be reported as 3100
-                    'interval': card.ivl,
-                    'note': card.nid,
-                    'type': card.type,
-                    'queue': card.queue,
-                    'due': card.due,
-                    'odue': card.odue,
-                    'reps': card.reps,
-                    'lapses': card.lapses,
-                    'left': card.left,
-                    'mod': card.mod,
-                })
-            except NotFoundError:
-                # Anki will give a NotFoundError if the card ID does not exist.
-                # Best behavior is probably to add an 'empty card' to the
-                # returned result, so that the items of the input and return
-                # lists correspond.
-                result.append({})
+                    result.append({
+                        'cardId': card.id,
+                        'fields': fields,
+                        'fields_strip_html': fields_strip_html,
+                        'fieldOrder': card.ord,
+                        'question': util.cardQuestion(card),
+                        'answer': util.cardAnswer(card),
+                        'modelName': model['name'],
+                        'ord': card.ord,
+                        'deckName': self.deckNameFromId(card.did),
+                        'css': model['css'],
+                        'tags': note.tags,
+                        'factor': card.factor,
+                        #This factor is 10 times the ease percentage,
+                        # so an ease of 310% would be reported as 3100
+                        'interval': card.ivl,
+                        'note': card.nid,
+                        'type': card.type,
+                        'queue': card.queue,
+                        'due': card.due,
+                        'odue': card.odue,
+                        'reps': card.reps,
+                        'lapses': card.lapses,
+                        'left': card.left,
+                        'mod': card.mod,
+                    })
+                except NotFoundError:
+                    # Anki will give a NotFoundError if the card ID does not exist.
+                    # Best behavior is probably to add an 'empty card' to the
+                    # returned result, so that the items of the input and return
+                    # lists correspond.
+                    result.append({})
+        else:
+            for cid in cards:
+                try:
+                    card = self.getCard(cid)
+                    dic = {"cardId": card.id}
 
+                    if "tags" in select or "miscelaneaous" in select or "fields" in select:
+                        note = card.note()
+
+                    if "questionAndAnswer" in select:
+                        dic["question"] = util.cardQuestion(card)
+                        dic["answer"] = util.cardAnswer(card)
+                    if "deckName" in select:
+                        dic["deckName"] = self.deckNameFromId(card.did)
+                    if "tags" in select:
+                        dic["tags"] = note.tags
+                    if "factor" in select:
+                        dic["factor"] = card.factor
+                    if "interval" in select:
+                        dic["interval"] = card.ivl
+
+                    if "miscelaneaous" in select:
+                        dic.update({'ord': card.ord,
+                                    'note': card.nid,
+                                    'type': card.type,
+                                    'queue': card.queue,
+                                    'due': card.due,
+                                    'odue': card.odue,
+                                    'reps': card.reps,
+                                    'lapses': card.lapses,
+                                    'left': card.left,
+                                    'mod': card.mod})
+
+                    if "css" in select or "modelName" in select or "fields" in select:
+                        model = card.model()
+                        if "css" in select:
+                            dic["css"] = model["css"]
+
+                        if "modelName" in select:
+                            dic["modelName"] = model["name"]
+                        if "fields" in select:
+                            fields = {}
+                            fields_strip_html = {}
+                            for info in model['flds']:
+                                order = info['ord']
+                                name = info['name']
+                                fields[name] = {'value': note.fields[order], 'order': order}
+                                fields_strip_html[name] = {'value':
+                                    stripHTML(note.fields[order]),
+                                    'order': order}
+                            dic["fields"] = fields
+                            dic["fields_strip_html"] = fields_strip_html
+                            dic["fieldsOrder"] = card.ord
+                    result.append(dic)
+                except NotFoundError:
+                    result.append({})
         return result
 
     @util.api()
@@ -1407,34 +1463,59 @@ are you sure you want to enable it? Clicking no will disable it until next start
 
 
     @util.api()
-    def notesInfo(self, notes):
+    def notesInfo(self, notes, select="all"):
         result = []
-        for nid in notes:
-            try:
-                note = self.getNote(nid)
-                model = note.model()
+        if select == "all":
+            for nid in notes:
+                try:
+                    note = self.getNote(nid)
+                    model = note.model()
 
-                fields = {}
-                for info in model['flds']:
-                    order = info['ord']
-                    name = info['name']
-                    fields[name] = {'value': note.fields[order], 'order': order}
+                    fields = {}
+                    for info in model['flds']:
+                        order = info['ord']
+                        name = info['name']
+                        fields[name] = {'value': note.fields[order], 'order': order}
 
-                result.append({
-                    'noteId': note.id,
-                    'tags' : note.tags,
-                    'fields': fields,
-                    'modelName': model['name'],
-                    'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
-                })
-            except NotFoundError:
-                # Anki will give a NotFoundError if the note ID does not exist.
-                # Best behavior is probably to add an 'empty card' to the
-                # returned result, so that the items of the input and return
-                # lists correspond.
-                result.append({})
+                    result.append({
+                        'noteId': note.id,
+                        'tags' : note.tags,
+                        'fields': fields,
+                        'modelName': model['name'],
+                        'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
+                    })
+                except NotFoundError:
+                    # Anki will give a NotFoundError if the note ID does not exist.
+                    # Best behavior is probably to add an 'empty card' to the
+                    # returned result, so that the items of the input and return
+                    # lists correspond.
+                    result.append({})
 
+        else:
+            for nid in notes:
+                try:
+                    note = self.getNote(nid)
+                    dic = {'noteId': note.id}
+                    if "modelName" in select or "fields" in select:
+                        model = note.model()
+                        if "modelName" in select:
+                            dic["modelName"] = model["name"]
+                        if "fields" in select:
+                            fields = {}
+                            for info in model['flds']:
+                                order = info['ord']
+                                name = info['name']
+                                fields[name] = {'value': note.fields[order], 'order': order}
+                        dic["fields"] = fields
+                    if "tags" in select:
+                        dic["tags"] = note.tags
+                    if "cards" in select:
+                        dic["cards"] = self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
+                    result.append(dic)
+                except NotFoundError:
+                    result.append({})
         return result
+
 
 
     @util.api()
