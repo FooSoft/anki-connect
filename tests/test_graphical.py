@@ -9,6 +9,9 @@ class TestGui(unittest.TestCase):
         # guiBrowse
         util.invoke('guiBrowse', query='deck:Default')
 
+        # guiSelectedNotes
+        util.invoke('guiSelectedNotes')
+
         # guiAddCards
         util.invoke('guiAddCards')
 
