@@ -1018,6 +1018,27 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **guiSelectedNotes**
+
+    Finds the open instance of the *Card Browser* dialog and returns an array of identifiers of the notes that are
+    selected. Returns an empty list if the browser is not open.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "guiSelectedNotes",
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [1494723142483, 1494703460437, 1494703479525],
+        "error": null
+    }
+    ```
+
 *   **guiAddCards**
 
     Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.

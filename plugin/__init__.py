@@ -1354,6 +1354,12 @@ class AnkiConnect:
 
         return self.findCards(query)
 
+    @util.api()
+    def guiSelectedNotes(self):
+        (creator, instance) = aqt.dialogs._dialogs['Browser']
+        if instance is None:
+            return []
+        return instance.selectedNotes()
 
     @util.api()
     def guiAddCards(self, note=None):
