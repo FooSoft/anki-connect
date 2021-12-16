@@ -7,7 +7,7 @@ Description = "Anki plugin to expose a remote API for creating flash cards."
 Collection = "ProjectsActive"
 +++ -->
 
-# AnkiConnect
+# Anki-Connect
 
 AnkiConnect enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate with
 [Anki](https://apps.ankiweb.net/) over a simple HTTP API. Its capabilities include executing queries against the user's
@@ -32,7 +32,7 @@ Windows users may see a firewall nag dialog box appear on Anki startup. This occ
 HTTP server in order to enable other applications to connect to it. The host application, Anki, must be unblocked for
 this plugin to function correctly.
 
-### Notes for macOS Users
+### Notes for MacOS Users
 
 Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks), a feature named *App Nap* has been
 introduced to the operating system. This feature causes certain applications which are open (but not visible) to be
@@ -166,8 +166,8 @@ to make this happen. I recognise that the role of AnkiConnect has evolved from t
 review new feature requests.
 
 With that said, *this project operates on a self-serve model*. If you would like a new feature, create a PR. I'll review
-it and if it looks good, it will be merged in. *Requests to add new features without accompanying PRs will not be
-serviced*. Make sure that your PRs meet the following criteria:
+it and if it looks good, it will be merged in. *Requests to add new features without accompanying pull requests will not
+be serviced*. Make sure that your pull request meets the following criteria:
 
 *   Attempt to match style of the surrounding code.
 *   Have accompanying documentation with examples.
