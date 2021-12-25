@@ -55,6 +55,8 @@ from . import web, util
 #
 
 class AnkiConnect:
+    _anki21_version = int(aqt.appVersion.split('.')[-1])
+
     def __init__(self):
         self.log = None
         logPath = util.setting('apiLogPath')
@@ -75,6 +77,12 @@ class AnkiConnect:
                 'Failed to listen on port {}.\nMake sure it is available and is not in use.'.format(util.setting('webBindPort'))
             )
 
+    def save_model(self, models, ankiModel):
+        if self._anki21_version < 45:
+            models.save(ankiModel, True)
+            models.flush()
+        else:
+            models.update_dict(ankiModel)
 
     def logEvent(self, name, data):
         if self.log is not None:
@@ -1064,8 +1072,7 @@ class AnkiConnect:
                 if afmt:
                     ankiTemplate['afmt'] = afmt
 
-        models.save(ankiModel, True)
-        models.flush()
+        self.save_model(models, ankiModel)
 
 
     @util.api()
@@ -1077,8 +1084,7 @@ class AnkiConnect:
 
         ankiModel['css'] = model['css']
 
-        models.save(ankiModel, True)
-        models.flush()
+        self.save_model(models, ankiModel)
 
 
     @util.api()
@@ -1104,8 +1110,7 @@ class AnkiConnect:
                 if back and findText in tmpls['afmt']:
                     checkForText = True
                     tmpls['afmt'] = tmpls['afmt'].replace(findText, replaceText)
-            self.collection().models.save(model, True)
-            self.collection().models.flush()
+            self.save_model(self.collection().models, model)
             if checkForText:
                 updatedModels += 1
         return updatedModels
