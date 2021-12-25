@@ -218,7 +218,7 @@ class WebServer:
                 ['Access-Control-Allow-Origin', corsOrigin],
                 ['Access-Control-Allow-Headers', '*']
             ]
-            body = ''.encode('utf-8');
+            body = ''.encode('utf-8')
 
         for key, value in headers:
             if value is None:
