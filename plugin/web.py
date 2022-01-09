@@ -178,7 +178,7 @@ class WebServer:
             elif 'http://localhost' in webCorsOriginList and ( 
             originStr == 'http://127.0.0.1' or originStr == 'https://127.0.0.1' or # allow 127.0.0.1 if localhost allowed
             originStr.startswith('http://127.0.0.1:') or originStr.startswith('http://127.0.0.1:') or
-            originStr.startswith('chrome-extension://') or originStr.startswith('moz-extension://') ) : # allow chrome and firefox extension if localhost allowed
+            originStr.startswith('chrome-extension://') or originStr.startswith('moz-extension://') or originStr.startswith('safari-web-extension://') ) : # allow chrome, firefox and safari extension if localhost allowed
                 corsOrigin = originStr
                 allowed = True
         else:
