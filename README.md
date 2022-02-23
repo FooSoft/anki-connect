@@ -238,6 +238,35 @@ corresponding to when the API was available for use.
     }
     ```
 
+
+*   **setSpecificValueOfCard**
+
+    Sets specific value of a single card. Given the risk of wreaking havor in the database when changing some of the values of a card, some of the keys require the argument "warning_check" set to True.
+    This can be used to set a card's flag, change it's ease factor, change the review order in a filtered deck and change the column "data" (not currently used by anki apparantly), and many other values.
+    A list of values and explanation of their respective utility can be found at [AnkiDroid's wiki](https://github.com/ankidroid/Anki-Android/wiki/Database-Structure).
+
+    *Sample request*:
+    ```json
+    {
+        "action": "setSpecificValueOfCard",
+        "version": 6,
+        "params": {
+            "card": 1483959291685,
+            "keys": ["flags", "odue"],
+            "newValues": ["1", "-100"]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [true, true],
+        "error": null
+    }
+    ```
+
+
 *   **suspend**
 
     Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`

@@ -833,6 +833,38 @@ class AnkiConnect:
 
         return couldSetEaseFactors
 
+    @util.api()
+    def setSpecificValueOfCard(self, card, keys,
+                               newValues, warning_check=False):
+        if isinstance(card, list):
+            print("card has to be int, not list")
+            return False
+
+        if not isinstance(keys, list) or not isinstance(newValues, list):
+            print("keys and newValues have to be lists.")
+            return False
+
+        if len(newValues) != len(keys):
+            print("Invalid list lengths.")
+            return False
+
+        for key in keys:
+            if key in ["did", "id", "ivl", "lapses", "left", "mod", "nid",
+                       "odid", "odue", "ord", "queue", "reps", "type", "usn"]:
+                if warning_check is False:
+                    return False
+
+        result = []
+        try:
+            ankiCard = self.getCard(card)
+            for i, key in enumerate(keys):
+                setattr(ankiCard, key, newValues[i])
+            ankiCard.flush()
+            result.append(True)
+        except Exception as e:
+            result.append([False, str(e)])
+        return result
+
 
     @util.api()
     def getEaseFactors(self, cards):
