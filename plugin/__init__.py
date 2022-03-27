@@ -709,7 +709,8 @@ class AnkiConnect:
                                                         data=media.get('data'),
                                                         path=media.get('path'),
                                                         url=media.get('url'),
-                                                        skipHash=media.get('skipHash'))
+                                                        skipHash=media.get('skipHash'),
+                                                        deleteExisting=media.get('deleteExisting'))
 
                     if mediaFilename is not None:
                         for field in media['fields']:
