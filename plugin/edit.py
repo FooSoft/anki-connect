@@ -16,11 +16,11 @@ from anki.utils import ids2str
 #   * has no bar with the Close button
 #
 # To register in Anki's dialog system:
-#   from .edit import Edit
-#   Edit.register_with_dialog_manager()
+# > from .edit import Edit
+# > Edit.register_with_dialog_manager()
 #
 # To (re)open (note_id is an integer):
-#   Edit.open_dialog_and_show_note_with_id(note_id)
+# > Edit.open_dialog_and_show_note_with_id(note_id)
 
 
 DOMAIN_PREFIX = "foosoft.ankiconnect."
@@ -41,19 +41,69 @@ def filter_valid_note_ids(note_ids):
 ##############################################################################
 
 
-class Cards:
+class DecentPreviewer(aqt.browser.previewer.MultiCardPreviewer):
+    class Adapter:
+        def get_current_card(self): raise NotImplementedError
+        def can_select_previous_card(self): raise NotImplementedError
+        def can_select_next_card(self): raise NotImplementedError
+        def select_previous_card(self): raise NotImplementedError
+        def select_next_card(self): raise NotImplementedError
+
+    def __init__(self, adapter: Adapter):
+        super().__init__(parent=None, mw=aqt.mw, on_close=lambda: None) # noqa
+        self.adapter = adapter
+        self.last_card_id = 0
+
+    def card(self):
+        return self.adapter.get_current_card()
+
+    def card_changed(self):
+        current_card_id = self.adapter.get_current_card().id
+        changed = self.last_card_id != current_card_id
+        self.last_card_id = current_card_id
+        return changed
+
+    # the check if we can select next/previous card is needed because
+    # the buttons sometimes get disabled a tad too late
+    # and can still be pressed by user.
+    # this is likely due to Anki sometimes delaying rendering of cards
+    # in order to avoid rendering them too fast?
+    def _on_prev_card(self):
+        if self.adapter.can_select_previous_card():
+            self.adapter.select_previous_card()
+            self.render_card()
+
+    def _on_next_card(self):
+        if self.adapter.can_select_next_card():
+            self.adapter.select_next_card()
+            self.render_card()
+
+    def _should_enable_prev(self):
+        return self.showing_answer_and_can_show_question() or \
+               self.adapter.can_select_previous_card()
+
+    def _should_enable_next(self):
+        return self.showing_question_and_can_show_answer() or \
+               self.adapter.can_select_next_card()
+
+    def _render_scheduled(self):
+        super()._render_scheduled()
+        self._updateButtons()
+
+    def showing_answer_and_can_show_question(self):
+        return self._state == "answer" and not self._show_both_sides
+
+    def showing_question_and_can_show_answer(self):
+        return self._state == "question"
+
+
+class ReadyCardsAdapter(DecentPreviewer.Adapter):
     def __init__(self, cards):
         self.cards = cards
         self.current = 0
-        self.last = 0
 
     def get_current_card(self):
         return self.cards[self.current]
-
-    def current_card_changed_since_last_call_to_this_method(self):
-        changed = self.current != self.last
-        self.last = self.current
-        return changed
 
     def can_select_previous_card(self):
         return self.current > 0
@@ -62,50 +112,10 @@ class Cards:
         return self.current < len(self.cards) - 1
 
     def select_previous_card(self):
-        if self.can_select_previous_card():
-            self.current -= 1
+        self.current -= 1
 
     def select_next_card(self):
-        if self.can_select_next_card():
-            self.current += 1
-
-
-class SimplePreviewer(aqt.browser.previewer.MultiCardPreviewer):
-    def __init__(self, cards):
-        super().__init__(parent=None, mw=aqt.mw, on_close=lambda: None)
-        self.cards = Cards(cards)
-
-    def card(self):
-        return self.cards.get_current_card()
-
-    def card_changed(self):
-        return self.cards.current_card_changed_since_last_call_to_this_method()
-
-    def _on_prev_card(self):
-        self.cards.select_previous_card()
-        self.render_card()
-
-    def _on_next_card(self):
-        self.cards.select_next_card()
-        self.render_card()
-
-    def _should_enable_prev(self):
-        return self.showing_answer_and_can_show_question() or \
-               self.cards.can_select_previous_card()
-
-    def _should_enable_next(self):
-        return self.showing_question_and_can_show_answer() or \
-               self.cards.can_select_next_card()
-
-    def _render_scheduled(self):
-        super()._render_scheduled()
-        self._updateButtons()
-
-    def showing_answer_and_can_show_question(self):
-        return MultiCardPreviewer._should_enable_prev(self)
-
-    def showing_question_and_can_show_answer(self):
-        return MultiCardPreviewer._should_enable_next(self)
+        self.current += 1
 
 
 ##############################################################################
@@ -245,9 +255,12 @@ class Edit(aqt.editcurrent.EditCurrent):
 
     def show_preview(self, *_):
         if cards := self.note.cards():
-            SimplePreviewer(cards).open()
+            previewer = DecentPreviewer(ReadyCardsAdapter(cards))
+            previewer.open()
+            return previewer
         else:
             tooltip("No cards found", parent=self)
+            return None
 
     def show_previous(self, *_):
         if history.has_note_to_left_of(self.note):
@@ -292,7 +305,7 @@ class Edit(aqt.editcurrent.EditCurrent):
                 cmd=DOMAIN_PREFIX + cmd, 
                 id=DOMAIN_PREFIX + cmd,
                 func=function, 
-                label="&nbsp;&nbsp;" + label + "&nbsp;&nbsp;",
+                label=f"&nbsp;&nbsp;{label}&nbsp;&nbsp;",
                 tip=f"{tip} ({keys})",
                 keys=keys,
             )
@@ -312,12 +325,16 @@ class Edit(aqt.editcurrent.EditCurrent):
         disable_previous = to_js(not(history.has_note_to_left_of(self.note)))
         disable_next = to_js(not(history.has_note_to_right_of(self.note)))
 
-        self.editor.web.eval(f'''
-            document.getElementById('{DOMAIN_PREFIX}previous')
-                    .disabled = {disable_previous};
-            document.getElementById('{DOMAIN_PREFIX}next')
-                    .disabled = {disable_next};
-        ''')
+        self.editor.web.eval(f"""
+            $editorToolbar.then(({{ toolbar }}) => {{
+                setTimeout(function() {{
+                    document.getElementById("{DOMAIN_PREFIX}previous")
+                            .disabled = {disable_previous};
+                    document.getElementById("{DOMAIN_PREFIX}next")
+                            .disabled = {disable_next};
+                }}, 1);
+            }});
+        """)
 
     ##########################################################################
 
@@ -328,4 +345,4 @@ class Edit(aqt.editcurrent.EditCurrent):
     @classmethod
     def open_dialog_and_show_note_with_id(cls, note_id):    # raises NotFoundError
         note = get_note_by_note_id(note_id)
-        aqt.dialogs.open(cls.dialog_registry_tag, note)
+        return aqt.dialogs.open(cls.dialog_registry_tag, note)
