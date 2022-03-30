@@ -745,8 +745,8 @@ corresponding to when the API was available for use.
 
 *   **deleteDecks**
 
-    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
-    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+    Deletes decks with the given names. 
+    The argument `cardsToo` *must* be specified and set to `true`.
 
     *Sample request*:
     ```json
