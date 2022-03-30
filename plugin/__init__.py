@@ -58,14 +58,19 @@ class AnkiConnect:
 
     def __init__(self):
         self.log = None
+        self.timer = None
+        self.server = web.WebServer(self.handler)
+
+    def initLogging(self):
         logPath = util.setting('apiLogPath')
         if logPath is not None:
             self.log = open(logPath, 'w')
 
+    def startWebServer(self):
         try:
-            self.server = web.WebServer(self.handler)
             self.server.listen()
 
+            # only keep reference to prevent garbage collection
             self.timer = QTimer()
             self.timer.timeout.connect(self.advance)
             self.timer.start(util.setting('apiPollInterval'))
@@ -1698,4 +1703,9 @@ class AnkiConnect:
 # Entry
 #
 
-ac = AnkiConnect()
+# when run inside Anki, `__name__` would be either numeric,
+# or, if installed via `link.sh`, `AnkiConnectDev`
+if __name__ != "plugin":
+    ac = AnkiConnect()
+    ac.initLogging()
+    ac.startWebServer()
