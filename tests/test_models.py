@@ -1,66 +1,112 @@
-#!/usr/bin/env python
-
-import unittest
-import util
-import uuid
+from conftest import ac
 
 
-MODEL_1_NAME = str(uuid.uuid4())
-MODEL_2_NAME = str(uuid.uuid4())
+def test_modelNames(setup):
+    result = ac.modelNames()
+    assert "test_model" in result
 
-CSS = 'some random css'
-NEW_CSS = 'new random css'
 
-CARD_1_TEMPLATE = {'Front': 'field1', 'Back': 'field2'}
-NEW_CARD_1_TEMPLATE = {'Front': 'question: field1', 'Back': 'answer: field2'}
+def test_modelNamesAndIds(setup):
+    result = ac.modelNamesAndIds()
+    assert isinstance(result["test_model"], int)
 
-TEXT_TO_REPLACE = "new random css"
-REPLACE_WITH_TEXT = "new updated css"
 
-class TestModels(unittest.TestCase):
-    def runTest(self):
-        # modelNames
-        modelNames = util.invoke('modelNames')
-        self.assertGreater(len(modelNames), 0)
+def test_modelFieldNames(setup):
+    result = ac.modelFieldNames(modelName="test_model")
+    assert result == ["field1", "field2"]
 
-        # modelNamesAndIds
-        modelNamesAndIds = util.invoke('modelNamesAndIds')
-        self.assertGreater(len(modelNames), 0)
 
-        # modelFieldNames
-        modelFields = util.invoke('modelFieldNames', modelName=modelNames[0])
+def test_modelFieldsOnTemplates(setup):
+    result = ac.modelFieldsOnTemplates(modelName="test_model")
+    assert result == {
+        "Card 1": [["field1"], ["field2"]],
+        "Card 2": [["field2"], ["field1"]],
+    }
 
-        # modelFieldsOnTemplates
-        modelFieldsOnTemplates = util.invoke('modelFieldsOnTemplates', modelName=modelNames[0])
 
-        # createModel with css
-        newModel = util.invoke('createModel', modelName=MODEL_1_NAME, inOrderFields=['field1', 'field2'], cardTemplates=[CARD_1_TEMPLATE], css=CSS)
+class TestCreateModel:
+    createModel_kwargs = {
+        "modelName": "test_model_foo",
+        "inOrderFields": ["field1", "field2"],
+        "cardTemplates": [{"Front": "{{field1}}", "Back": "{{field2}}"}],
+    }
 
-        # createModel without css
-        newModel = util.invoke('createModel', modelName=MODEL_2_NAME, inOrderFields=['field1', 'field2'], cardTemplates=[CARD_1_TEMPLATE])
+    def test_createModel_without_css(self, session_with_profile_loaded):
+        ac.createModel(**self.createModel_kwargs)
 
-        # modelStyling: get model 1 css
-        css = util.invoke('modelStyling', modelName=MODEL_1_NAME)
-        self.assertEqual({'css': CSS}, css)
+    def test_createModel_with_css(self, session_with_profile_loaded):
+        ac.createModel(**self.createModel_kwargs, css="* {}")
 
-        # modelTemplates: get model 1 templates
-        templates = util.invoke('modelTemplates', modelName=MODEL_1_NAME)
-        self.assertEqual({'Card 1': CARD_1_TEMPLATE}, templates)
 
-        # updateModelStyling: change and verify model css
-        util.invoke('updateModelStyling', model={'name': MODEL_1_NAME, 'css': NEW_CSS})
-        new_css = util.invoke('modelStyling', modelName=MODEL_1_NAME)
-        self.assertEqual({'css': NEW_CSS}, new_css)
+class TestStyling:
+    def test_modelStyling(self, setup):
+        result = ac.modelStyling(modelName="test_model")
+        assert result == {"css": "* {}"}
 
-        # updateModelTemplates: change and verify model 1 templates
-        util.invoke('updateModelTemplates', model={'name': MODEL_1_NAME, 'templates': {'Card 1': NEW_CARD_1_TEMPLATE}})
-        templates = util.invoke('modelTemplates', modelName=MODEL_1_NAME)
-        self.assertEqual({'Card 1': NEW_CARD_1_TEMPLATE}, templates)
+    def test_updateModelStyling(self, setup):
+        ac.updateModelStyling(model={
+            "name": "test_model",
+            "css": "* {color: red;}"
+        })
 
-        # findAndReplaceInModels: find and replace text in all models or model by name
-        util.invoke('findAndReplaceInModels', modelName=MODEL_1_NAME, findText=TEXT_TO_REPLACE, replaceText=REPLACE_WITH_TEXT, front=True, back=True, css=True)
-        new_css = util.invoke('modelStyling', modelName=MODEL_1_NAME)
-        self.assertEqual({'css': REPLACE_WITH_TEXT}, new_css)
+        assert ac.modelStyling(modelName="test_model") == {
+            "css": "* {color: red;}"
+        }
 
-if __name__ == '__main__':
-    unittest.main()
+
+class TestModelTemplates:
+    def test_modelTemplates(self, setup):
+        result = ac.modelTemplates(modelName="test_model")
+        assert result == {
+            "Card 1": {"Front": "{{field1}}", "Back": "{{field2}}"},
+            "Card 2": {"Front": "{{field2}}", "Back": "{{field1}}"}
+        }
+
+    def test_updateModelTemplates(self, setup):
+        ac.updateModelTemplates(model={
+            "name": "test_model",
+            "templates": {"Card 1": {"Front": "{{field1}}", "Back": "foo"}}
+        })
+
+        assert ac.modelTemplates(modelName="test_model") == {
+            "Card 1": {"Front": "{{field1}}", "Back": "foo"},
+            "Card 2": {"Front": "{{field2}}", "Back": "{{field1}}"}
+        }
+
+
+def test_findAndReplaceInModels(setup):
+    ac.findAndReplaceInModels(
+        modelName="test_model",
+        findText="}}",
+        replaceText="}}!",
+        front=True,
+        back=False,
+        css=False,
+    )
+
+    ac.findAndReplaceInModels(
+        modelName="test_model",
+        findText="}}",
+        replaceText="}}?",
+        front=True,
+        back=True,
+        css=False,
+    )
+
+    ac.findAndReplaceInModels(
+        modelName="test_model",
+        findText="}",
+        replaceText="color: blue;}",
+        front=False,
+        back=False,
+        css=True,
+    )
+
+    assert ac.modelTemplates(modelName="test_model") == {
+        "Card 1": {"Front": "{{field1}}?!", "Back": "{{field2}}?"},
+        "Card 2": {"Front": "{{field2}}?!", "Back": "{{field1}}?"}
+    }
+
+    assert ac.modelStyling(modelName="test_model") == {
+        "css": "* {color: blue;}"
+    }
