@@ -41,6 +41,8 @@ from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 
+from .edit import Edit
+
 try:
     from anki.rsbackend import NotFoundError
 except:
@@ -1366,6 +1368,12 @@ class AnkiConnect:
 
         return self.findCards(query)
 
+
+    @util.api()
+    def guiEditNote(self, note):
+        Edit.open_dialog_and_show_note_with_id(note)
+
+
     @util.api()
     def guiSelectedNotes(self):
         (creator, instance) = aqt.dialogs._dialogs['Browser']
@@ -1706,6 +1714,8 @@ class AnkiConnect:
 # when run inside Anki, `__name__` would be either numeric,
 # or, if installed via `link.sh`, `AnkiConnectDev`
 if __name__ != "plugin":
+    Edit.register_with_dialog_manager()
+
     ac = AnkiConnect()
     ac.initLogging()
     ac.startWebServer()

@@ -1059,6 +1059,34 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **guiEditNote**
+
+    Opens the *Edit* dialog with a note corresponding to given note ID.
+    The dialog is similar to the *Edit Current* dialog, but:
+    * has a Preview button to preview the cards for the note
+    * has a Browse button to open the browser with these cards
+    * has Previous/Back buttons to navigate the history of the dialog
+    * has no bar with the Close button
+
+    *Sample request*:
+    ```json
+    {
+        "action": "guiEditNote",
+        "version": 6,
+        "params": {
+            "note": 1649198355435
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 *   **guiCurrentCard**
 
     Returns information about the current card or `null` if not in review mode.
