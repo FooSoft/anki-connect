@@ -43,10 +43,9 @@ def download(url):
 
 def api(*versions):
     def decorator(func):
-        method = lambda *args, **kwargs: func(*args, **kwargs)
-        setattr(method, 'versions', versions)
-        setattr(method, 'api', True)
-        return method
+        setattr(func, 'versions', versions)
+        setattr(func, 'api', True)
+        return func
 
     return decorator
 
