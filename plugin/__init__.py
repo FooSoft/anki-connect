@@ -1137,7 +1137,7 @@ class AnkiConnect:
             model = self.collection().models.byName(modelName)
             if model is None:
                 raise Exception('model was not found: {}'.format(modelName))
-            ankiModel = [model]
+            ankiModel = [modelName]
         updatedModels = 0
         for model in ankiModel:
             model = self.collection().models.byName(model)
