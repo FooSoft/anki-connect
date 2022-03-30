@@ -40,7 +40,6 @@ from anki.consts import MODEL_CLOZE
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
-from anki.utils import joinFields, intTime, guid64, fieldChecksum
 
 try:
     from anki.rsbackend import NotFoundError
@@ -1284,45 +1283,6 @@ class AnkiConnect:
             'select max(id) from revlog where cid in (select id from cards where did=?)',
             self.decks().id(deck)
         ) or 0
-
-
-    @util.api()
-    def updateCompleteDeck(self, data):
-        self.startEditing()
-        did = self.decks().id(data['deck'])
-        self.decks().flush()
-        model_manager = self.collection().models
-        for _, card in data['cards'].items():
-            self.database().execute(
-                'replace into cards (id, nid, did, ord, type, queue, due, ivl, factor, reps, lapses, left, '
-                'mod, usn, odue, odid, flags, data) '
-                'values (' + '?,' * (12 + 6 - 1) + '?)',
-                card['id'], card['nid'], did, card['ord'], card['type'], card['queue'], card['due'],
-                card['ivl'], card['factor'], card['reps'], card['lapses'], card['left'],
-                intTime(), -1, 0, 0, 0, 0
-            )
-            note = data['notes'][str(card['nid'])]
-            tags = self.collection().tags.join(self.collection().tags.canonify(note['tags']))
-            self.database().execute(
-                'replace into notes(id, mid, tags, flds,'
-                'guid, mod, usn, flags, data, sfld, csum) values (' + '?,' * (4 + 7 - 1) + '?)',
-                note['id'], note['mid'], tags, joinFields(note['fields']),
-                guid64(), intTime(), -1, 0, 0, '', fieldChecksum(note['fields'][0])
-            )
-            model = data['models'][str(note['mid'])]
-            if not model_manager.get(model['id']):
-                model_o = model_manager.new(model['name'])
-                for field_name in model['fields']:
-                    field = model_manager.newField(field_name)
-                    model_manager.addField(model_o, field)
-                for template_name in model['templateNames']:
-                    template = model_manager.newTemplate(template_name)
-                    model_manager.addTemplate(model_o, template)
-                model_o['id'] = model['id']
-                model_manager.update(model_o)
-                model_manager.flush()
-
-        self.stopEditing()
 
 
     @util.api()
