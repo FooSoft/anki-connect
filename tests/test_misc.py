@@ -21,7 +21,7 @@ def test_reloadCollection(setup):
 class TestProfiles:
     def test_getProfiles(self, session_with_profile_loaded):
         result = ac.getProfiles()
-        assert result == ["User 1"]
+        assert result == ["test_user"]
 
     # waiting a little while gets rid of the cryptic warning:
     #   Qt warning: QXcbConnection: XCB error: 8 (BadMatch), sequence: 658,
@@ -29,7 +29,7 @@ class TestProfiles:
     def test_loadProfile(self, session_with_profile_loaded):
         aqt.mw.unloadProfileAndShowProfileManager()
         wait(0.1)
-        ac.loadProfile(name="User 1")
+        ac.loadProfile(name="test_user")
 
 
 class TestExportImport:

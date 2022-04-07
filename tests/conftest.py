@@ -6,8 +6,7 @@ from dataclasses import dataclass
 import aqt.operations.note
 import pytest
 from PyQt5 import QtTest
-from _pytest.monkeypatch import MonkeyPatch
-from pytest_anki._launch import anki_running  # noqa
+from pytest_anki._launch import anki_running, temporary_user  # noqa
 
 from plugin import AnkiConnect
 from plugin.edit import Edit
@@ -45,41 +44,22 @@ def close_all_dialogs_and_wait_for_them_to_run_closing_callbacks():
     wait_until(aqt.dialogs.allClosed)
 
 
-# largely analogous to `aqt.mw.pm.remove`.
-# by default, the profile is moved to trash. this is a problem for us,
-# as on some systems trash folders may not exist.
-# we can't delete folder and *then* call `aqt.mw.pm.remove`,
-# as it calls `profileFolder` and that *creates* the folder!
-def remove_current_profile():
-    import os
-    import shutil
-
-    def send2trash(profile_folder):
-        assert profile_folder.endswith("User 1")
-        if os.path.exists(profile_folder):
-            shutil.rmtree(profile_folder)
-
-    with MonkeyPatch().context() as monkey:
-        monkey.setattr(aqt.profiles, "send2trash", send2trash)
-        aqt.mw.pm.remove(aqt.mw.pm.name)
-
-
 @contextmanager
 def empty_anki_session_started():
     with anki_running(
         qtbot=None,  # noqa
         enable_web_debugging=False,
+        profile_name="test_user",
     ) as session:
         yield session
 
 
-# backups are run in a thread and can lead to warnings when the thread dies
-# after trying to open collection after it's been deleted
 @contextmanager
-def profile_loaded(session):
-    with session.profile_loaded():
-        aqt.mw.pm.profile["numBackups"] = 0
-        yield session
+def profile_created_and_loaded(session):
+    with temporary_user(session.base, "test_user", "en_US"):
+        with session.profile_loaded():
+            aqt.mw.pm.profile["numBackups"] = 0     # don't try to do backups
+            yield session
 
 
 @contextmanager
@@ -218,7 +198,7 @@ def session_scope_empty_session():
 
 @pytest.fixture(scope="session")
 def session_scope_session_with_profile_loaded(session_scope_empty_session):
-    with profile_loaded(session_scope_empty_session):
+    with profile_created_and_loaded(session_scope_empty_session):
         yield session_scope_empty_session
 
 
@@ -237,11 +217,8 @@ def session_with_profile_loaded(session_scope_empty_session, request):
         Tearing down the profile is significantly slower.
     """
     if request.config.option.tear_down_profile_after_each_test:
-        try:
-            with profile_loaded(session_scope_empty_session):
-                yield session_scope_empty_session
-        finally:
-            remove_current_profile()
+        with profile_created_and_loaded(session_scope_empty_session):
+            yield session_scope_empty_session
     else:
         session = request.getfixturevalue(
             session_scope_session_with_profile_loaded.__name__

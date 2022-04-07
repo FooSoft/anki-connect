@@ -15,7 +15,7 @@ from plugin import AnkiConnect
 from tests.conftest import wait_until, \
         empty_anki_session_started, \
         anki_connect_config_loaded, \
-        profile_loaded
+        profile_created_and_loaded
 
 
 @contextmanager
@@ -72,7 +72,7 @@ def external_anki_entry_function(web_bind_port, exit_event):
     with empty_anki_session_started() as session:
         with anki_connect_config_loaded(session, web_bind_port):
             with anki_connect_web_server_started():
-                with profile_loaded(session):
+                with profile_created_and_loaded(session):
                     wait_until(exit_event.is_set)
 
 
