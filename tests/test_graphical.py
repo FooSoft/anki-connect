@@ -36,12 +36,6 @@ class TestAddCards:
         "tags": ["tag1"]
     }
 
-    options_closeAfterAdding = {
-        "options": {
-            "closeAfterAdding": True
-        }
-    }
-
     # an actual small image, you can see it if you run the test with GUI
     # noinspection SpellCheckingInspection
     base64_gif = "R0lGODlhBQAEAHAAACwAAAAABQAEAIH///8AAAAAAAAAAAACB0QMqZcXDwoAOw=="
@@ -57,8 +51,8 @@ class TestAddCards:
     }
 
     @staticmethod
-    def click_on_add_card_dialog_save_button(dialog_name="AddCards"):
-        dialog = aqt.dialogs._dialogs[dialog_name][1]
+    def click_on_add_card_dialog_save_button():
+        dialog = aqt.dialogs._dialogs["AddCards"][1]
         dialog.addButton.click()
 
     # todo previously, these tests were verifying
@@ -82,33 +76,6 @@ class TestAddCards:
 
         assert len(ac.findCards(query="new")) == 1
         assert ac.retrieveMediaFile(filename="smiley.gif") == self.base64_gif
-
-    # todo the tested method, when called with option `closeAfterAdding=True`,
-    #   is broken for the following reasons:
-    #     * it uses the note that comes with dialog's Editor.
-    #       this note might be of a different model than the proposed note,
-    #       and field values from the proposed note can't be put into it.
-    #     * most crucially, `AddCardsAndClose` is trying to override the method
-    #       `_addCards` that is no longer present or called by the superclass.
-    #   also, it creates and registers a new class each time it is called.
-    #   todo fix the method, or ignore/disallow the option `closeAfterAdding`?
-    @pytest.mark.skip("API method `guiAddCards` is broken "
-                      "when called with note option `closeAfterAdding=True`")
-    def test_with_note_and_closeAfterAdding(self, setup):
-        def find_AddCardsAndClose_dialog_registered_name():
-            for name in aqt.dialogs._dialogs.keys():
-                if name.startswith("AddCardsAndClose"):
-                    return name
-
-        def dialog_is_open(name):
-            return aqt.dialogs._dialogs[name][1] is not None
-
-        ac.guiAddCards(note={**self.note, **self.options_closeAfterAdding})
-
-        dialog_name = find_AddCardsAndClose_dialog_registered_name()
-        assert dialog_is_open(dialog_name)
-        self.click_on_add_card_dialog_save_button(dialog_name)
-        wait_until(aqt.dialogs.allClosed)
 
 
 class TestReviewActions:

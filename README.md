@@ -1015,9 +1015,6 @@ corresponding to when the API was available for use.
     Audio, video, and picture files can be embedded into the fields via the `audio`, `video`, and `picture` keys, respectively.
     Refer to the documentation of `addNote` and `storeMediaFile` for an explanation of these fields.
 
-    The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
-    Invoking the action mutliple times with this option will create _multiple windows_.
-
     The result is the ID of the note which would be added, if the user chose to confirm the *Add Cards* dialogue.
 
     *Sample request*:
@@ -1032,9 +1029,6 @@ corresponding to when the API was available for use.
                 "fields": {
                     "Text": "The capital of Romania is {{c1::Bucharest}}",
                     "Extra": "Romania is a country in Europe"
-                },
-                "options": {
-                    "closeAfterAdding": true
                 },
                 "tags": [
                   "countries"
