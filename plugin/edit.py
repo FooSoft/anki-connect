@@ -2,7 +2,6 @@ import aqt
 import aqt.editor
 from aqt import gui_hooks
 from aqt.qt import QDialog, Qt, QKeySequence, QShortcut
-from aqt.browser.previewer import MultiCardPreviewer
 from aqt.utils import disable_help_button, restoreGeom, saveGeom, tooltip
 from anki.errors import NotFoundError
 from anki.consts import QUEUE_TYPE_SUSPENDED
@@ -11,13 +10,13 @@ from anki.utils import ids2str
 
 # Edit dialog. Like Edit Current, but:
 #   * has a Preview button to preview the cards for the note
-#   * has a Browse button to open the browser with these cards
 #   * has Previous/Back buttons to navigate the history of the dialog
+#   * has a Browse button to open the history in the Browser
 #   * has no bar with the Close button
 #
 # To register in Anki's dialog system:
 # > from .edit import Edit
-# > Edit.register_with_dialog_manager()
+# > Edit.register_with_anki()
 #
 # To (re)open (note_id is an integer):
 # > Edit.open_dialog_and_show_note_with_id(note_id)
@@ -87,7 +86,7 @@ class DecentPreviewer(aqt.browser.previewer.MultiCardPreviewer):
                self.adapter.can_select_next_card()
 
     def _render_scheduled(self):
-        super()._render_scheduled()
+        super()._render_scheduled()  # noqa
         self._updateButtons()
 
     def showing_answer_and_can_show_question(self):
@@ -157,6 +156,21 @@ class History:
 history = History()
 
 
+# see method `find_cards` of `collection.py`
+def trigger_search_for_dialog_history_notes(search_context, use_history_order):
+    search_context.search = " or ".join(
+        f"nid:{note_id}" for note_id in history.note_ids
+    )
+
+    if use_history_order:
+        search_context.order = f"""case c.nid {
+            " ".join(
+                f"when {note_id} then {n}"
+                for (n, note_id) in enumerate(reversed(history.note_ids))
+            )
+        } end asc"""
+
+
 ##############################################################################
 
 
@@ -164,6 +178,7 @@ history = History()
 class Edit(aqt.editcurrent.EditCurrent):
     dialog_geometry_tag = DOMAIN_PREFIX + "edit"
     dialog_registry_tag = DOMAIN_PREFIX + "Edit"
+    dialog_search_tag = DOMAIN_PREFIX + "edit.history"
 
     # depending on whether the dialog already exists, 
     # upon a request to open the dialog via `aqt.dialogs.open()`,
@@ -245,13 +260,26 @@ class Edit(aqt.editcurrent.EditCurrent):
 
     ################################################################## actions
 
+    # search two times, one is to select the current note or its cards,
+    # and another to show the whole history, while keeping the above selection
+    # set sort column to our search tag, which:
+    #  * prevents the column sort indicator from being shown
+    #  * serves as a hint for us to show notes or cards in history order
+    #    (user can then click on any of the column names
+    #    to show history cards in the order of their choosing)
     def show_browser(self, *_):
-        def search_input_select_all(browser, *_):
-            browser.form.searchEdit.lineEdit().selectAll()
+        def search_input_select_all(hook_browser, *_):
+            hook_browser.form.searchEdit.lineEdit().selectAll()
             gui_hooks.browser_did_change_row.remove(search_input_select_all)
-
         gui_hooks.browser_did_change_row.append(search_input_select_all)
-        aqt.dialogs.open("Browser", aqt.mw, search=(f"nid:{self.note.id}",))
+
+        browser = aqt.dialogs.open("Browser", aqt.mw)
+        browser.table._state.sort_column = self.dialog_search_tag  # noqa
+        browser.table._set_sort_indicator()  # noqa
+
+        browser.search_for(f"nid:{self.note.id}")
+        browser.table.select_all()
+        browser.search_for(self.dialog_search_tag)
 
     def show_preview(self, *_):
         if cards := self.note.cards():
@@ -339,8 +367,19 @@ class Edit(aqt.editcurrent.EditCurrent):
     ##########################################################################
 
     @classmethod
-    def register_with_dialog_manager(cls):
-        aqt.dialogs.register_dialog(cls.dialog_registry_tag, cls)
+    def browser_will_search(cls, search_context):
+        if search_context.search == cls.dialog_search_tag:
+            trigger_search_for_dialog_history_notes(
+                search_context=search_context,
+                use_history_order=cls.dialog_search_tag ==
+                        search_context.browser.table._state.sort_column  # noqa
+            )
+
+    @classmethod
+    def register_with_anki(cls):
+        if cls.dialog_registry_tag not in aqt.dialogs._dialogs:  # noqa
+            aqt.dialogs.register_dialog(cls.dialog_registry_tag, cls)
+            gui_hooks.browser_will_search.append(cls.browser_will_search)
 
     @classmethod
     def open_dialog_and_show_note_with_id(cls, note_id):    # raises NotFoundError

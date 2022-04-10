@@ -44,6 +44,10 @@ def close_all_dialogs_and_wait_for_them_to_run_closing_callbacks():
     wait_until(aqt.dialogs.allClosed)
 
 
+def get_dialog_instance(name):
+    return aqt.dialogs._dialogs[name][1]    # noqa
+
+
 @contextmanager
 def empty_anki_session_started():
     with anki_running(
@@ -98,6 +102,8 @@ class Setup:
     deck_id: int
     note1_id: int
     note2_id: int
+    note1_card_ids: "list[int]"
+    note2_card_ids: "list[int]"
     card_ids: "list[int]"
 
 
@@ -128,12 +134,16 @@ def set_up_test_deck_and_test_model_and_two_notes():
         tags={"tag2"},
     ))
 
+    note1_card_ids = ac.findCards(query=f"nid:{note1_id}")
+    note2_card_ids = ac.findCards(query=f"nid:{note2_id}")
     card_ids = ac.findCards(query="deck:test_deck")
 
     return Setup(
         deck_id=deck_id,
         note1_id=note1_id,
         note2_id=note2_id,
+        note1_card_ids=note1_card_ids,
+        note2_card_ids=note2_card_ids,
         card_ids=card_ids,
     )
 
@@ -239,6 +249,6 @@ def setup(session_with_profile_loaded):
       * Edit dialog is registered with dialog manager
       * Any dialogs, if open, are safely closed on exit
     """
-    Edit.register_with_dialog_manager()
+    Edit.register_with_anki()
     yield set_up_test_deck_and_test_model_and_two_notes()
     close_all_dialogs_and_wait_for_them_to_run_closing_callbacks()

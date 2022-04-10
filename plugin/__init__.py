@@ -1629,7 +1629,7 @@ class AnkiConnect:
 # when run inside Anki, `__name__` would be either numeric,
 # or, if installed via `link.sh`, `AnkiConnectDev`
 if __name__ != "plugin":
-    Edit.register_with_dialog_manager()
+    Edit.register_with_anki()
 
     ac = AnkiConnect()
     ac.initLogging()

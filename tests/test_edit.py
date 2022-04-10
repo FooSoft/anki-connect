@@ -1,5 +1,7 @@
-import pytest
 import aqt.operations.note
+import pytest
+
+from conftest import get_dialog_instance
 from plugin.edit import Edit, DecentPreviewer, history
 
 
@@ -18,9 +20,39 @@ def test_edit_dialog_fails_to_open_with_invalid_note(setup):
         Edit.open_dialog_and_show_note_with_id(123)
 
 
-def test_browser_dialog_opens(setup):
-    dialog = Edit.open_dialog_and_show_note_with_id(setup.note1_id)
-    dialog.show_browser()
+class TestBrowser:
+    @staticmethod
+    def get_selected_card_ids():
+        return get_dialog_instance("Browser").table.get_selected_card_ids()
+
+    def test_dialog_opens(self, setup):
+        dialog = Edit.open_dialog_and_show_note_with_id(setup.note1_id)
+        dialog.show_browser()
+
+    def test_selects_cards_of_last_note(self, setup):
+        Edit.open_dialog_and_show_note_with_id(setup.note1_id)
+        Edit.open_dialog_and_show_note_with_id(setup.note2_id).show_browser()
+
+        assert {*self.get_selected_card_ids()} == {*setup.note2_card_ids}
+
+    def test_selects_cards_of_note_before_last_after_previous_button_pressed(self, setup):
+        Edit.open_dialog_and_show_note_with_id(setup.note1_id)
+        dialog = Edit.open_dialog_and_show_note_with_id(setup.note2_id)
+
+        def verify_that_the_table_shows_note2_cards_then_note1_cards():
+            get_dialog_instance("Browser").table.select_all()
+            assert {*self.get_selected_card_ids()[:2]} == {*setup.note2_card_ids}
+            assert {*self.get_selected_card_ids()[2:]} == {*setup.note1_card_ids}
+
+        dialog.show_previous()
+        dialog.show_browser()
+        assert {*self.get_selected_card_ids()} == {*setup.note1_card_ids}
+        verify_that_the_table_shows_note2_cards_then_note1_cards()
+
+        dialog.show_next()
+        dialog.show_browser()
+        assert {*self.get_selected_card_ids()} == {*setup.note2_card_ids}
+        verify_that_the_table_shows_note2_cards_then_note1_cards()
 
 
 class TestPreviewDialog:

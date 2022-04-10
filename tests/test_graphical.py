@@ -1,8 +1,8 @@
-import aqt
 import pytest
 
-from conftest import ac, wait, wait_until, \
-        close_all_dialogs_and_wait_for_them_to_run_closing_callbacks
+from conftest import ac, wait_until, \
+        close_all_dialogs_and_wait_for_them_to_run_closing_callbacks, \
+        get_dialog_instance
 
 
 def test_guiBrowse(setup):
@@ -52,7 +52,7 @@ class TestAddCards:
 
     @staticmethod
     def click_on_add_card_dialog_save_button():
-        dialog = aqt.dialogs._dialogs["AddCards"][1]
+        dialog = get_dialog_instance("AddCards")
         dialog.addButton.click()
 
     # todo previously, these tests were verifying
