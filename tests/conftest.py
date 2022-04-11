@@ -6,7 +6,9 @@ from dataclasses import dataclass
 import aqt.operations.note
 import pytest
 from PyQt5 import QtTest
+from _pytest.monkeypatch import MonkeyPatch  # noqa
 from pytest_anki._launch import anki_running, temporary_user  # noqa
+from waitress import wasyncore
 
 from plugin import AnkiConnect
 from plugin.edit import Edit
@@ -48,14 +50,42 @@ def get_dialog_instance(name):
     return aqt.dialogs._dialogs[name][1]    # noqa
 
 
+# waitress is a WSGI server that Anki starts to serve css etc to its web views.
+# it seems to have a race condition issue;
+# the main loop thread is trying to `select.select` the sockets
+# which a worker thread is closing because of a dead connection.
+# this is especially pronounced in tests,
+# as we open and close windows rapidly--and so web views and their connections.
+# this small patch makes waitress skip actually closing the sockets
+# (unless the server is shutting down--if it is, loop exceptions are ignored).
+# while the unclosed sockets might accumulate,
+# this should not pose an issue in test environment.
+# see https://github.com/Pylons/waitress/issues/374
+@contextmanager
+def waitress_patched_to_prevent_it_from_dying():
+    original_close = wasyncore.dispatcher.close
+    sockets_that_must_not_be_garbage_collected = []     # lists are thread-safe
+
+    def close(self):
+        if not aqt.mw.mediaServer.is_shutdown:
+            sockets_that_must_not_be_garbage_collected.append(self.socket)
+            self.socket = None
+        original_close(self)
+
+    with MonkeyPatch().context() as monkey:
+        monkey.setattr(wasyncore.dispatcher, "close", close)
+        yield
+
+
 @contextmanager
 def empty_anki_session_started():
-    with anki_running(
-        qtbot=None,  # noqa
-        enable_web_debugging=False,
-        profile_name="test_user",
-    ) as session:
-        yield session
+    with waitress_patched_to_prevent_it_from_dying():
+        with anki_running(
+            qtbot=None,  # noqa
+            enable_web_debugging=False,
+            profile_name="test_user",
+        ) as session:
+            yield session
 
 
 @contextmanager
@@ -187,8 +217,7 @@ def run_background_tasks_on_main_thread(request, monkeypatch):  # noqa
         if on_done is not None:
             on_done(future)
 
-    monkeypatch.setattr(aqt.mw.taskman, "run_in_background",
-                        run_in_background)
+    monkeypatch.setattr(aqt.mw.taskman, "run_in_background", run_in_background)
 
 
 # don't use run_background_tasks_on_main_thread for tests that don't run Anki
