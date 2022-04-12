@@ -1425,9 +1425,7 @@ class AnkiConnect:
                 if savedMid:
                     deck['mid'] = savedMid
 
-                addCards.editor.note = ankiNote
-                addCards.editor.loadNote()
-                addCards.editor.updateTags()
+                addCards.editor.set_note(ankiNote)
 
                 addCards.activateWindow()
 
