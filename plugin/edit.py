@@ -184,7 +184,7 @@ class Edit(aqt.editcurrent.EditCurrent):
     # upon a request to open the dialog via `aqt.dialogs.open()`,
     # the manager will call either the constructor or the `reopen` method
     def __init__(self, note):
-        QDialog.__init__(self, None, Qt.Window)
+        QDialog.__init__(self, None, Qt.WindowType.Window)
         aqt.mw.garbage_collect_on_dialog_finish(self)
         self.form = aqt.forms.editcurrent.Ui_Dialog()
         self.form.setupUi(self)

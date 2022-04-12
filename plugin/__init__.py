@@ -20,15 +20,9 @@ import inspect
 import json
 import os
 import os.path
-import random
 import re
-import string
 import time
 import unicodedata
-
-from PyQt5 import QtCore
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QMessageBox, QCheckBox
 
 import anki
 import anki.exporting
@@ -36,10 +30,10 @@ import anki.storage
 import aqt
 from anki.cards import Card
 from anki.consts import MODEL_CLOZE
-
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
+from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
 from .edit import Edit
 
@@ -391,7 +385,7 @@ class AnkiConnect:
             msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
             msg.setDefaultButton(QMessageBox.No)
             msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(Qt.WindowStaysOnTopHint)
             pressedButton = msg.exec_()
 
             if pressedButton == QMessageBox.Yes:

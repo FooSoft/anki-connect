@@ -6,7 +6,6 @@ from dataclasses import dataclass
 import aqt.operations.note
 import pytest
 import anki.collection
-from PyQt5 import QtTest
 from _pytest.monkeypatch import MonkeyPatch  # noqa
 from pytest_anki._launch import anki_running, temporary_user  # noqa
 from waitress import wasyncore
@@ -14,6 +13,11 @@ from waitress import wasyncore
 from plugin import AnkiConnect
 from plugin.edit import Edit
 from plugin.util import DEFAULT_CONFIG
+
+try:
+    from PyQt6 import QtTest
+except ImportError:
+    from PyQt5 import QtTest
 
 
 ac = AnkiConnect()
