@@ -1,8 +1,63 @@
+from dataclasses import dataclass
+from unittest.mock import MagicMock
+
 import aqt.operations.note
 import pytest
 
-from conftest import get_dialog_instance
-from plugin.edit import Edit, DecentPreviewer, history
+from conftest import get_dialog_instance, wait_until
+from plugin.edit import Edit, DecentPreviewer, history, DOMAIN_PREFIX
+
+
+NOTHING = object()
+
+
+class Value:
+    def __init__(self):
+        self.value = NOTHING
+
+    def set(self, value):
+        self.value = value
+
+    def has_been_set(self):
+        return self.value is not NOTHING
+
+
+@dataclass
+class JavascriptDialogButtonManipulator:
+    dialog: ...
+
+    def eval_js(self, js):
+        evaluation_result = Value()
+        self.dialog.editor.web.evalWithCallback(js, evaluation_result.set)
+        wait_until(evaluation_result.has_been_set)
+        return evaluation_result.value
+
+    def wait_until_toolbar_buttons_are_ready(self):
+        ready_flag = Value()
+        self.dialog.editor._links["set_ready_flag"] = ready_flag.set  # noqa
+        self.dialog.run_javascript_after_toolbar_ready("pycmd('set_ready_flag');")
+        wait_until(ready_flag.has_been_set)
+
+    # preview button doesn't have an id, so find by label
+    def click_preview_button(self):
+        self.eval_js("""
+            document.evaluate("//button[text()='Preview']", document)
+                    .iterateNext()
+                    .click()
+        """)
+
+    def click_button(self, button_id):
+        self.eval_js(f"""
+            document.getElementById("{DOMAIN_PREFIX}{button_id}").click()
+        """)
+
+    def is_button_disabled(self, button_id):
+        return self.eval_js(f"""
+            document.getElementById("{DOMAIN_PREFIX}{button_id}").disabled
+        """)
+
+
+##############################################################################
 
 
 def test_edit_dialog_opens(setup):
@@ -97,6 +152,30 @@ class TestPreviewDialog:
         assert dialog.showing_question_and_can_show_answer() is showing_question_only
         assert dialog._should_enable_prev() is previous_enabled
         assert dialog._should_enable_next() is next_enabled
+
+
+class TestButtons:
+    @pytest.fixture
+    def manipulator(self, setup):
+        dialog = Edit.open_dialog_and_show_note_with_id(setup.note1_id)
+        return JavascriptDialogButtonManipulator(dialog)
+
+    def test_preview_button_can_be_clicked(self, manipulator, monkeypatch):
+        monkeypatch.setattr(manipulator.dialog, "show_preview", MagicMock())
+        manipulator.wait_until_toolbar_buttons_are_ready()
+        manipulator.click_preview_button()
+        wait_until(lambda: manipulator.dialog.show_preview.call_count == 1)
+
+    def test_addon_buttons_can_be_clicked(self, manipulator):
+        manipulator.wait_until_toolbar_buttons_are_ready()
+        manipulator.click_button(button_id="browse")
+        wait_until(lambda: get_dialog_instance("Browser") is not None)
+
+    def test_addon_buttons_get_disabled_enabled(self, setup, manipulator):
+        Edit.open_dialog_and_show_note_with_id(setup.note2_id)
+        manipulator.wait_until_toolbar_buttons_are_ready()
+        assert manipulator.is_button_disabled("previous") is False
+        assert manipulator.is_button_disabled("next") is True
 
 
 class TestHistory:
