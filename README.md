@@ -1503,11 +1503,18 @@ corresponding to when the API was available for use.
 
 *   **requestPermission**
 
-    Request permission to use the API exposed by this plugin. Only request coming from origin listed in the
-    `webCorsOriginList` option are allowed to use the Api. Calling this method will display a popup asking the user
-    if he want to allow your origin to use the Api. This is the only method that can be called even if the origin of
-    the request isn't in the `webCorsOriginList` list. It also doesn't require the api key. Calling this method will
-    not display the popup if the origin is already trusted.
+    Requests permission to use the API exposed by this plugin. This method does not require the API key, and is the
+    only one that accepts requests from any origin; the other methods only accept requests from trusted origins,
+    which are listed under `webCorsOriginList` in the add-on config. `localhost` is trusted by default.
+
+    Calling this method from an untrusted origin will display a popup in Anki asking the user whether they want to
+    allow your origin to use the API; calls from trusted origins will return the result without displaying the popup.
+    When denying permission, the user may also choose to ignore further permission requests from that origin. These
+    origins end up in the `ignoreOriginList`, editable via the add-on config.
+
+    The result always contains the `permission` field, which in turn contains either the string `granted` or `denied`,
+    corresponding to whether your origin is trusted. If your origin is trusted, the fields `requireApiKey` (`true` if
+    required) and `version` will also be returned.
 
     This should be the first call you make to make sure that your application and Anki-Connect are able to communicate
     properly with each other. New versions of Anki-Connect are backwards compatible; as long as you are using actions
