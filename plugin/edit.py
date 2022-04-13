@@ -8,6 +8,8 @@ from anki.errors import NotFoundError
 from anki.consts import QUEUE_TYPE_SUSPENDED
 from anki.utils import ids2str
 
+from . import anki_version
+
 
 # Edit dialog. Like Edit Current, but:
 #   * has a Preview button to preview the cards for the note
@@ -24,8 +26,6 @@ from anki.utils import ids2str
 
 
 DOMAIN_PREFIX = "foosoft.ankiconnect."
-
-anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
 
 
 def get_note_by_note_id(note_id):
