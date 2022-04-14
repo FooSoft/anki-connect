@@ -28,7 +28,7 @@ import unicodedata
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QCheckBox
 
 import anki
 import anki.exporting
@@ -364,53 +364,56 @@ class AnkiConnect:
     def version(self):
         return util.setting('apiVersion')
 
+
     @util.api()
     def requestPermission(self, origin, allowed):
+        results = {
+                "permission": "denied",
+        }
+
         if allowed:
-            return {
-                "permission": "granted",
-                "requireApikey": bool(util.setting('apiKey')),
-                "version": util.setting('apiVersion')
-            }
-
-        if origin in util.setting('ignoreOriginList') :
-            return {
-                "permission": "denied",
-            }
-
-        msg = QMessageBox(None)
-        msg.setWindowTitle("A website want to access to Anki")
-        msg.setText(origin + " request permission to use Anki through AnkiConnect.\nDo you want to give it access ?")
-        msg.setInformativeText("By giving permission, the website will be able to do actions on anki, including destructives actions like deck deletion.")
-        msg.setWindowIcon(self.window().windowIcon())
-        msg.setIcon(QMessageBox.Question)
-        msg.setStandardButtons(QMessageBox.Yes|QMessageBox.Ignore|QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.No)
-        msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        pressedButton = msg.exec_()
-
-        if pressedButton == QMessageBox.Yes:
-            config = aqt.mw.addonManager.getConfig(__name__)
-            config["webCorsOriginList"] = util.setting('webCorsOriginList')
-            config["webCorsOriginList"].append(origin)
-            aqt.mw.addonManager.writeConfig(__name__, config)
-
-        if pressedButton == QMessageBox.Ignore:
-            config = aqt.mw.addonManager.getConfig(__name__)
-            config["ignoreOriginList"] = util.setting('ignoreOriginList')
-            config["ignoreOriginList"].append(origin)
-            aqt.mw.addonManager.writeConfig(__name__, config)
-
-        if pressedButton == QMessageBox.Yes:
             results = {
-                "permission": "granted",
-                "requireApikey": bool(util.setting('apiKey')),
-                "version": util.setting('apiVersion')
+                    "permission": "granted",
+                    "requireApikey": bool(util.setting('apiKey')),
+                    "version": util.setting('apiVersion')
             }
-        else :
-            results = {
-                "permission": "denied",
-            }
+
+        elif origin in util.setting('ignoreOriginList'):
+            pass  # defaults to denied
+
+        else:  # prompt the user
+            msg = QMessageBox(None)
+            msg.setWindowTitle("A website wants to access to Anki")
+            msg.setText('"{}" requests permission to use Anki through AnkiConnect. Do you want to give it access?'.format(origin))
+            msg.setInformativeText("By granting permission, you'll allow the website to modify your collection on your behalf, including the execution of destructive actions such as deck deletion.")
+            msg.setWindowIcon(self.window().windowIcon())
+            msg.setIcon(QMessageBox.Question)
+            msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.No)
+            msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
+            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            pressedButton = msg.exec_()
+
+            if pressedButton == QMessageBox.Yes:
+                config = aqt.mw.addonManager.getConfig(__name__)
+                config["webCorsOriginList"] = util.setting('webCorsOriginList')
+                config["webCorsOriginList"].append(origin)
+                aqt.mw.addonManager.writeConfig(__name__, config)
+                results = {
+                    "permission": "granted",
+                    "requireApikey": bool(util.setting('apiKey')),
+                    "version": util.setting('apiVersion')
+                }
+
+            # if the origin isn't an empty string, the user clicks "No", and the ignore box is checked
+            elif origin and pressedButton == QMessageBox.No and msg.checkBox().isChecked():
+                config = aqt.mw.addonManager.getConfig(__name__)
+                config["ignoreOriginList"] = util.setting('ignoreOriginList')
+                config["ignoreOriginList"].append(origin)
+                aqt.mw.addonManager.writeConfig(__name__, config)
+
+            # else defaults to denied
+
         return results
 
 
