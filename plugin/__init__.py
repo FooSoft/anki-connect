@@ -27,6 +27,7 @@ import inspect
 import json
 import os
 import os.path
+import platform
 import re
 import time
 import unicodedata
@@ -1619,6 +1620,9 @@ class AnkiConnect:
 # when run inside Anki, `__name__` would be either numeric,
 # or, if installed via `link.sh`, `AnkiConnectDev`
 if __name__ != "plugin":
+    if platform.system() == "Windows" and anki_version == (2, 1, 50):
+        util.patch_anki_2_1_50_having_null_stdout_on_windows()
+
     Edit.register_with_anki()
 
     ac = AnkiConnect()
