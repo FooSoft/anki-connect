@@ -43,6 +43,7 @@ from anki.notes import Note
 from anki.errors import NotFoundError
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
+from .web import format_exception_reply, format_success_reply
 from .edit import Edit
 from . import web, util
 
@@ -99,7 +100,6 @@ class AnkiConnect:
         version = request.get('version', 4)
         params = request.get('params', {})
         key = request.get('key')
-        reply = {'result': None, 'error': None}
 
         try:
             if key != util.setting('apiKey') and name != 'requestPermission':
@@ -126,14 +126,12 @@ class AnkiConnect:
 
             if method is None:
                 raise Exception('unsupported action')
-            else:
-                reply['result'] = methodInst(**params)
 
-            if version <= 4:
-                reply = reply['result']
+            api_return_value = methodInst(**params)
+            reply = format_success_reply(version, api_return_value)
 
         except Exception as e:
-            reply['error'] = str(e)
+            reply = format_exception_reply(version, e)
 
         self.logEvent('reply', reply)
         return reply

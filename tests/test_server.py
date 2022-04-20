@@ -46,11 +46,14 @@ class Client:
         return {"action": action, "params": params, "version": 6}
 
     def send_request(self, action, **params):
-        request_url = f"http://localhost:{self.port}"
         request_data = self.make_request(action, **params)
-        request_json = json.dumps(request_data).encode("utf-8")
-        request = urllib.request.Request(request_url, request_json)
-        response = json.load(urllib.request.urlopen(request))
+        json_bytes = json.dumps(request_data).encode("utf-8")
+        return json.loads(self.send_bytes(json_bytes))
+
+    def send_bytes(self, bytes, headers={}):  # noqa
+        request_url = f"http://localhost:{self.port}"
+        request = urllib.request.Request(request_url, bytes, headers)
+        response = urllib.request.urlopen(request).read()
         return response
 
     def wait_for_web_server_to_come_live(self, at_most_seconds=30):
@@ -137,6 +140,11 @@ def test_multi_request(external_anki):
     }
 
 
+def test_request_with_empty_body_returns_version_banner(external_anki):
+    response = external_anki.send_bytes(b"")
+    assert response == b"AnkiConnect v.6"
+
+
 def test_failing_request_due_to_bad_arguments(external_anki):
     response = external_anki.send_request("addNote", bad="request")
     assert response["result"] is None
@@ -147,3 +155,24 @@ def test_failing_request_due_to_anki_raising_exception(external_anki):
     response = external_anki.send_request("suspend", cards=[-123])
     assert response["result"] is None
     assert "Card was not found" in response["error"]
+
+
+def test_failing_request_due_to_bad_encoding(external_anki):
+    response = json.loads(external_anki.send_bytes(b"\xe7\x8c"))
+    assert response["result"] is None
+    assert "can't decode" in response["error"]
+
+
+def test_failing_request_due_to_bad_json(external_anki):
+    response = json.loads(external_anki.send_bytes(b'{1: 2}'))
+    assert response["result"] is None
+    assert "in double quotes" in response["error"]
+
+
+def test_403_in_case_of_disallowed_origin(external_anki):
+    with pytest.raises(urllib.error.HTTPError, match="403"):  # good request/json
+        json_bytes = json.dumps(Client.make_request("version")).encode("utf-8")
+        external_anki.send_bytes(json_bytes, headers={b"origin": b"foo"})
+
+    with pytest.raises(urllib.error.HTTPError, match="403"):  # bad json
+        external_anki.send_bytes(b'{1: 2}', headers={b"origin": b"foo"})
