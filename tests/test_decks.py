@@ -1,98 +1,73 @@
-#!/usr/bin/env python
+import pytest
 
-import unittest
-import util
-
-
-class TestDecks(unittest.TestCase):
-    def runTest(self):
-        # deckNames (part 1)
-        deckNames = util.invoke('deckNames')
-        self.assertIn('Default', deckNames)
-
-        # deckNamesAndIds
-        result = util.invoke('deckNamesAndIds')
-        self.assertIn('Default', result)
-        self.assertEqual(result['Default'], 1)
-
-        # createDeck
-        util.invoke('createDeck', deck='test1')
-
-        # deckNames (part 2)
-        deckNames = util.invoke('deckNames')
-        self.assertIn('test1', deckNames)
-
-        # changeDeck
-        note = {'deckName': 'test1', 'modelName': 'Basic', 'fields': {'Front': 'front', 'Back': 'back'}, 'tags': ['tag']}
-        noteId = util.invoke('addNote', note=note)
-        cardIds = util.invoke('findCards', query='deck:test1')
-        util.invoke('changeDeck', cards=cardIds, deck='test2')
-
-        # deckNames (part 3)
-        deckNames = util.invoke('deckNames')
-        self.assertIn('test2', deckNames)
-
-        # deleteDecks
-        util.invoke('deleteDecks', decks=['test1', 'test2'], cardsToo=True)
-
-        # deckNames (part 4)
-        deckNames = util.invoke('deckNames')
-        self.assertNotIn('test1', deckNames)
-        self.assertNotIn('test2', deckNames)
-
-        # getDeckConfig
-        deckConfig = util.invoke('getDeckConfig', deck='Default')
-        self.assertEqual('Default', deckConfig['name'])
-
-        # saveDeckConfig
-        deckConfig = util.invoke('saveDeckConfig', config=deckConfig)
-
-        # setDeckConfigId
-        setDeckConfigId = util.invoke('setDeckConfigId', decks=['Default'], configId=1)
-        self.assertTrue(setDeckConfigId)
-
-        # cloneDeckConfigId (part 1)
-        deckConfigId = util.invoke('cloneDeckConfigId', cloneFrom=1, name='test')
-        self.assertTrue(deckConfigId)
-
-        # removeDeckConfigId (part 1)
-        removedDeckConfigId = util.invoke('removeDeckConfigId', configId=deckConfigId)
-        self.assertTrue(removedDeckConfigId)
-
-        # removeDeckConfigId (part 2)
-        removedDeckConfigId = util.invoke('removeDeckConfigId', configId=deckConfigId)
-        self.assertFalse(removedDeckConfigId)
-
-        # cloneDeckConfigId (part 2)
-        deckConfigId = util.invoke('cloneDeckConfigId', cloneFrom=deckConfigId, name='test')
-        self.assertFalse(deckConfigId)
-
-        # updateCompleteDeck
-        util.invoke('updateCompleteDeck', data={
-            'deck': 'test3',
-            'cards': {
-                '12': {
-                    'id': 12, 'nid': 23, 'ord': 0,  'type': 0, 'queue': 0,
-                    'due': 1186031, 'factor': 0, 'ivl': 0, 'reps': 0, 'lapses': 0, 'left': 0
-                }
-            },
-            'notes': {
-                '23': {
-                    'id': 23, 'mid': 34, 'fields': ['frontValue', 'backValue'], 'tags': ['aTag']
-                }
-            },
-            'models': {
-                '34': {
-                    'id': 34, 'fields': ['Front', 'Back'], 'templateNames': ['Card 1'], 'name': 'anotherModel',
-                }
-            }
-        })
-        deckNames = util.invoke('deckNames')
-        self.assertIn('test3', deckNames)
-        cardIDs = util.invoke('findCards', query='deck:test3')
-        self.assertEqual(len(cardIDs), 1)
-        self.assertEqual(cardIDs[0], 12)
+from conftest import ac
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_deckNames(session_with_profile_loaded):
+    result = ac.deckNames()
+    assert result == ["Default"]
+
+
+def test_deckNamesAndIds(session_with_profile_loaded):
+    result = ac.deckNamesAndIds()
+    assert result == {"Default": 1}
+
+
+def test_createDeck(session_with_profile_loaded):
+    ac.createDeck("foo")
+    assert {*ac.deckNames()} == {"Default", "foo"}
+
+
+def test_changeDeck(setup):
+    ac.changeDeck(cards=setup.card_ids, deck="bar")
+    assert "bar" in ac.deckNames()
+
+
+def test_deleteDeck(setup):
+    before = ac.deckNames()
+    ac.deleteDecks(decks=["test_deck"], cardsToo=True)
+    after = ac.deckNames()
+    assert {*before} - {*after} == {"test_deck"}
+
+
+@pytest.mark.skipif(
+    condition=ac._anki21_version < 28,
+    reason=f"Not applicable to Anki < 2.1.28"
+)
+def test_deleteDeck_must_be_called_with_cardsToo_set_to_True_on_later_api(setup):
+    with pytest.raises(Exception):
+        ac.deleteDecks(decks=["test_deck"])
+    with pytest.raises(Exception):
+        ac.deleteDecks(decks=["test_deck"], cardsToo=False)
+
+
+def test_getDeckConfig(session_with_profile_loaded):
+    result = ac.getDeckConfig(deck="Default")
+    assert result["name"] == "Default"
+
+
+def test_saveDeckConfig(session_with_profile_loaded):
+    config = ac.getDeckConfig(deck="Default")
+    result = ac.saveDeckConfig(config=config)
+    assert result is True
+
+
+def test_setDeckConfigId(session_with_profile_loaded):
+    result = ac.setDeckConfigId(decks=["Default"], configId=1)
+    assert result is True
+
+
+def test_cloneDeckConfigId(session_with_profile_loaded):
+    result = ac.cloneDeckConfigId(cloneFrom=1, name="test")
+    assert isinstance(result, int)
+
+
+def test_removedDeckConfigId(session_with_profile_loaded):
+    new_config_id = ac.cloneDeckConfigId(cloneFrom=1, name="test")
+    assert ac.removeDeckConfigId(configId=new_config_id) is True
+
+
+def test_removedDeckConfigId_fails_with_invalid_id(session_with_profile_loaded):
+    new_config_id = ac.cloneDeckConfigId(cloneFrom=1, name="test")
+    assert ac.removeDeckConfigId(configId=new_config_id) is True
+    assert ac.removeDeckConfigId(configId=new_config_id) is False
