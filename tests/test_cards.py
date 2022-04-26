@@ -1,95 +1,78 @@
-#!/usr/bin/env python
+import pytest
+from anki.errors import NotFoundError  # noqa
 
-import unittest
-import util
-
-
-class TestCards(unittest.TestCase):
-    def setUp(self):
-        util.invoke('createDeck', deck='test')
-        note = {
-            'deckName': 'test',
-            'modelName': 'Basic',
-            'fields': {'Front': 'front1', 'Back': 'back1'},
-            'tags': ['tag1'],
-            'options': {
-                'allowDuplicate': True
-            }
-        }
-        self.noteId = util.invoke('addNote', note=note)
+from conftest import ac
 
 
-    def tearDown(self):
-        util.invoke('deleteDecks', decks=['test'], cardsToo=True)
+def test_findCards(setup):
+    card_ids = ac.findCards(query="deck:test_deck")
+    assert len(card_ids) == 4
 
 
-    def runTest(self):
-        incorrectId = 1234
+class TestEaseFactors:
+    def test_setEaseFactors(self, setup):
+        result = ac.setEaseFactors(cards=setup.card_ids, easeFactors=[4200] * 4)
+        assert result == [True] * 4
 
-        # findCards
-        cardIds = util.invoke('findCards', query='deck:test')
-        self.assertEqual(len(cardIds), 1)
+    def test_setEaseFactors_with_invalid_card_id(self, setup):
+        result = ac.setEaseFactors(cards=[123], easeFactors=[4200])
+        assert result == [False]
 
-        # setEaseFactors
-        EASE_TO_TRY = 4200
-        easeFactors = [EASE_TO_TRY for card in cardIds]
-        couldGetEaseFactors = util.invoke('setEaseFactors', cards=cardIds, easeFactors=easeFactors)
-        self.assertEqual([True for card in cardIds], couldGetEaseFactors)
-        couldGetEaseFactors = util.invoke('setEaseFactors', cards=[incorrectId], easeFactors=[EASE_TO_TRY])
-        self.assertEqual([False], couldGetEaseFactors)
+    def test_getEaseFactors(self, setup):
+        ac.setEaseFactors(cards=setup.card_ids, easeFactors=[4200] * 4)
+        result = ac.getEaseFactors(cards=setup.card_ids)
+        assert result == [4200] * 4
 
-        # getEaseFactors
-        easeFactorsFound = util.invoke('getEaseFactors', cards=cardIds)
-        self.assertEqual(easeFactors, easeFactorsFound)
-        easeFactorsFound = util.invoke('getEaseFactors', cards=[incorrectId])
-        self.assertEqual([None], easeFactorsFound)
+    def test_getEaseFactors_with_invalid_card_id(self, setup):
+        assert ac.getEaseFactors(cards=[123]) == [None]
 
-        # suspend
-        util.invoke('suspend', cards=cardIds)
-        self.assertRaises(Exception, lambda: util.invoke('suspend', cards=[incorrectId]))
 
-        # areSuspended (part 1)
-        suspendedStates = util.invoke('areSuspended', cards=cardIds)
-        self.assertEqual(len(cardIds), len(suspendedStates))
-        self.assertNotIn(False, suspendedStates)
-        self.assertEqual([None], util.invoke('areSuspended', cards=[incorrectId]))
+class TestSuspending:
+    def test_suspend(self, setup):
+        assert ac.suspend(cards=setup.card_ids) is True
 
-        # unsuspend
-        util.invoke('unsuspend', cards=cardIds)
+    def test_suspend_fails_with_incorrect_id(self, setup):
+        with pytest.raises(NotFoundError):
+            assert ac.suspend(cards=[123])
 
-        # areSuspended (part 2)
-        suspendedStates = util.invoke('areSuspended', cards=cardIds)
-        self.assertEqual(len(cardIds), len(suspendedStates))
-        self.assertNotIn(True, suspendedStates)
+    def test_areSuspended_returns_False_for_regular_cards(self, setup):
+        result = ac.areSuspended(cards=setup.card_ids)
+        assert result == [False] * 4
 
-        # areDue
-        dueStates = util.invoke('areDue', cards=cardIds)
-        self.assertEqual(len(cardIds), len(dueStates))
-        self.assertNotIn(False, dueStates)
+    def test_areSuspended_returns_True_for_suspended_cards(self, setup):
+        ac.suspend(setup.card_ids)
+        result = ac.areSuspended(cards=setup.card_ids)
+        assert result == [True] * 4
 
-        # getIntervals
-        util.invoke('getIntervals', cards=cardIds, complete=True)
-        util.invoke('getIntervals', cards=cardIds, complete=False)
 
-        # cardsToNotes
-        noteIds = util.invoke('cardsToNotes', cards=cardIds)
-        self.assertEqual(len(noteIds), len(cardIds))
-        self.assertIn(self.noteId, noteIds)
+def test_areDue_returns_True_for_new_cards(setup):
+    result = ac.areDue(cards=setup.card_ids)
+    assert result == [True] * 4
 
-        # cardsInfo
-        cardsInfo = util.invoke('cardsInfo', cards=cardIds)
-        self.assertEqual(len(cardsInfo), len(cardIds))
-        for i, cardInfo in enumerate(cardsInfo):
-            self.assertEqual(cardInfo['cardId'], cardIds[i])
-        cardsInfo = util.invoke('cardsInfo', cards=[incorrectId])
-        self.assertEqual(len(cardsInfo), 1)
-        self.assertDictEqual(cardsInfo[0], dict())
 
-        # forgetCards
-        util.invoke('forgetCards', cards=cardIds)
+def test_getIntervals(setup):
+    ac.getIntervals(cards=setup.card_ids, complete=False)
+    ac.getIntervals(cards=setup.card_ids, complete=True)
 
-        # relearnCards
-        util.invoke('relearnCards', cards=cardIds)
 
-if __name__ == '__main__':
-    unittest.main()
+def test_cardsToNotes(setup):
+    result = ac.cardsToNotes(cards=setup.card_ids)
+    assert {*result} == {setup.note1_id, setup.note2_id}
+
+
+class TestCardInfo:
+    def test_with_valid_ids(self, setup):
+        result = ac.cardsInfo(cards=setup.card_ids)
+        assert [item["cardId"] for item in result] == setup.card_ids
+
+    def test_with_incorrect_id(self, setup):
+        result = ac.cardsInfo(cards=[123])
+        assert result == [{}]
+
+
+def test_forgetCards(setup):
+    ac.forgetCards(cards=setup.card_ids)
+
+
+def test_relearnCards(setup):
+    ac.relearnCards(cards=setup.card_ids)

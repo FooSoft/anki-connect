@@ -1,68 +1,50 @@
-#!/usr/bin/env python
+import aqt
 
-import os
-import tempfile
-import unittest
-import util
-
-
-class TestMisc(unittest.TestCase):
-    def runTest(self):
-        # version
-        self.assertEqual(util.invoke('version'), 6)
-
-        # sync
-        util.invoke('sync')
-
-        # getProfiles
-        profiles = util.invoke('getProfiles')
-        self.assertIsInstance(profiles, list)
-        self.assertGreater(len(profiles), 0)
-
-        # loadProfile
-        util.invoke('loadProfile', name=profiles[0])
-
-        # multi
-        actions = [util.request('version'), util.request('version'), util.request('version')]
-        results = util.invoke('multi', actions=actions)
-        self.assertEqual(len(results), len(actions))
-        for result in results:
-            self.assertIsNone(result['error'])
-            self.assertEqual(result['result'], 6)
-
-        # exportPackage
-        fd, newname = tempfile.mkstemp(prefix='testexport', suffix='.apkg')
-        os.close(fd)
-        os.unlink(newname)
-        result = util.invoke('exportPackage', deck='Default', path=newname)
-        self.assertTrue(result)
-        self.assertTrue(os.path.exists(newname))
-
-        # importPackage
-        deckName = 'importTest'
-        fd, newname = tempfile.mkstemp(prefix='testimport', suffix='.apkg')
-        os.close(fd)
-        os.unlink(newname)
-        util.invoke('createDeck', deck=deckName)
-        note = {
-            'deckName': deckName,
-            'modelName': 'Basic',
-            'fields': {'Front': 'front1', 'Back': 'back1'},
-            'tags': '',
-            'options': {
-                'allowDuplicate': True
-            }
-        }
-        noteId = util.invoke('addNote', note=note)
-        util.invoke('exportPackage', deck=deckName, path=newname)
-        util.invoke('deleteDecks', decks=[deckName], cardsToo=True)
-        util.invoke('importPackage', path=newname)
-        deckNames = util.invoke('deckNames')
-        self.assertIn(deckName, deckNames)
-
-        # reloadCollection
-        util.invoke('reloadCollection')
+from conftest import ac, anki_connect_config_loaded, \
+    set_up_test_deck_and_test_model_and_two_notes, \
+    current_decks_and_models_etc_preserved, wait
 
 
-if __name__ == '__main__':
-    unittest.main()
+# version is retrieved from config
+def test_version(session_with_profile_loaded):
+    with anki_connect_config_loaded(
+        session=session_with_profile_loaded,
+        web_bind_port=0,
+    ):
+        assert ac.version() == 6
+
+
+def test_reloadCollection(setup):
+    ac.reloadCollection()
+
+
+class TestProfiles:
+    def test_getProfiles(self, session_with_profile_loaded):
+        result = ac.getProfiles()
+        assert result == ["test_user"]
+
+    # waiting a little while gets rid of the cryptic warning:
+    #   Qt warning: QXcbConnection: XCB error: 8 (BadMatch), sequence: 658,
+    #   resource id: 2097216, major code: 42 (SetInputFocus), minor code: 0
+    def test_loadProfile(self, session_with_profile_loaded):
+        aqt.mw.unloadProfileAndShowProfileManager()
+        wait(0.1)
+        ac.loadProfile(name="test_user")
+
+
+class TestExportImport:
+    def test_exportPackage(self,  session_with_profile_loaded, setup):
+        filename = session_with_profile_loaded.base + "/export.apkg"
+        ac.exportPackage(deck="test_deck", path=filename)
+
+    def test_importPackage(self, session_with_profile_loaded):
+        filename = session_with_profile_loaded.base + "/export.apkg"
+
+        with current_decks_and_models_etc_preserved():
+            set_up_test_deck_and_test_model_and_two_notes()
+            ac.exportPackage(deck="test_deck", path=filename)
+
+        with current_decks_and_models_etc_preserved():
+            assert "test_deck" not in ac.deckNames()
+            ac.importPackage(path=filename)
+            assert "test_deck" in ac.deckNames()

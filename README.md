@@ -745,8 +745,8 @@ corresponding to when the API was available for use.
 
 *   **deleteDecks**
 
-    Deletes decks with the given names. If `cardsToo` is `true` (defaults to `false` if unspecified), the cards within
-    the deleted decks will also be deleted; otherwise they will be moved to the default deck.
+    Deletes decks with the given names. 
+    The argument `cardsToo` *must* be specified and set to `true`.
 
     *Sample request*:
     ```json
@@ -960,76 +960,6 @@ corresponding to when the API was available for use.
     }
     ```
 
-*   **updateCompleteDeck**
-
-    Pastes all transmitted data into the database and reloads the collection.
-    You can send a deckName and corresponding cards, notes and models.
-    All cards are assumed to belong to the given deck.
-    All notes referenced by given cards should be present.
-    All models referenced by given notes should be present.
-
-    *Sample request*:
-    ```json
-    {
-        "action": "updateCompleteDeck",
-        "version": 6,
-        "params": {
-            "data":  {
-                "deck": "test3",
-                "cards": {
-                     "1485369472028": {
-                         "id": 1485369472028,
-                         "nid": 1485369340204,
-                         "ord": 0,
-                         "type": 0,
-                         "queue": 0,
-                         "due": 1186031,
-                         "factor": 0,
-                         "ivl": 0,
-                         "reps": 0,
-                         "lapses": 0,
-                         "left": 0
-                     }
-                },
-                "notes": {
-                    "1485369340204": {
-                        "id": 1485369340204,
-                        "mid": 1375786181313,
-                        "fields": [
-                            "frontValue",
-                            "backValue"
-                        ],
-                        "tags": [
-                            "aTag"
-                        ]
-                    }
-                },
-                "models": {
-                    "1375786181313": {
-                        "id": 1375786181313,
-                        "name": "anotherModel",
-                        "fields": [
-                            "Front",
-                            "Back"
-                        ],
-                        "templateNames": [
-                            "Card 1"
-                        ]
-                    }
-                }
-            }
-        }
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": null,
-        "error": null
-    }
-    ```
-
 #### Graphical Actions
 
 *   **guiBrowse**
@@ -1085,9 +1015,6 @@ corresponding to when the API was available for use.
     Audio, video, and picture files can be embedded into the fields via the `audio`, `video`, and `picture` keys, respectively.
     Refer to the documentation of `addNote` and `storeMediaFile` for an explanation of these fields.
 
-    The `closeAfterAdding` member inside `options` group can be set to true to create a dialog that closes upon adding the note.
-    Invoking the action mutliple times with this option will create _multiple windows_.
-
     The result is the ID of the note which would be added, if the user chose to confirm the *Add Cards* dialogue.
 
     *Sample request*:
@@ -1102,9 +1029,6 @@ corresponding to when the API was available for use.
                 "fields": {
                     "Text": "The capital of Romania is {{c1::Bucharest}}",
                     "Extra": "Romania is a country in Europe"
-                },
-                "options": {
-                    "closeAfterAdding": true
                 },
                 "tags": [
                   "countries"
@@ -1125,6 +1049,34 @@ corresponding to when the API was available for use.
     ```json
     {
         "result": 1496198395707,
+        "error": null
+    }
+    ```
+
+*   **guiEditNote**
+
+    Opens the *Edit* dialog with a note corresponding to given note ID.
+    The dialog is similar to the *Edit Current* dialog, but:
+    * has a Preview button to preview the cards for the note
+    * has a Browse button to open the browser with these cards
+    * has Previous/Back buttons to navigate the history of the dialog
+    * has no bar with the Close button
+
+    *Sample request*:
+    ```json
+    {
+        "action": "guiEditNote",
+        "version": 6,
+        "params": {
+            "note": 1649198355435
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
         "error": null
     }
     ```
