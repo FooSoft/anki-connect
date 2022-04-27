@@ -30,10 +30,6 @@ def test_deleteDeck(setup):
     assert {*before} - {*after} == {"test_deck"}
 
 
-@pytest.mark.skipif(
-    condition=ac._anki21_version < 28,
-    reason=f"Not applicable to Anki < 2.1.28"
-)
 def test_deleteDeck_must_be_called_with_cardsToo_set_to_True_on_later_api(setup):
     with pytest.raises(Exception):
         ac.deleteDecks(decks=["test_deck"])

@@ -13,6 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import aqt
+
+anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
+
+if anki_version < (2, 1, 45):
+    raise Exception("Minimum Anki version supported: 2.1.45")
+
 import base64
 import glob
 import hashlib
@@ -20,34 +27,23 @@ import inspect
 import json
 import os
 import os.path
-import random
+import platform
 import re
-import string
 import time
 import unicodedata
-
-from PyQt5 import QtCore
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QMessageBox, QCheckBox
 
 import anki
 import anki.exporting
 import anki.storage
-import aqt
 from anki.cards import Card
 from anki.consts import MODEL_CLOZE
-
 from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
+from anki.errors import NotFoundError
+from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
 from .edit import Edit
-
-try:
-    from anki.rsbackend import NotFoundError
-except:
-    NotFoundError = Exception
-
 from . import web, util
 
 
@@ -56,8 +52,6 @@ from . import web, util
 #
 
 class AnkiConnect:
-    _anki21_version = int(aqt.appVersion.split('.')[-1])
-
     def __init__(self):
         self.log = None
         self.timer = None
@@ -84,11 +78,7 @@ class AnkiConnect:
             )
 
     def save_model(self, models, ankiModel):
-        if self._anki21_version < 45:
-            models.save(ankiModel, True)
-            models.flush()
-        else:
-            models.update_dict(ankiModel)
+        models.update_dict(ankiModel)
 
     def logEvent(self, name, data):
         if self.log is not None:
@@ -391,7 +381,7 @@ class AnkiConnect:
             msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
             msg.setDefaultButton(QMessageBox.No)
             msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(Qt.WindowStaysOnTopHint)
             pressedButton = msg.exec_()
 
             if pressedButton == QMessageBox.Yes:
@@ -547,9 +537,8 @@ class AnkiConnect:
             # however, since 62c23c6816adf912776b9378c008a52bb50b2e8d (2.1.45)
             # passing cardsToo to `rem` (long deprecated) won't raise an error!
             # this is dangerous, so let's raise our own exception
-            if self._anki21_version >= 28:
-                raise Exception("Since Anki 2.1.28 it's not possible "
-                                "to delete decks without deleting cards as well")
+            raise Exception("Since Anki 2.1.28 it's not possible "
+                            "to delete decks without deleting cards as well")
         try:
             self.startEditing()
             decks = filter(lambda d: d in self.deckNames(), decks)
@@ -1425,9 +1414,7 @@ class AnkiConnect:
                 if savedMid:
                     deck['mid'] = savedMid
 
-                addCards.editor.note = ankiNote
-                addCards.editor.loadNote()
-                addCards.editor.updateTags()
+                addCards.editor.set_note(ankiNote)
 
                 addCards.activateWindow()
 
@@ -1633,6 +1620,9 @@ class AnkiConnect:
 # when run inside Anki, `__name__` would be either numeric,
 # or, if installed via `link.sh`, `AnkiConnectDev`
 if __name__ != "plugin":
+    if platform.system() == "Windows" and anki_version == (2, 1, 50):
+        util.patch_anki_2_1_50_having_null_stdout_on_windows()
+
     Edit.register_with_anki()
 
     ac = AnkiConnect()

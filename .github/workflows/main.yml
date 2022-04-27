@@ -12,8 +12,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pyqt5-dev-tools xvfb
 
-      - name: Setup Python
+      - name: Setup Python 3.8
         uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
 
       - name: Install tox
         run: pip install tox

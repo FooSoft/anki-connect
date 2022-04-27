@@ -5,14 +5,19 @@ from dataclasses import dataclass
 
 import aqt.operations.note
 import pytest
-from PyQt5 import QtTest
+import anki.collection
 from _pytest.monkeypatch import MonkeyPatch  # noqa
 from pytest_anki._launch import anki_running, temporary_user  # noqa
 from waitress import wasyncore
 
-from plugin import AnkiConnect
+from plugin import AnkiConnect, anki_version
 from plugin.edit import Edit
 from plugin.util import DEFAULT_CONFIG
+
+try:
+    from PyQt6 import QtTest
+except ImportError:
+    from PyQt5 import QtTest
 
 
 ac = AnkiConnect()
@@ -78,21 +83,32 @@ def waitress_patched_to_prevent_it_from_dying():
 
 
 @contextmanager
+def anki_patched_to_prevent_backups():
+    with MonkeyPatch().context() as monkey:
+        if anki_version < (2, 1, 50):
+            monkey.setitem(aqt.profiles.profileConf, "numBackups", 0)
+        else:
+            monkey.setattr(anki.collection.Collection, "create_backup",
+                           lambda *args, **kwargs: True)
+        yield
+
+
+@contextmanager
 def empty_anki_session_started():
     with waitress_patched_to_prevent_it_from_dying():
-        with anki_running(
-            qtbot=None,  # noqa
-            enable_web_debugging=False,
-            profile_name="test_user",
-        ) as session:
-            yield session
+        with anki_patched_to_prevent_backups():
+            with anki_running(
+                qtbot=None,  # noqa
+                enable_web_debugging=False,
+                profile_name="test_user",
+            ) as session:
+                yield session
 
 
 @contextmanager
 def profile_created_and_loaded(session):
     with temporary_user(session.base, "test_user", "en_US"):
         with session.profile_loaded():
-            aqt.mw.pm.profile["numBackups"] = 0     # don't try to do backups
             yield session
 
 

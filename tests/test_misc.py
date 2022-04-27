@@ -1,4 +1,7 @@
+import os
+
 import aqt
+import pytest
 
 from conftest import ac, anki_connect_config_loaded, \
     set_up_test_deck_and_test_model_and_two_notes, \
@@ -33,6 +36,19 @@ class TestProfiles:
 
 
 class TestExportImport:
+    # since Anki 2.1.50, exporting media for some wild reason
+    # will change the current working directory, which then gets removed.
+    # see `exporting.py`, ctrl-f `os.chdir(self.mediaDir)`
+    @pytest.fixture(autouse=True)
+    def current_working_directory_preserved(self):
+        cwd = os.getcwd()
+        yield
+
+        try:
+            os.getcwd()
+        except FileNotFoundError:
+            os.chdir(cwd)
+
     def test_exportPackage(self,  session_with_profile_loaded, setup):
         filename = session_with_profile_loaded.base + "/export.apkg"
         ac.exportPackage(deck="test_deck", path=filename)
