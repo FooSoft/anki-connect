@@ -147,3 +147,29 @@ def test_failing_request_due_to_anki_raising_exception(external_anki):
     response = external_anki.send_request("suspend", cards=[-123])
     assert response["result"] is None
     assert "Card was not found" in response["error"]
+
+def test_failing_request_due_malformed_json(external_anki):
+    request_url = f"http://localhost:{external_anki.port}"
+    request_json = "{]".encode("utf-8")
+    request = urllib.request.Request(request_url, request_json)
+
+    try:
+        response = json.load(urllib.request.urlopen(request))
+        assert False
+    except urllib.error.HTTPError as e:
+        reason = e.code
+        assert e.code == 400
+
+def test_reject_non_object_request_body(external_anki):
+    request_url = f"http://localhost:{external_anki.port}"
+    request_json = "1.2".encode("utf-8")
+    request = urllib.request.Request(request_url, request_json)
+
+    response = {}
+    try:
+        response = json.load(urllib.request.urlopen(request))
+    except urllib.error.HTTPError as e:
+        assert False
+
+    assert "unsupported action" in response["error"]
+

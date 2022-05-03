@@ -175,38 +175,60 @@ class WebServer:
 
             return self.buildResponse(headers, body)
     
-        paramsError = False
+        params = {}
+        parseError = False
+        body = ''.encode('utf-8')
 
         try:
             params = json.loads(req.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            parseError = len(req.body) != 0
         except ValueError:
-            body = json.dumps(None).encode('utf-8')
-            paramsError = True
+            pass
 
-        if allowed or not paramsError and params.get('action', '') == 'requestPermission':
-            if len(req.body) == 0:
-                body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
-            else:
-                if params.get('action', '') == 'requestPermission':
-                    params['params'] = params.get('params', {})
-                    params['params']['allowed'] = allowed
-                    params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
-                    if not allowed :
-                        corsOrigin = params['params']['origin']
-                        
-                body = json.dumps(self.handler(params)).encode('utf-8')
-                    
+        if type(params) is not dict:
+            params = {}
+
+        if parseError:
+            body = json.dumps({'error': "malformed JSON", 'result': None}).encode('utf-8')
+            headers = [
+                ['HTTP/1.1 400 Bad Request', None],
+                ['Access-Control-Allow-Origin', corsOrigin],
+                ['Access-Control-Allow-Headers', '*']
+            ]
+            return self.buildResponse(headers, body)
+
+        if allowed:
+            body = self.getAnkiVersion() if len(req.body) == 0 else self.createResponseBody(params)
             headers = self.buildHeaders(corsOrigin, body)
-        else :
+
+        elif params.get('action', '') == 'requestPermission':
+            if len(req.body) == 0:
+                body = self.getAnkiVersion()
+            else:
+                params['params'] = params.get('params', {})
+                params['params']['allowed'] = allowed
+                params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
+                body = self.createResponseBody(params)
+                if not allowed :
+                    corsOrigin = params['params']['origin']
+
+            headers = self.buildHeaders(corsOrigin, body)
+
+        else:
             headers = [
                 ['HTTP/1.1 403 Forbidden', None],
                 ['Access-Control-Allow-Origin', corsOrigin],
                 ['Access-Control-Allow-Headers', '*']
             ]
-            body = ''.encode('utf-8')
 
         return self.buildResponse(headers, body)
 
+    def createResponseBody(self, params):
+        return json.dumps(self.handler(params)).encode('utf-8')
+
+    def getAnkiVersion(self):
+        return 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
 
     def allowOrigin(self, req):
         # handle multiple cors origins by checking the 'origin'-header against the allowed origin list from the config
