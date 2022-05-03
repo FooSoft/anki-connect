@@ -67,3 +67,8 @@ def test_removedDeckConfigId_fails_with_invalid_id(session_with_profile_loaded):
     new_config_id = ac.cloneDeckConfigId(cloneFrom=1, name="test")
     assert ac.removeDeckConfigId(configId=new_config_id) is True
     assert ac.removeDeckConfigId(configId=new_config_id) is False
+
+
+def test_getDeckStats(session_with_profile_loaded):
+    result = ac.getDeckStats(decks=["Default"])
+    assert result["name"] == "Default"

@@ -960,6 +960,46 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **getDeckStats**
+
+    Gets statistics such as total cards and cards due for the given decks.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getDeckStats",
+        "version": 6,
+        "params": {
+            "decks": ["Japanese::JLPT N5", "Easy Spanish"]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": {
+            "1651445861967": {
+                "deck_id": 1651445861967,
+                "name": "Japanese::JLPT N5",
+                "new_count": 20,
+                "learn_count": 0,
+                "review_count": 0,
+                "total_in_deck": 1506
+            },
+            "1651445861960": {
+                "deck_id": 1651445861960,
+                "name": "Easy Spanish",
+                "new_count": 26,
+                "learn_count": 10,
+                "review_count": 5,
+                "total_in_deck": 852
+            }
+        },
+        "error": null
+    }
+    ```
+
 #### Graphical Actions
 
 *   **guiBrowse**
