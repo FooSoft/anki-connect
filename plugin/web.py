@@ -14,6 +14,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import jsonschema
 import select
 import socket
 
@@ -177,7 +178,8 @@ class WebServer:
     
         try:
             params = json.loads(req.body.decode('utf-8'))
-        except ValueError as e:
+            jsonschema.validate(params, request_schema)
+        except (ValueError, jsonschema.ValidationError) as e:
             if allowed:
                 if len(req.body) == 0:
                     body = f"AnkiConnect v.{util.setting('apiVersion')}".encode()
@@ -286,3 +288,14 @@ def format_success_reply(api_version, result):
 
 def format_exception_reply(_api_version, exception):
     return {"result": None, "error": str(exception)}
+
+
+request_schema = {
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "minLength": 1},
+        "version": {"type": "integer"},
+        "params": {"type": "object"},
+    },
+    "required": ["action"],
+}

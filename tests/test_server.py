@@ -169,6 +169,24 @@ def test_failing_request_due_to_bad_json(external_anki):
     assert "in double quotes" in response["error"]
 
 
+def test_failing_request_due_to_json_root_not_being_an_object(external_anki):
+    response = json.loads(external_anki.send_bytes(b"1.2"))
+    assert response["result"] is None
+    assert "is not of type 'object'" in response["error"]
+
+
+def test_failing_request_due_to_json_missing_wanted_properties(external_anki):
+    response = json.loads(external_anki.send_bytes(b"{}"))
+    assert response["result"] is None
+    assert "'action' is a required property" in response["error"]
+
+
+def test_failing_request_due_to_json_properties_being_of_wrong_types(external_anki):
+    response = json.loads(external_anki.send_bytes(b'{"action": 1}'))
+    assert response["result"] is None
+    assert "1 is not of type 'string'" in response["error"]
+
+
 def test_403_in_case_of_disallowed_origin(external_anki):
     with pytest.raises(urllib.error.HTTPError, match="403"):  # good request/json
         json_bytes = json.dumps(Client.make_request("version")).encode("utf-8")
