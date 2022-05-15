@@ -346,6 +346,21 @@ class AnkiConnect:
         except NotFoundError:
             raise NotFoundError('Note was not found: {}'.format(note_id))
 
+    def deckStatsToJson(self, due_tree):
+        return {'deck_id': due_tree.deck_id,
+                'name': due_tree.name,
+                'new_count': due_tree.new_count,
+                'learn_count': due_tree.learn_count,
+                'review_count': due_tree.review_count,
+                'total_in_deck': due_tree.total_in_deck}
+
+    def collectDeckTreeChildren(self, parent_node):
+        allNodes = {parent_node.deck_id: parent_node}
+        for child in parent_node.children:
+            for deckId, childNode in self.collectDeckTreeChildren(child).items():
+                allNodes[deckId] = childNode
+        return allNodes
+
     #
     # Miscellaneous
     #
@@ -617,6 +632,18 @@ class AnkiConnect:
         collection.decks.remConf(configId)
         return True
 
+    @util.api()
+    def getDeckStats(self, decks):
+        collection = self.collection()
+        scheduler = self.scheduler()
+        responseDict = {}
+        deckIds = list(map(lambda d: collection.decks.id(d), decks))
+
+        allDeckNodes = self.collectDeckTreeChildren(scheduler.deck_due_tree())
+        for deckId, deckNode in allDeckNodes.items():
+            if deckId in deckIds:
+                responseDict[deckId] = self.deckStatsToJson(deckNode)
+        return responseDict
 
     @util.api()
     def storeMediaFile(self, filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True):
