@@ -1640,6 +1640,36 @@ class AnkiConnect:
 
         return False
 
+
+    @util.api()
+    def apiReflect(self, scopes=None, actions=None):
+        if not isinstance(scopes, list):
+            raise Exception('scopes has invalid value')
+        if not (actions is None or isinstance(actions, list)):
+            raise Exception('actions has invalid value')
+
+        cls = type(self)
+        scopes2 = []
+        result = {'scopes': scopes2}
+
+        if 'actions' in scopes:
+            if actions is None:
+                actions = dir(cls)
+
+            methodNames = []
+            for methodName in actions:
+                if not isinstance(methodName, str):
+                    pass
+                method = getattr(cls, methodName, None)
+                if method is not None and getattr(method, 'api', False):
+                    methodNames.append(methodName)
+
+            scopes2.append('actions')
+            result['actions'] = methodNames
+
+        return result
+
+
 #
 # Entry
 #
