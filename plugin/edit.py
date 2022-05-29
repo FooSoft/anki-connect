@@ -200,11 +200,12 @@ class Edit(aqt.editcurrent.EditCurrent):
         self.form.buttonBox.setVisible(False)   # hides the Close button bar
         self.setup_editor_buttons()
 
+        self.show()
+        self.bring_to_foreground()
+
         history.remove_invalid_notes()
         history.append(note)
-
         self.show_note(note)
-        self.show()
 
         gui_hooks.operation_did_execute.append(self.on_operation_did_execute)
         gui_hooks.editor_did_load_note.append(self.editor_did_load_note)
@@ -212,6 +213,7 @@ class Edit(aqt.editcurrent.EditCurrent):
     def reopen(self, note):
         history.append(note)
         self.show_note(note)
+        self.bring_to_foreground()
 
     def cleanup_and_close(self):
         gui_hooks.editor_did_load_note.remove(self.editor_did_load_note)
@@ -221,6 +223,33 @@ class Edit(aqt.editcurrent.EditCurrent):
         saveGeom(self, self.dialog_geometry_tag)
         aqt.dialogs.markClosed(self.dialog_registry_tag)
         QDialog.reject(self)
+
+    # This method (mostly) solves (at least on my Windows 10 machine) three issues
+    # with window activation. Without this not even too hacky a fix,
+    #   * When dialog is opened from Yomichan *for the first time* since app start,
+    #     the dialog opens in background (just like Browser does),
+    #     but does not flash in taskbar (unlike Browser);
+    #   * When dialog is opened, closed, *then main window is focused by clicking in it*,
+    #     then dialog is opened from Yomichan again, same issue as above arises;
+    #   * When dialog is restored from minimized state *and main window isn't minimized*,
+    #     opening the dialog from Yomichan does not reliably focus it;
+    #     sometimes it opens in foreground, sometimes in background.
+    # With this fix, windows nearly always appear in foreground in all three cases.
+    # In the case of the first two issues, strictly speaking, the fix is not ideal:
+    # the window appears in background first, and then quickly pops into foreground.
+    # It is not *too* unsightly, probably, no-one will notice this;
+    # still, a better solution must be possible. TODO find one!
+    #
+    # Note that operation systems, notably Windows, and desktop managers, may restrict
+    # background applications from raising windows to prevent them from interrupting
+    # what the user is currently doing. For details, see:
+    # https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow#remarks
+    # https://doc.qt.io/qt-5/qwidget.html#activateWindow
+    # https://wiki.qt.io/Technical_FAQ#QWidget_::activateWindow.28.29_-_behavior_under_windows
+    def bring_to_foreground(self):
+        aqt.mw.app.processEvents()
+        self.activateWindow()
+        self.raise_()
 
     #################################### hooks enabled during dialog lifecycle
 
