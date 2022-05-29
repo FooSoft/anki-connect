@@ -1560,6 +1560,43 @@ corresponding to when the API was available for use.
     }
     ```
 
+
+*   **apiReflect**
+
+    Gets information about the AnkiConnect APIs available. The request supports the following params:
+
+    * `scopes` - An array of scopes to get reflection information about.
+      The only currently supported value is `"actions"`.
+    * `actions` - Either `null` or an array of API method names to check for.
+      If the value is `null`, the result will list all of the available API actions.
+      If the value is an array of strings, the result will only contain actions which were in this array.
+
+    The result will contain a list of which scopes were used and a value for each scope.
+    For example, the `"actions"` scope will contain a `"actions"` property which contains a list of supported action names.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "apiReflect",
+        "params": {
+            "scopes": ["actions", "invalidType"],
+            "actions": ["apiReflect", "invalidMethod"]
+        },
+        "version": 6
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": {
+            "scopes": ["actions"],
+            "actions": ["apiReflect"]
+        },
+        "error": null
+    }
+    ```
+
 *   **sync**
 
     Synchronizes the local Anki collections with AnkiWeb.

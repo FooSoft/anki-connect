@@ -21,6 +21,17 @@ def test_reloadCollection(setup):
     ac.reloadCollection()
 
 
+def test_apiReflect(setup):
+    result = ac.apiReflect(
+        scopes=["actions", "invalidType"],
+        actions=["apiReflect", "invalidMethod"]
+    )
+    assert result == {
+        "scopes": ["actions"],
+        "actions": ["apiReflect"]
+    }
+
+
 class TestProfiles:
     def test_getProfiles(self, session_with_profile_loaded):
         result = ac.getProfiles()
