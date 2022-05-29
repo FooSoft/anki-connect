@@ -14,6 +14,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import jsonschema
 import select
 import socket
 
@@ -175,27 +176,30 @@ class WebServer:
 
             return self.buildResponse(headers, body)
     
-        paramsError = False
-
         try:
             params = json.loads(req.body.decode('utf-8'))
-        except ValueError:
-            body = json.dumps(None).encode('utf-8')
-            paramsError = True
-
-        if allowed or not paramsError and params.get('action', '') == 'requestPermission':
-            if len(req.body) == 0:
-                body = 'AnkiConnect v.{}'.format(util.setting('apiVersion')).encode('utf-8')
+            jsonschema.validate(params, request_schema)
+        except (ValueError, jsonschema.ValidationError) as e:
+            if allowed:
+                if len(req.body) == 0:
+                    body = f"AnkiConnect v.{util.setting('apiVersion')}".encode()
+                else:
+                    reply = format_exception_reply(util.setting('apiVersion'), e)
+                    body = json.dumps(reply).encode('utf-8')
+                headers = self.buildHeaders(corsOrigin, body)
+                return self.buildResponse(headers, body)
             else:
-                if params.get('action', '') == 'requestPermission':
-                    params['params'] = params.get('params', {})
-                    params['params']['allowed'] = allowed
-                    params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
-                    if not allowed :
-                        corsOrigin = params['params']['origin']
+                params = {}  # trigger the 403 response below
+
+        if allowed or params.get('action', '') == 'requestPermission':
+            if params.get('action', '') == 'requestPermission':
+                params['params'] = params.get('params', {})
+                params['params']['allowed'] = allowed
+                params['params']['origin'] = b'origin' in req.headers and req.headers[b'origin'].decode() or ''
+                if not allowed :
+                    corsOrigin = params['params']['origin']
                         
-                body = json.dumps(self.handler(params)).encode('utf-8')
-                    
+            body = json.dumps(self.handler(params)).encode('utf-8')
             headers = self.buildHeaders(corsOrigin, body)
         else :
             headers = [
@@ -273,3 +277,25 @@ class WebServer:
             client.close()
 
         self.clients = []
+
+
+def format_success_reply(api_version, result):
+    if api_version <= 4:
+        return result
+    else:
+        return {"result": result, "error": None}
+
+
+def format_exception_reply(_api_version, exception):
+    return {"result": None, "error": str(exception)}
+
+
+request_schema = {
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "minLength": 1},
+        "version": {"type": "integer"},
+        "params": {"type": "object"},
+    },
+    "required": ["action"],
+}
