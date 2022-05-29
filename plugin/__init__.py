@@ -345,12 +345,15 @@ class AnkiConnect:
             raise NotFoundError('Note was not found: {}'.format(note_id))
 
     def deckStatsToJson(self, due_tree):
-        return {'deck_id': due_tree.deck_id,
-                'name': due_tree.name,
-                'new_count': due_tree.new_count,
-                'learn_count': due_tree.learn_count,
-                'review_count': due_tree.review_count,
-                'total_in_deck': due_tree.total_in_deck}
+        deckStats = {'deck_id': due_tree.deck_id,
+                     'name': due_tree.name,
+                     'new_count': due_tree.new_count,
+                     'learn_count': due_tree.learn_count,
+                     'review_count': due_tree.review_count}
+        if anki_version > (2, 1, 46):
+            # total_in_deck is not supported on lower Anki versions
+            deckStats['total_in_deck'] = due_tree.total_in_deck
+        return deckStats
 
     def collectDeckTreeChildren(self, parent_node):
         allNodes = {parent_node.deck_id: parent_node}

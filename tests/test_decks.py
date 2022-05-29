@@ -71,4 +71,4 @@ def test_removedDeckConfigId_fails_with_invalid_id(session_with_profile_loaded):
 
 def test_getDeckStats(session_with_profile_loaded):
     result = ac.getDeckStats(decks=["Default"])
-    assert result["name"] == "Default"
+    assert list(result.values())[0]["name"] == "Default"
