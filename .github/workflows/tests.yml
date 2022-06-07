@@ -1,0 +1,53 @@
+name: Tests
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  run-tests:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: Anki 2.1.45
+            python: 3.8
+            environment: py38-anki2.1.45
+          - name: Anki 2.1.46
+            python: 3.8
+            environment: py38-anki2.1.46
+          - name: Anki 2.1.47
+            python: 3.8
+            environment: py38-anki2.1.47
+          - name: Anki 2.1.48
+            python: 3.8
+            environment: py38-anki2.1.48
+          - name: Anki 2.1.49
+            python: 3.8
+            environment: py38-anki2.1.49
+          - name: Anki 2.1.50 (Qt5)
+            python: 3.9
+            environment: py39-anki2.1.50-qt5
+          - name: Anki 2.1.50 (Qt6)
+            python: 3.9
+            environment: py39-anki2.1.50-qt6
+      fail-fast: false
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pyqt5-dev-tools xvfb jq
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: tox -vvve ${{ matrix.environment }} -- --forked --verbose
