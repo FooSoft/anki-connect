@@ -650,8 +650,6 @@ class AnkiConnect:
     def storeMediaFile(self, filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True):
         if not (data or path or url):
             raise Exception('You must provide a "data", "path", or "url" field.')
-        if deleteExisting:
-            self.deleteMediaFile(filename)
         if data:
             mediaData = base64.b64decode(data)
         elif path:
@@ -669,6 +667,8 @@ class AnkiConnect:
 
         if skip:
             return None
+        if deleteExisting:
+            self.deleteMediaFile(filename)
         return self.media().writeData(filename, mediaData)
 
 
