@@ -1,12 +1,3 @@
-<!-- +++
-Area = "projects"
-GitHub = "anki-connect"
-Layout = "page"
-Tags = ["anki", "gpl license", "japanese", "yomichan", "python", "anki-connect"]
-Description = "Anki plugin to expose a remote API for creating flash cards."
-Collection = "ProjectsActive"
-+++ -->
-
 # Anki-Connect
 
 Anki-Connect enables external applications such as [Yomichan](https://foosoft.net/projects/yomichan/) to communicate
