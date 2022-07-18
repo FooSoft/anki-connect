@@ -1753,6 +1753,29 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **interpret**
+
+    Executes arbitrary code in the plugin's namespace and returns the result or `null` if given a statement. If the result cannot be JSON-encoded, it is stringified.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "interpret",
+        "params": {
+            "code": "aqt",
+        },
+        "version": 6,
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": "<module 'aqt' (<oxidized_importer.OxidizedFinder object at 0x7f3aa5551be0>)>",
+        "error": null,
+    }
+    ```
+
 #### Model Actions
 
 *   **modelNames**
