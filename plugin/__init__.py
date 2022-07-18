@@ -57,6 +57,7 @@ class AnkiConnect:
         self.log = None
         self.timer = None
         self.server = web.WebServer(self.handler)
+        self._namespace = globals()
 
     def initLogging(self):
         logPath = util.setting('apiLogPath')
@@ -481,6 +482,38 @@ class AnkiConnect:
         stats = self.collection().stats()
         stats.wholeCollection = wholeCollection
         return stats.report()
+
+    @util.api()
+    def interpret(self, code):
+        ns = self._namespace
+        result = False
+
+        try:
+            compile(code, "", "eval")
+            expr = True
+
+        except SyntaxError:
+            expr = False
+
+        try:
+            if expr:
+                result = eval(code, ns)
+
+            else:
+                exec(code, ns)
+                result = None
+
+        except Exception as e:
+            result = repr(e)
+
+        try:
+            import json
+            json.dumps(result)
+
+        except:
+            result = str(result)
+        return result
+
 
 
     #

@@ -75,3 +75,13 @@ class TestExportImport:
             assert "test_deck" not in ac.deckNames()
             ac.importPackage(path=filename)
             assert "test_deck" in ac.deckNames()
+
+
+def test_interpret():
+    fn_str = "def average_nums(*nums):\n    return sum(nums) / len(nums)"
+    ac.interpret(fn_str)
+    assert ac.interpret(
+        "'average_nums' in globals() and callable(average_nums)") is True
+    assert ac.interpret("average_nums(1, 2, 3)") == 2
+    ac.interpret("del average_nums")
+    return
