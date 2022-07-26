@@ -84,6 +84,12 @@ included below as reference.
 curl localhost:8765 -X POST -d '{"action": "deckNames", "version": 6}'
 ```
 
+#### Powershell
+
+```powershell
+(Invoke-RestMethod -Uri http://localhost:8765 -Method Post -Body '{"action": "deckNames", "version": 6}').result
+```
+
 #### Python
 
 ```python
