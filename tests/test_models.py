@@ -110,3 +110,99 @@ def test_findAndReplaceInModels(setup):
     assert ac.modelStyling(modelName="test_model") == {
         "css": "* {color: blue;}"
     }
+
+
+class TestModelFieldNames:
+    def test_modelFieldRename(self, setup):
+        ac.modelFieldRename(
+            modelName="test_model",
+            oldFieldName="field1",
+            newFieldName="foo",
+        )
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["foo", "field2"]
+
+    def test_modelFieldReposition(self, setup):
+        ac.modelFieldReposition(
+            modelName="test_model",
+            fieldName="field1",
+            index=2,
+        )
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["field2", "field1"]
+
+    def test_modelFieldAdd(self, setup):
+        ac.modelFieldAdd(
+            modelName="test_model",
+            fieldName="Foo",
+        )
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["field1", "field2", "Foo"]
+
+    def test_modelFieldAddIndex(self, setup):
+        ac.modelFieldAdd(
+            modelName="test_model",
+            fieldName="Foo",
+            index=1,
+        )
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["field1", "Foo", "field2"]
+
+    def test_modelFieldRemove(self, setup):
+        # makes sure that the front template always has a field,
+        # and makes sure that the front template of the cards are not the same
+        ac.updateModelTemplates(model={
+            "name": "test_model",
+            "templates": {"Card 1": {"Front": "{{field2}} {{field2}}", "Back": "foo"}}
+        })
+
+        ac.modelFieldRemove(
+            modelName="test_model",
+            fieldName="field1",
+        )
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["field2"]
+
+    def test_editFieldNames(self, setup):
+        editFieldNames_kwargs = {
+            "modelName": "test_model",
+            "actions": [
+                {
+                    "action": "add",
+                    "fieldName": "field3",
+                },
+                {
+                    "action": "add",
+                    "fieldName": "field4",
+                    "index": 1,
+                },
+                {
+                    "action": "add",
+                    "fieldName": "field5",
+                },
+                {
+                    "action": "reposition",
+                    "fieldName": "field3",
+                    "index": 0,
+                },
+                {
+                    "action": "rename",
+                    "oldFieldName": "field3",
+                    "newFieldName": "renamed_field3",
+                },
+                {
+                    "action": "remove",
+                    "fieldName": "field5",
+                },
+            ]
+        }
+
+        ac.editFieldNames(**editFieldNames_kwargs)
+
+        result = ac.modelFieldNames(modelName="test_model")
+        assert result == ["renamed_field3", "field1", "field4", "field2"]

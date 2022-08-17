@@ -1186,6 +1186,106 @@ class AnkiConnect:
 
 
     @util.api()
+    def modelFieldRename(self, modelName, oldFieldName, newFieldName):
+        #self.startEditing()
+
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if oldFieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, oldFieldName))
+        field = fieldMap[oldFieldName][1]
+
+        mm.renameField(model, field, newFieldName)
+
+        self.save_model(mm, model)
+        #self.stopEditing()
+
+
+    @util.api()
+    def modelFieldReposition(self, modelName, fieldName, index):
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
+        field = fieldMap[fieldName][1]
+
+        mm.repositionField(model, field, index)
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldAdd(self, modelName, fieldName, index=None):
+        #self.startEditing()
+
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        # only adds the field if it doesn't already exist
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            field = mm.newField(fieldName)
+            mm.addField(model, field)
+
+        # repositions, even if the field already exists
+        if index is not None:
+            fieldMap = mm.fieldMap(model)
+            newField = fieldMap[fieldName][1]
+            mm.repositionField(model, newField, index)
+
+        self.save_model(mm, model)
+        #self.stopEditing()
+
+
+    @util.api()
+    def modelFieldRemove(self, modelName, fieldName):
+        #self.startEditing()
+
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
+        field = fieldMap[fieldName][1]
+
+        mm.removeField(model, field)
+
+        self.save_model(mm, model)
+        #self.stopEditing()
+
+
+    @util.api()
+    def editFieldNames(self, modelName, actions):
+        actionToFuncMap = {
+            'rename': self.modelFieldRename,
+            'reposition': self.modelFieldReposition,
+            'add': self.modelFieldAdd,
+            'remove': self.modelFieldRemove,
+        }
+
+        for actionDict in actions:
+            action = actionDict['action']
+            if action not in actionToFuncMap:
+                raise Exception('invalid edit field name action: {}'.format(action))
+            func = actionToFuncMap[action]
+            args = {k: v for k, v in actionDict.items() if k != 'action'}
+            func(modelName=modelName, **args)
+
+
+    @util.api()
     def deckNameFromId(self, deckId):
         deck = self.collection().decks.get(deckId)
         if deck is None:

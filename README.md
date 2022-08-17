@@ -2099,6 +2099,121 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **modelFieldRename**
+
+    TODO
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldRename",
+        "version": 6,
+        "params": {
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldReposition**
+
+    TODO
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldReposition",
+        "version": 6,
+        "params": {
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldAdd**
+
+    TODO
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldAdd",
+        "version": 6,
+        "params": {
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldRemove**
+
+    TODO
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldRemove",
+        "version": 6,
+        "params": {
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **editFieldNames**
+
+    TODO
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "editFieldNames",
+        "version": 6,
+        "params": {
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 #### Note Actions
 
 *   **addNote**
