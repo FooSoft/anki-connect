@@ -2109,7 +2109,9 @@ corresponding to when the API was available for use.
         "action": "modelFieldRename",
         "version": 6,
         "params": {
-            }
+            "modelName": "Basic",
+            "oldFieldName": "Front",
+            "newFieldName": "FrontRenamed"
         }
     }
     ```
@@ -2132,7 +2134,9 @@ corresponding to when the API was available for use.
         "action": "modelFieldReposition",
         "version": 6,
         "params": {
-            }
+            "modelName": "Basic",
+            "fieldName": "Front",
+            "index": 1
         }
     }
     ```
@@ -2148,6 +2152,7 @@ corresponding to when the API was available for use.
 *   **modelFieldAdd**
 
     TODO
+    (optional index, defaults to adding the field to the very end of the list)
 
     *Sample Request*:
     ```json
@@ -2155,7 +2160,8 @@ corresponding to when the API was available for use.
         "action": "modelFieldAdd",
         "version": 6,
         "params": {
-            }
+            "modelName": "Basic",
+            "fieldName": "NewField"
         }
     }
     ```
@@ -2178,7 +2184,8 @@ corresponding to when the API was available for use.
         "action": "modelFieldRemove",
         "version": 6,
         "params": {
-            }
+            "modelName": "Basic",
+            "fieldName": "Front"
         }
     }
     ```
@@ -2194,6 +2201,7 @@ corresponding to when the API was available for use.
 *   **editFieldNames**
 
     TODO
+    Bulk version of the above 4 actions.
 
     *Sample Request*:
     ```json
@@ -2201,7 +2209,28 @@ corresponding to when the API was available for use.
         "action": "editFieldNames",
         "version": 6,
         "params": {
-            }
+            "modelName": "Basic",
+            "actions": [
+                {
+                    "action": "add",
+                    "fieldName": "field3",
+                    "index": 0
+                },
+                {
+                    "action": "reposition",
+                    "fieldName": "field3",
+                    "index": 2
+                },
+                {
+                    "action": "rename",
+                    "oldFieldName": "field3",
+                    "newFieldName": "renamed_field3"
+                },
+                {
+                    "action": "remove",
+                    "fieldName": "field3"
+                }
+            ]
         }
     }
     ```
