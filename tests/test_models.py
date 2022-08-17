@@ -142,7 +142,7 @@ class TestModelFieldNames:
         result = ac.modelFieldNames(modelName="test_model")
         assert result == ["field1", "field2", "Foo"]
 
-    def test_modelFieldAddIndex(self, setup):
+    def test_modelFieldAdd_with_index(self, setup):
         ac.modelFieldAdd(
             modelName="test_model",
             fieldName="Foo",
