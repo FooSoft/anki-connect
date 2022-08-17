@@ -2101,7 +2101,7 @@ corresponding to when the API was available for use.
 
 *   **modelFieldRename**
 
-    TODO
+    Rename the field name of a given model.
 
     *Sample Request*:
     ```json
@@ -2126,7 +2126,9 @@ corresponding to when the API was available for use.
 
 *   **modelFieldReposition**
 
-    TODO
+    Reposition the field within the field list of a given model.
+
+    The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position.
 
     *Sample Request*:
     ```json
@@ -2135,8 +2137,8 @@ corresponding to when the API was available for use.
         "version": 6,
         "params": {
             "modelName": "Basic",
-            "fieldName": "Front",
-            "index": 1
+            "fieldName": "Back",
+            "index": 0
         }
     }
     ```
@@ -2151,8 +2153,9 @@ corresponding to when the API was available for use.
 
 *   **modelFieldAdd**
 
-    TODO
-    (optional index, defaults to adding the field to the very end of the list)
+    Creates a new field within a given model.
+
+    Optionally, the `index` value can be provided, which works exactly the same as the index in `modelFieldReposition`. By default, the field is added to the end of the field list.
 
     *Sample Request*:
     ```json
@@ -2161,7 +2164,8 @@ corresponding to when the API was available for use.
         "version": 6,
         "params": {
             "modelName": "Basic",
-            "fieldName": "NewField"
+            "fieldName": "NewField",
+            "index": 0
         }
     }
     ```
@@ -2176,7 +2180,7 @@ corresponding to when the API was available for use.
 
 *   **modelFieldRemove**
 
-    TODO
+    Deletes a field within a given model.
 
     *Sample Request*:
     ```json
