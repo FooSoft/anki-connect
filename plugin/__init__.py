@@ -1187,8 +1187,6 @@ class AnkiConnect:
 
     @util.api()
     def modelFieldRename(self, modelName, oldFieldName, newFieldName):
-        #self.startEditing()
-
         mm = self.collection().models
         model = mm.byName(modelName)
         if model is None:
@@ -1202,7 +1200,6 @@ class AnkiConnect:
         mm.renameField(model, field, newFieldName)
 
         self.save_model(mm, model)
-        #self.stopEditing()
 
 
     @util.api()
@@ -1224,8 +1221,6 @@ class AnkiConnect:
 
     @util.api()
     def modelFieldAdd(self, modelName, fieldName, index=None):
-        #self.startEditing()
-
         mm = self.collection().models
         model = mm.byName(modelName)
         if model is None:
@@ -1244,13 +1239,10 @@ class AnkiConnect:
             mm.repositionField(model, newField, index)
 
         self.save_model(mm, model)
-        #self.stopEditing()
 
 
     @util.api()
     def modelFieldRemove(self, modelName, fieldName):
-        #self.startEditing()
-
         mm = self.collection().models
         model = mm.byName(modelName)
         if model is None:
@@ -1264,25 +1256,6 @@ class AnkiConnect:
         mm.removeField(model, field)
 
         self.save_model(mm, model)
-        #self.stopEditing()
-
-
-    @util.api()
-    def editFieldNames(self, modelName, actions):
-        actionToFuncMap = {
-            'rename': self.modelFieldRename,
-            'reposition': self.modelFieldReposition,
-            'add': self.modelFieldAdd,
-            'remove': self.modelFieldRemove,
-        }
-
-        for actionDict in actions:
-            action = actionDict['action']
-            if action not in actionToFuncMap:
-                raise Exception('invalid edit field name action: {}'.format(action))
-            func = actionToFuncMap[action]
-            args = {k: v for k, v in actionDict.items() if k != 'action'}
-            func(modelName=modelName, **args)
 
 
     @util.api()

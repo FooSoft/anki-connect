@@ -2198,51 +2198,6 @@ corresponding to when the API was available for use.
     }
     ```
 
-*   **editFieldNames**
-
-    TODO
-    Bulk version of the above 4 actions.
-
-    *Sample Request*:
-    ```json
-    {
-        "action": "editFieldNames",
-        "version": 6,
-        "params": {
-            "modelName": "Basic",
-            "actions": [
-                {
-                    "action": "add",
-                    "fieldName": "field3",
-                    "index": 0
-                },
-                {
-                    "action": "reposition",
-                    "fieldName": "field3",
-                    "index": 2
-                },
-                {
-                    "action": "rename",
-                    "oldFieldName": "field3",
-                    "newFieldName": "renamed_field3"
-                },
-                {
-                    "action": "remove",
-                    "fieldName": "field3"
-                }
-            ]
-        }
-    }
-    ```
-
-    *Sample result*:
-    ```json
-    {
-        "result": null,
-        "error": null
-    }
-    ```
-
 #### Note Actions
 
 *   **addNote**
