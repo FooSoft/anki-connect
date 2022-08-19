@@ -1186,6 +1186,79 @@ class AnkiConnect:
 
 
     @util.api()
+    def modelFieldRename(self, modelName, oldFieldName, newFieldName):
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if oldFieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, oldFieldName))
+        field = fieldMap[oldFieldName][1]
+
+        mm.renameField(model, field, newFieldName)
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldReposition(self, modelName, fieldName, index):
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
+        field = fieldMap[fieldName][1]
+
+        mm.repositionField(model, field, index)
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldAdd(self, modelName, fieldName, index=None):
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        # only adds the field if it doesn't already exist
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            field = mm.newField(fieldName)
+            mm.addField(model, field)
+
+        # repositions, even if the field already exists
+        if index is not None:
+            fieldMap = mm.fieldMap(model)
+            newField = fieldMap[fieldName][1]
+            mm.repositionField(model, newField, index)
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldRemove(self, modelName, fieldName):
+        mm = self.collection().models
+        model = mm.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+
+        fieldMap = mm.fieldMap(model)
+        if fieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
+        field = fieldMap[fieldName][1]
+
+        mm.removeField(model, field)
+
+        self.save_model(mm, model)
+
+
+    @util.api()
     def deckNameFromId(self, deckId):
         deck = self.collection().decks.get(deckId)
         if deck is None:

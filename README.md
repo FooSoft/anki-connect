@@ -2099,6 +2099,109 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **modelFieldRename**
+
+    Rename the field name of a given model.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldRename",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "oldFieldName": "Front",
+            "newFieldName": "FrontRenamed"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldReposition**
+
+    Reposition the field within the field list of a given model.
+
+    The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldReposition",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "Back",
+            "index": 0
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldAdd**
+
+    Creates a new field within a given model.
+
+    Optionally, the `index` value can be provided, which works exactly the same as the index in `modelFieldReposition`. By default, the field is added to the end of the field list.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldAdd",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "NewField",
+            "index": 0
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldRemove**
+
+    Deletes a field within a given model.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldRemove",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "Front"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 #### Note Actions
 
 *   **addNote**
