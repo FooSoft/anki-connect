@@ -2403,8 +2403,8 @@ corresponding to when the API was available for use.
     Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
     optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
 
-    > ** Warning **
-    > Your Anki browser must not be viewing the note that you are updating, otherwise
+    > **Warning**
+    > You must not be viewing the note that you are updating on your Anki browser, otherwise
     > the fields will not update. See [this issue](https://github.com/FooSoft/anki-connect/issues/82)
     > for further details.
 
