@@ -1859,7 +1859,7 @@ corresponding to when the API was available for use.
 *   **createModel**
 
     Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
-    used in the model. There are optinal fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
+    used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
 
     Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
     card names will be `Card 1`, `Card 2`, and so on.
@@ -1873,7 +1873,7 @@ corresponding to when the API was available for use.
             "modelName": "newModelName",
             "inOrderFields": ["Field1", "Field2", "Field3"],
             "css": "Optional CSS with default to builtin css",
-            "isCloze": False,
+            "isCloze": false,
             "cardTemplates": [
                 {
                     "Name": "My Card 1",
