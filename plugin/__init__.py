@@ -1374,6 +1374,13 @@ class AnkiConnect:
 
 
     @util.api()
+    def getReviewsOfCard(self, card):
+        return self.database().all(
+            'select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog where cid = ?', card
+        )
+
+
+    @util.api()
     def reloadCollection(self):
         self.collection().reset()
 

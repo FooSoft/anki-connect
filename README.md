@@ -2759,6 +2759,35 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **getReviewsOfCard**
+
+    Requests all card reviews for a specific card ID.
+    Returns a list of 9-tuples in the same format as `cardReviews`: `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getReviewsOfCard",
+        "version": 6,
+        "params": {
+            "card": "1653613948202"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": [
+            [1654102387663, 1653613948202, 1780, 3, 8, 3, 2500, 25796, 1],
+            [1654798974478, 1653613948202, 1861, 3, 20, 8, 2500, 18134, 1],
+            [1656556319328, 1653613948202, 2075, 3, 53, 20, 2500, 20530, 1],
+            [1661107990069, 1653613948202, 2478, 3, 131, 53, 2500, 24247, 1]
+        ],
+        "error": null
+    }
+    ```
+
 *   **getLatestReviewID**
 
     Returns the unix time of the latest review for the given deck. 0 if no review has ever been made for the deck.

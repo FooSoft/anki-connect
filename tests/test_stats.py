@@ -29,3 +29,5 @@ class TestReviews:
 
         assert len(ac.cardReviews(deck="test_deck", startID=0)) == 2
         assert ac.getLatestReviewID(deck="test_deck") == 789
+        assert ac.getReviewsOfCard(card=setup.card_ids[0]) == \
+                [[456, setup.card_ids[0], -1, 3, 4, -60, 2500, 6157, 0]]
