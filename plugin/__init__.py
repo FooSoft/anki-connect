@@ -220,6 +220,8 @@ class AnkiConnect:
                     ankiNote[ankiName] = value
                     break
 
+        self.addMediaFromNote(ankiNote, note)
+
         allowDuplicate = False
         duplicateScope = None
         duplicateScopeDeckName = None
@@ -703,8 +705,6 @@ class AnkiConnect:
     @util.api()
     def addNote(self, note):
         ankiNote = self.createNote(note)
-
-        self.addMediaFromNote(ankiNote, note)
 
         collection = self.collection()
         self.startEditing()
