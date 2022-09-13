@@ -2759,18 +2759,21 @@ corresponding to when the API was available for use.
     }
     ```
 
-*   **getReviewsOfCard**
+*   **getReviewsOfCards**
 
-    Requests all card reviews for a specific card ID.
-    Returns a list of 9-tuples in the same format as `cardReviews`: `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
+    Requests all card reviews for each card ID.
+    Returns a dictionary mapping the card ID to 9-tuples in the same format as `cardReviews`:
+    `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
 
     *Sample request*:
     ```json
     {
-        "action": "getReviewsOfCard",
+        "action": "getReviewsOfCards",
         "version": 6,
         "params": {
-            "card": "1653613948202"
+            "cards": [
+                "1653613948202"
+            ]
         }
     }
     ```
@@ -2778,12 +2781,14 @@ corresponding to when the API was available for use.
     *Sample result*:
     ```json
     {
-        "result": [
-            [1654102387663, 1653613948202, 1780, 3, 8, 3, 2500, 25796, 1],
-            [1654798974478, 1653613948202, 1861, 3, 20, 8, 2500, 18134, 1],
-            [1656556319328, 1653613948202, 2075, 3, 53, 20, 2500, 20530, 1],
-            [1661107990069, 1653613948202, 2478, 3, 131, 53, 2500, 24247, 1]
-        ],
+        "result": {
+            "1653613948202": [
+                [1654102387663, 1653613948202, 1780, 3,   8,  3, 2500, 25796, 1],
+                [1654798974478, 1653613948202, 1861, 3,  20,  8, 2500, 18134, 1],
+                [1656556319328, 1653613948202, 2075, 3,  53, 20, 2500, 20530, 1],
+                [1661107990069, 1653613948202, 2478, 3, 131, 53, 2500, 24247, 1]
+            ]
+        },
         "error": null
     }
     ```

@@ -1374,10 +1374,15 @@ class AnkiConnect:
 
 
     @util.api()
-    def getReviewsOfCard(self, card):
-        return self.database().all(
-            'select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog where cid = ?', card
-        )
+    def getReviewsOfCards(self, cards):
+        return {
+            card: self.database().all(
+                "select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog where cid = ?",
+                card,
+            )
+            for card in cards
+        }
+
 
 
     @util.api()
