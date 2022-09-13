@@ -1859,7 +1859,7 @@ corresponding to when the API was available for use.
 *   **createModel**
 
     Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
-    used in the model. There are optinal fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
+    used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
 
     Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
     card names will be `Card 1`, `Card 2`, and so on.
@@ -1873,7 +1873,7 @@ corresponding to when the API was available for use.
             "modelName": "newModelName",
             "inOrderFields": ["Field1", "Field2", "Field3"],
             "css": "Optional CSS with default to builtin css",
-            "isCloze": False,
+            "isCloze": false,
             "cardTemplates": [
                 {
                     "Name": "My Card 1",
@@ -2390,6 +2390,11 @@ corresponding to when the API was available for use.
 
     Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
     optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
+
+    > **Warning**
+    > You must not be viewing the note that you are updating on your Anki browser, otherwise
+    > the fields will not update. See [this issue](https://github.com/FooSoft/anki-connect/issues/82)
+    > for further details.
 
     *Sample request*:
     ```json
