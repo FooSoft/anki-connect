@@ -1,0 +1,87 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Anki Connect - OpenAPI 3.0",
+    "description": "",
+    "license": {
+      "name": "GNU General Public License",
+      "url": "https://raw.githubusercontent.com/FooSoft/anki-connect/master/LICENSE"
+    },
+    "version": "22.7.14.0"
+  },
+  "externalDocs": {
+    "description": "Anki Connect",
+    "url": "https://github.com/FooSoft/anki-connect"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8765"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "description": "",
+        "requestBody": {
+          "description": "Send the action and get result",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Request": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "example": "getEaseFactors"
+          },
+          "version": {
+            "type": "integer",
+            "example": 6
+          },
+          "params": {
+            "type": "object",
+            "example": {
+              "cards": [1483959291685, 1483959293217]
+            }
+          }
+        }
+      },
+      "Response": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object",
+            "example": [4100, 3900]
+          },
+          "error": {
+            "type": "object",
+            "example": null
+          }
+        }
+      }
+    }
+  }
+}

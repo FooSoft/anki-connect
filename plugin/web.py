@@ -17,6 +17,8 @@ import json
 import jsonschema
 import select
 import socket
+import mimetypes
+from os import path
 
 from . import util
 
@@ -25,7 +27,8 @@ from . import util
 #
 
 class WebRequest:
-    def __init__(self, method, headers, body):
+    def __init__(self, path, method, headers, body):
+        self.path = path
         self.method = method
         self.headers = headers
         self.body = body
@@ -99,11 +102,12 @@ class WebClient:
 
         lines = parts[0].split('\r\n'.encode('utf-8'))
         method = None
+        path = None
 
         if len(lines) > 0:
             request_line_parts = lines[0].split(' '.encode('utf-8'))
             method = request_line_parts[0].upper() if len(request_line_parts) > 0 else None
-
+            path = request_line_parts[1].decode() if len(request_line_parts) > 1 else None
         headers = {}
         for line in lines[1:]:
             pair = line.split(': '.encode('utf-8'))
@@ -117,7 +121,7 @@ class WebClient:
             return None, 0
 
         body = data[headerLength : totalLength]
-        return WebRequest(method, headers, body), totalLength
+        return WebRequest(path, method, headers, body), totalLength
 
 #
 # WebServer
@@ -182,6 +186,16 @@ class WebServer:
         except (ValueError, jsonschema.ValidationError) as e:
             if allowed:
                 if len(req.body) == 0:
+                    if req.path.startswith('/swaggerui'):
+                        if len(req.path) == 11:
+                            file_path = f"{path.dirname(__file__)}/swaggerui/index.html"
+                        else:
+                            file_path = f"{path.dirname(__file__)}/swaggerui/{req.path[11:]}"
+                        if path.exists(file_path):
+                            with open(file_path, 'rb') as f:
+                                body = f.read()
+                            headers = self.buildHeaders(corsOrigin, body, contentType=mimetypes.guess_type(file_path)[0])
+                            return self.buildResponse(headers, body)
                     body = f"AnkiConnect v.{util.setting('apiVersion')}".encode()
                 else:
                     reply = format_exception_reply(util.setting('apiVersion'), e)
@@ -236,6 +250,7 @@ class WebServer:
             elif 'http://localhost' in webCorsOriginList and ( 
             originStr == 'http://127.0.0.1' or originStr == 'https://127.0.0.1' or # allow 127.0.0.1 if localhost allowed
             originStr.startswith('http://127.0.0.1:') or originStr.startswith('http://127.0.0.1:') or
+            originStr.startswith('http://localhost:') or originStr.startswith('http://localhost:') or
             originStr.startswith('chrome-extension://') or originStr.startswith('moz-extension://') or originStr.startswith('safari-web-extension://') ) : # allow chrome, firefox and safari extension if localhost allowed
                 corsOrigin = originStr
                 allowed = True
@@ -245,10 +260,10 @@ class WebServer:
         return allowed, corsOrigin
     
 
-    def buildHeaders(self, corsOrigin, body):
+    def buildHeaders(self, corsOrigin, body, contentType='text/json'):
         return [
             ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json'],
+            ['Content-Type', contentType],
             ['Access-Control-Allow-Origin', corsOrigin],
             ['Access-Control-Allow-Headers', '*'],
             ['Content-Length', str(len(body))]
