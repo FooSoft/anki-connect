@@ -2764,6 +2764,69 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **getReviewsOfCards**
+
+    Requests all card reviews for each card ID.
+    Returns a dictionary mapping each card ID to a list of dictionaries of the format:
+    ```
+    {
+        "id": reviewTime,
+        "usn": usn,
+        "ease": buttonPressed,
+        "ivl": newInterval,
+        "lastIvl": previousInterval,
+        "factor": newFactor,
+        "time": reviewDuration,
+        "type": reviewType,
+    }
+    ```
+    The reason why these key values are used instead of the more descriptive counterparts
+    is because these are the exact key values used in Anki's database.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getReviewsOfCards",
+        "version": 6,
+        "params": {
+            "cards": [
+                "1653613948202"
+            ]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": {
+            "1653613948202": [
+                {
+                    "id": 1653772912146,
+                    "usn": 1750,
+                    "ease": 1,
+                    "ivl": -20,
+                    "lastIvl": -20,
+                    "factor": 0,
+                    "time": 38192,
+                    "type": 0
+                },
+                {
+                    "id": 1653772965429,
+                    "usn": 1750,
+                    "ease": 3,
+                    "ivl": -45,
+                    "lastIvl": -20,
+                    "factor": 0,
+                    "time": 15337,
+                    "type": 0
+                }
+            ]
+        },
+        "error": null
+    }
+    ```
+
 *   **getLatestReviewID**
 
     Returns the unix time of the latest review for the given deck. 0 if no review has ever been made for the deck.

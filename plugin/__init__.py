@@ -1374,6 +1374,20 @@ class AnkiConnect:
 
 
     @util.api()
+    def getReviewsOfCards(self, cards):
+        COLUMNS = ['id', 'usn', 'ease', 'ivl', 'lastIvl', 'factor', 'time', 'type']
+        QUERY = 'select {} from revlog where cid = ?'.format(', '.join(COLUMNS))
+
+        result = {}
+        for card in cards:
+            query_result = self.database().all(QUERY, card)
+            result[card] = [dict(zip(COLUMNS, row)) for row in query_result]
+
+        return result
+
+
+
+    @util.api()
     def reloadCollection(self):
         self.collection().reset()
 
