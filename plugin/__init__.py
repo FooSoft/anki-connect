@@ -1070,6 +1070,15 @@ class AnkiConnect:
 
 
     @util.api()
+    def modelFieldDescriptions(self, modelName):
+        model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+        else:
+            return [field['description'] for field in model['flds']]
+
+
+    @util.api()
     def modelFieldsOnTemplates(self, modelName):
         model = self.collection().models.byName(modelName)
         if model is None:
