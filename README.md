@@ -2768,7 +2768,7 @@ corresponding to when the API was available for use.
 
     Requests all card reviews for each card ID.
     Returns a dictionary mapping each card ID to a list of dictionaries of the format:
-    ```
+    ```json
     {
         "id": reviewTime,
         "usn": usn,
