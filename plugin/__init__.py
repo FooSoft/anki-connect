@@ -1075,7 +1075,12 @@ class AnkiConnect:
         if model is None:
             raise Exception('model was not found: {}'.format(modelName))
         else:
-            return [field['description'] for field in model['flds']]
+            try:
+                return [field['description'] for field in model['flds']]
+            except KeyError:
+                # older versions of Anki don't have field descriptions
+                return ['' for field in model['flds']]
+
 
 
     @util.api()
