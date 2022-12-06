@@ -1670,8 +1670,8 @@ corresponding to when the API was available for use.
             "actions": [
                 {"action": "deckNames"},
                 {
-                    "action": "browse",
-                    "params": {"query": "deck:current"}
+                    "action": "invalidAction",
+                    "params": {"useless": "param"}
                 }
             ]
         }
@@ -1682,8 +1682,8 @@ corresponding to when the API was available for use.
     ```json
     {
         "result": [
-            {"result": "Default", "error": null},
-            {"result": [1494723142483, 1494703460437, 1494703479525], "error": null}
+            ["Default"],
+            {"result": null, "error": "unsupported action"}
         ],
         "error": null
     }
