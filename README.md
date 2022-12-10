@@ -1829,6 +1829,29 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **modelFieldDescriptions**
+
+    Gets the complete list of field descriptions (the text seen in the gui editor when a field is empty) for the provided model name.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "modelFieldDescriptions",
+        "version": 6,
+        "params": {
+            "modelName": "Basic"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["", ""],
+        "error": null
+    }
+    ```
+
 *   **modelFieldsOnTemplates**
 
     Returns an object indicating the fields on the question and answer side of each card template for the given model

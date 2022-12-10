@@ -16,6 +16,11 @@ def test_modelFieldNames(setup):
     assert result == ["field1", "field2"]
 
 
+def test_modelFieldDescriptions(setup):
+    result = ac.modelFieldDescriptions(modelName="test_model")
+    assert result == ["", ""]
+
+
 def test_modelFieldsOnTemplates(setup):
     result = ac.modelFieldsOnTemplates(modelName="test_model")
     assert result == {
