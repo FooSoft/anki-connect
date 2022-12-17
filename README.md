@@ -1668,10 +1668,21 @@ corresponding to when the API was available for use.
         "version": 6,
         "params": {
             "actions": [
-                {"action": "deckNames"},
+                {
+                    "action": "deckNames"
+                },
+                {
+                    "action": "deckNames",
+                    "version": 6
+                },
                 {
                     "action": "invalidAction",
                     "params": {"useless": "param"}
+                },
+                {
+                    "action": "invalidAction",
+                    "params": {"useless": "param"},
+                    "version": 6
                 }
             ]
         }
@@ -1683,6 +1694,8 @@ corresponding to when the API was available for use.
     {
         "result": [
             ["Default"],
+            {"result": ["Default"], "error": null},
+            {"result": null, "error": "unsupported action"},
             {"result": null, "error": "unsupported action"}
         ],
         "error": null
