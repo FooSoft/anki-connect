@@ -1668,10 +1668,21 @@ corresponding to when the API was available for use.
         "version": 6,
         "params": {
             "actions": [
-                {"action": "deckNames"},
                 {
-                    "action": "browse",
-                    "params": {"query": "deck:current"}
+                    "action": "deckNames"
+                },
+                {
+                    "action": "deckNames",
+                    "version": 6
+                },
+                {
+                    "action": "invalidAction",
+                    "params": {"useless": "param"}
+                },
+                {
+                    "action": "invalidAction",
+                    "params": {"useless": "param"},
+                    "version": 6
                 }
             ]
         }
@@ -1682,8 +1693,10 @@ corresponding to when the API was available for use.
     ```json
     {
         "result": [
-            {"result": "Default", "error": null},
-            {"result": [1494723142483, 1494703460437, 1494703479525], "error": null}
+            ["Default"],
+            {"result": ["Default"], "error": null},
+            {"result": null, "error": "unsupported action"},
+            {"result": null, "error": "unsupported action"}
         ],
         "error": null
     }
