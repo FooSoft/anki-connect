@@ -13,7 +13,7 @@ upload_time=$(curl https://pypi.org/pypi/anki/json \
             | jq --arg v "$version" -r '.releases[$v][0].upload_time_iso_8601')
 cutoff_time=$(date --utc -d "$upload_time +1 hour" '+%Y-%m-%dT%H:%M:%S')
 
-coproc SERVER { "$toxworkdir"/.tox/bin/python -um pypi_timemachine "$cutoff_time"; }
+coproc SERVER { "$toxworkdir"/bin/python -um pypi_timemachine "$cutoff_time"; }
 index_url=$(print_first_group '(http\S+)' <&"${SERVER[0]}")
 
 python -m pip install --index-url "$index_url" "anki==$version" "$AQT==$version"

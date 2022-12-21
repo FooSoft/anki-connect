@@ -57,15 +57,15 @@ jobs:
           sudo apt-get install -y pyqt5-dev-tools xvfb jq
 
       - name: Setup Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
       - name: Install tox
-        run: pip install tox
+        run: pip install 'tox==3.28.0'
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Run tests
         run: tox -vvve ${{ matrix.environment }} -- --forked --verbose
