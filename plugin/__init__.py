@@ -1328,9 +1328,23 @@ class AnkiConnect:
         field = self.getField(modelName, fieldName)
 
         if not isinstance(font, str):
-            raise Exception("font should be a string: {}".format(font))
+            raise Exception('font should be a string: {}'.format(font))
 
-        field["font"] = font
+        field['font'] = font
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldSetDescription(self, modelName, fieldName, description):
+        mm = self.collection().models
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
+
+        if not isinstance(description, str):
+            raise Exception('description should be a string: {}'.format(description))
+
+        field['description'] = description
 
         self.save_model(mm, model)
 
@@ -1342,9 +1356,9 @@ class AnkiConnect:
         field = self.getField(modelName, fieldName)
 
         if not isinstance(fontSize, int):
-            raise Exception("fontSize should be an integer: {}".format(fontSize))
+            raise Exception('fontSize should be an integer: {}'.format(fontSize))
 
-        field["size"] = fontSize
+        field['size'] = fontSize
 
         self.save_model(mm, model)
 
