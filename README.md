@@ -2246,6 +2246,30 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **modelFieldRemove**
+
+    Deletes a field within a given model.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldRemove",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "Front"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
 *   **modelFieldSetFont**
 
     Sets the font for a field within a given model.
