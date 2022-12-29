@@ -1,4 +1,5 @@
 from conftest import ac
+from plugin import anki_version
 
 
 def test_modelNames(setup):
@@ -234,7 +235,9 @@ class TestModelFieldNames:
 
         result = ac.modelFieldDescriptions(modelName="test_model")
 
-        if set_desc:
-            assert result == ["test description", ""]
-        else:
+        if anki_version < (2, 1, 50):
+            assert not set_desc
             assert result == ["", ""]
+        else:
+            assert set_desc
+            assert result == ["test description", ""]
