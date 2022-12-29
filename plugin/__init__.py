@@ -189,6 +189,22 @@ class AnkiConnect:
         return media
 
 
+    def getModel(self, modelName):
+        model = self.collection().models.byName(modelName)
+        if model is None:
+            raise Exception('model was not found: {}'.format(modelName))
+        return model
+
+
+    def getField(self, modelName, fieldName):
+        model = self.getModel(modelName)
+
+        fieldMap = self.collection().models.fieldMap(model)
+        if fieldName not in fieldMap:
+            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
+        return fieldMap[fieldName][1]
+
+
     def startEditing(self):
         self.window().requireReset()
 
@@ -1082,6 +1098,20 @@ class AnkiConnect:
                 return ['' for field in model['flds']]
 
 
+    @util.api()
+    def modelFieldFonts(self, modelName):
+        model = self.getModel(modelName)
+
+        fonts = {}
+        for field in model['flds']:
+
+            fonts[field['name']] = {
+                'font': field['font'],
+                'size': field['size'],
+            }
+
+        return fonts
+
 
     @util.api()
     def modelFieldsOnTemplates(self, modelName):
@@ -1202,14 +1232,8 @@ class AnkiConnect:
     @util.api()
     def modelFieldRename(self, modelName, oldFieldName, newFieldName):
         mm = self.collection().models
-        model = mm.byName(modelName)
-        if model is None:
-            raise Exception('model was not found: {}'.format(modelName))
-
-        fieldMap = mm.fieldMap(model)
-        if oldFieldName not in fieldMap:
-            raise Exception('field was not found in {}: {}'.format(modelName, oldFieldName))
-        field = fieldMap[oldFieldName][1]
+        model = self.getModel(modelName)
+        field = self.getField(modelName, oldFieldName)
 
         mm.renameField(model, field, newFieldName)
 
@@ -1219,14 +1243,8 @@ class AnkiConnect:
     @util.api()
     def modelFieldReposition(self, modelName, fieldName, index):
         mm = self.collection().models
-        model = mm.byName(modelName)
-        if model is None:
-            raise Exception('model was not found: {}'.format(modelName))
-
-        fieldMap = mm.fieldMap(model)
-        if fieldName not in fieldMap:
-            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
-        field = fieldMap[fieldName][1]
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
 
         mm.repositionField(model, field, index)
 
@@ -1236,9 +1254,7 @@ class AnkiConnect:
     @util.api()
     def modelFieldAdd(self, modelName, fieldName, index=None):
         mm = self.collection().models
-        model = mm.byName(modelName)
-        if model is None:
-            raise Exception('model was not found: {}'.format(modelName))
+        model = self.getModel(modelName)
 
         # only adds the field if it doesn't already exist
         fieldMap = mm.fieldMap(model)
@@ -1258,18 +1274,56 @@ class AnkiConnect:
     @util.api()
     def modelFieldRemove(self, modelName, fieldName):
         mm = self.collection().models
-        model = mm.byName(modelName)
-        if model is None:
-            raise Exception('model was not found: {}'.format(modelName))
-
-        fieldMap = mm.fieldMap(model)
-        if fieldName not in fieldMap:
-            raise Exception('field was not found in {}: {}'.format(modelName, fieldName))
-        field = fieldMap[fieldName][1]
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
 
         mm.removeField(model, field)
 
         self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldSetFont(self, modelName, fieldName, font):
+        mm = self.collection().models
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
+
+        if not isinstance(font, str):
+            raise Exception('font should be a string: {}'.format(font))
+
+        field['font'] = font
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldSetFontSize(self, modelName, fieldName, fontSize):
+        mm = self.collection().models
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
+
+        if not isinstance(fontSize, int):
+            raise Exception('fontSize should be an integer: {}'.format(fontSize))
+
+        field['size'] = fontSize
+
+        self.save_model(mm, model)
+
+
+    @util.api()
+    def modelFieldSetDescription(self, modelName, fieldName, description):
+        mm = self.collection().models
+        model = self.getModel(modelName)
+        field = self.getField(modelName, fieldName)
+
+        if not isinstance(description, str):
+            raise Exception('description should be a string: {}'.format(description))
+
+        if 'description' in field: # older versions do not have the 'description' key
+            field['description'] = description
+            self.save_model(mm, model)
+            return True
+        return False
 
 
     @util.api()
