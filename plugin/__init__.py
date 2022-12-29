@@ -793,6 +793,30 @@ class AnkiConnect:
 
         self.collection().autosave()
         self.stopEditing()
+    
+    
+    @util.api()
+    def updateNote(self, note):
+        self.updateNoteFields(note)
+        self.updateNoteTags(note['id'], note['tags'])
+
+
+    @util.api()
+    def updateNoteTags(self, nid, tags):
+        if type(tags) == str:
+            tags = [tags]
+        if type(tags) != list or not all([type(t) == str for t in tags]):
+            raise Exception('Must provide tags as list of strings')
+
+        for old_tag in self.getNoteTags(nid):
+            self.removeTags([nid], old_tag)
+        for new_tag in tags:
+            self.addTags([nid], new_tag)
+
+
+    @util.api()
+    def getNoteTags(self, nid):
+        return self.getNote(nid).tags
 
 
     @util.api()
