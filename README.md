@@ -1865,6 +1865,38 @@ corresponding to when the API was available for use.
     }
     ```
 
+*   **modelFieldFonts**
+
+    Gets the complete list of fonts along with their font sizes.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "modelFieldFonts",
+        "version": 6,
+        "params": {
+            "modelName": "Basic"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": {
+            "Front": {
+                "font": "Arial",
+                "size": 20
+            },
+            "Back": {
+                "font": "Arial",
+                "size": 20
+            }
+        },
+        "error": null
+    }
+    ```
+
 *   **modelFieldsOnTemplates**
 
     Returns an object indicating the fields on the question and answer side of each card template for the given model
@@ -2214,18 +2246,19 @@ corresponding to when the API was available for use.
     }
     ```
 
-*   **modelFieldRemove**
+*   **modelFieldSetFont**
 
-    Deletes a field within a given model.
+    Sets the font for a field within a given model.
 
     *Sample Request*:
     ```json
     {
-        "action": "modelFieldRemove",
+        "action": "modelFieldSetFont",
         "version": 6,
         "params": {
             "modelName": "Basic",
-            "fieldName": "Front"
+            "fieldName": "Front",
+            "font": "Courier"
         }
     }
     ```
@@ -2234,6 +2267,58 @@ corresponding to when the API was available for use.
     ```json
     {
         "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldSetFontSize**
+
+    Sets the font size for a field within a given model.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldSetFont",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "Front",
+            "fontSize": 10
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **modelFieldSetDescription**
+
+    Sets the description (the text seen in the gui editor when a field is empty) for a field within a given model.
+
+    Older versions of Anki (2.1.49 and below) do not have field descriptions. In that case, this will return with `false`.
+
+    *Sample Request*:
+    ```json
+    {
+        "action": "modelFieldSetDescription",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "fieldName": "Front",
+            "description": "example field description"
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": true,
         "error": null
     }
     ```

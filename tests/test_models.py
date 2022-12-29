@@ -21,6 +21,20 @@ def test_modelFieldDescriptions(setup):
     assert result == ["", ""]
 
 
+def test_modelFieldFonts(setup):
+    result = ac.modelFieldFonts(modelName="test_model")
+    assert result == {
+        "field1": {
+            "font": "Arial",
+            "size": 20,
+        },
+        "field2": {
+            "font": "Arial",
+            "size": 20,
+        },
+    }
+
+
 def test_modelFieldsOnTemplates(setup):
     result = ac.modelFieldsOnTemplates(modelName="test_model")
     assert result == {
@@ -172,3 +186,55 @@ class TestModelFieldNames:
 
         result = ac.modelFieldNames(modelName="test_model")
         assert result == ["field2"]
+
+    def test_modelFieldSetFont(self, setup):
+        ac.modelFieldSetFont(
+            modelName="test_model",
+            fieldName="field1",
+            font="Courier",
+        )
+
+        result = ac.modelFieldFonts(modelName="test_model")
+        assert result == {
+            "field1": {
+                "font": "Courier",
+                "size": 20,
+            },
+            "field2": {
+                "font": "Arial",
+                "size": 20,
+            },
+        }
+
+    def test_modelFieldSetFontSize(self, setup):
+        ac.modelFieldSetFontSize(
+            modelName="test_model",
+            fieldName="field2",
+            fontSize=16,
+        )
+
+        result = ac.modelFieldFonts(modelName="test_model")
+        assert result == {
+            "field1": {
+                "font": "Arial",
+                "size": 20,
+            },
+            "field2": {
+                "font": "Arial",
+                "size": 16,
+            },
+        }
+
+    def test_modelFieldSetDescription(self, setup):
+        set_desc = ac.modelFieldSetDescription(
+            modelName="test_model",
+            fieldName="field1",
+            description="test description",
+        )
+
+        result = ac.modelFieldDescriptions(modelName="test_model")
+
+        if set_desc:
+            assert result == ["test description", ""]
+        else:
+            assert result == ["", ""]
