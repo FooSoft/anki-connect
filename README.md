@@ -2533,7 +2533,7 @@ corresponding to when the API was available for use.
 
 *   **updateNoteFields**
 
-    Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
+    Modify the fields of an existing note. You can also include audio, video, or picture files which will be added to the note with an
     optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
 
     > **Warning**
@@ -2570,6 +2570,98 @@ corresponding to when the API was available for use.
     ```json
     {
         "result": null,
+        "error": null
+    }
+    ```
+
+*   **updateNote**
+
+    Modify the fields and/or tags of an existing note.
+    In other words, combines `updateNoteFields` and `updateNoteTags`.
+    Please see their documentation for an explanation of all properties.
+
+    Either `fields` or `tags` property can be omitted without affecting the other.
+    Thus valid requests to `updateNoteFields` also work with `updateNote`.
+    The note must have the `fields` property in order to update the optional audio, video, or picture objects.
+
+    If neither `fields` nor `tags` are provided, the method will fail.
+    Fields are updated first and are not rolled back if updating tags fails.
+    Tags are not updated if updating fields fails.
+
+    > **Warning**
+    > You must not be viewing the note that you are updating on your Anki browser, otherwise
+    > the fields will not update. See [this issue](https://github.com/FooSoft/anki-connect/issues/82)
+    > for further details.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateNote",
+        "version": 6,
+        "params": {
+            "note": {
+                "id": 1514547547030,
+                "fields": {
+                    "Front": "new front content",
+                    "Back": "new back content"
+                },
+                "tags": ["new", "tags"]
+            }
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **updateNoteTags**
+
+    Set a note's tags by note ID. Old tags will be removed.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "updateNoteTags",
+        "version": 6,
+        "params": {
+            "note": 1483959289817,
+            "tags": ["european-languages"]
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+*   **getNoteTags**
+
+    Get a note's tags by note ID.
+
+    *Sample request*:
+    ```json
+    {
+        "action": "getNoteTags",
+        "version": 6,
+        "params": {
+            "note": 1483959289817,
+        }
+    }
+    ```
+
+    *Sample result*:
+    ```json
+    {
+        "result": ["european-languages"],
         "error": null
     }
     ```

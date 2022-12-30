@@ -98,6 +98,12 @@ class TestTags:
         ac.clearUnusedTags()
         assert ac.getTags() == ["tag1"]
 
+    def test_updateNoteTags_and_getNoteTags(self, setup):
+        ac.updateNoteTags(note=setup.note1_id, tags="footag")
+        assert ac.getNoteTags(note=setup.note1_id) == ["footag"]
+        ac.updateNoteTags(note=setup.note1_id, tags=["foo", "bar", "baz"])
+        assert len(ac.getNoteTags(note=setup.note1_id)) == 3
+
 
 class TestUpdateNoteFields:
     def test_updateNoteFields(self, setup):
@@ -107,10 +113,25 @@ class TestUpdateNoteFields:
         notes_info = ac.notesInfo(notes=[setup.note1_id])
         assert notes_info[0]["fields"]["field2"]["value"] == "bar"
 
-    def test_updateNoteFields_will_note_update_invalid_notes(self, setup):
+    def test_updateNoteFields_will_not_update_invalid_notes(self, setup):
         bad_note = {"id": 123, "fields": make_note()["fields"]}
         with pytest.raises(NotFoundError):
             ac.updateNoteFields(note=bad_note)
+
+
+class TestUpdateNote:
+    def test_updateNote(self, setup):
+        new_fields = {"field1": "frontbar", "field2": "backbar"}
+        new_tags = ["foobar"]
+        good_note = {"id": setup.note1_id, "fields": new_fields, "tags": new_tags}
+        ac.updateNote(note=good_note)
+        notes_info = ac.notesInfo(notes=[setup.note1_id])
+        assert notes_info[0]["fields"]["field2"]["value"] == "backbar"
+        assert notes_info[0]["tags"] == ["foobar"]
+
+    def test_updateNote_requires_either_fields_or_tags(self, setup):
+        with pytest.raises(Exception, match="ust provide"):
+            ac.updateNote(note={"id": setup.note1_id})
 
 
 class TestCanAddNotes:
