@@ -350,17 +350,22 @@ class AnkiConnect:
         # Not a duplicate
         return 0
 
+    def raiseNotfoundError(self, errorMsg):
+        if anki_version < (2, 1, 55):
+            raise NotFoundError(errorMsg)
+        raise NotFoundError(errorMsg, None, None, None)
+
     def getCard(self, card_id: int) -> Card:
         try:
             return self.collection().getCard(card_id)
         except NotFoundError:
-            raise NotFoundError('Card was not found: {}'.format(card_id))
+            self.raiseNotfoundError('Card was not found: {}'.format(card_id))
 
     def getNote(self, note_id: int) -> Note:
         try:
             return self.collection().getNote(note_id)
         except NotFoundError:
-            raise NotFoundError('Note was not found: {}'.format(note_id))
+            self.raiseNotfoundError('Note was not found: {}'.format(note_id))
 
     def deckStatsToJson(self, due_tree):
         deckStats = {'deck_id': due_tree.deck_id,
