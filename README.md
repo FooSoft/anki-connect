@@ -2608,7 +2608,7 @@ corresponding to when the API was available for use.
 *   Rename the field name of a given model.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2641,7 +2641,7 @@ corresponding to when the API was available for use.
     The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2674,7 +2674,7 @@ corresponding to when the API was available for use.
     Optionally, the `index` value can be provided, which works exactly the same as the index in `modelFieldReposition`. By default, the field is added to the end of the field list.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2705,7 +2705,7 @@ corresponding to when the API was available for use.
 *   Deletes a field within a given model.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2735,7 +2735,7 @@ corresponding to when the API was available for use.
 *   Sets the font for a field within a given model.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2766,7 +2766,7 @@ corresponding to when the API was available for use.
 *   Sets the font size for a field within a given model.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2799,7 +2799,7 @@ corresponding to when the API was available for use.
     Older versions of Anki (2.1.49 and below) do not have field descriptions. In that case, this will return with `false`.
 
     <details>
-    <summary><i>Sample Request:</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
