@@ -2369,7 +2369,6 @@ corresponding to when the API was available for use.
             "mod":1551462107,
             "usn":-1,
             "vers":[
-            </details>
 
             ],
             "type":0,
@@ -2427,6 +2426,7 @@ corresponding to when the API was available for use.
         "error":null
     }
     ```
+    </details>
 
 #### `modelTemplates`
 
