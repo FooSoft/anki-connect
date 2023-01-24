@@ -171,7 +171,7 @@ be serviced*. Make sure that your pull request meets the following criteria:
 *   Have accompanying tests that verify operation.
 *   Implement features useful in other applications.
 
-### Supported Actions
+## Supported Actions
 
 Documentation for currently supported actions is split up by category and is referenced below. Note that deprecated APIs
 will continue to function despite not being listed on this page as long as your request is labeled with a version number
@@ -186,13 +186,17 @@ corresponding to when the API was available for use.
 * [Note Actions](#note-actions)
 * [Statistic Actions](#statistic-actions)
 
-#### Card Actions
+---
 
-*   **getEaseFactors**
+### Card Actions
 
-    Returns an array with the ease factor for each of the given cards (in the same order).
+#### `getEaseFactors`
 
-    *Sample request*:
+*   Returns an array with the ease factor for each of the given cards (in the same order).
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getEaseFactors",
@@ -202,20 +206,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [4100, 3900],
         "error": null
     }
     ```
+    </details>
 
-*   **setEaseFactors**
+#### `setEaseFactors`
 
-    Sets ease factor of cards by card ID; returns `true` if successful (all cards existed) or `false` otherwise.
+*   Sets ease factor of cards by card ID; returns `true` if successful (all cards existed) or `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "setEaseFactors",
@@ -226,23 +236,29 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [true, true],
         "error": null
     }
     ```
+    </details>
 
 
-*   **setSpecificValueOfCard**
+#### `setSpecificValueOfCard`
 
-    Sets specific value of a single card. Given the risk of wreaking havor in the database when changing some of the values of a card, some of the keys require the argument "warning_check" set to True.
+*   Sets specific value of a single card. Given the risk of wreaking havor in the database when changing some of the values of a card, some of the keys require the argument "warning_check" set to True.
     This can be used to set a card's flag, change it's ease factor, change the review order in a filtered deck and change the column "data" (not currently used by anki apparantly), and many other values.
     A list of values and explanation of their respective utility can be found at [AnkiDroid's wiki](https://github.com/ankidroid/Anki-Android/wiki/Database-Structure).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "setSpecificValueOfCard",
@@ -254,22 +270,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [true, true],
         "error": null
     }
     ```
+    </details>
 
 
-*   **suspend**
+#### `suspend`
 
-    Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
+*   Suspend cards by card ID; returns `true` if successful (at least one card wasn't already suspended) or `false`
     otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "suspend",
@@ -279,21 +301,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **unsuspend**
+#### `unsuspend`
 
-    Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
+*   Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
     otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "unsuspend",
@@ -303,20 +331,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **suspended**
+#### `suspended`
 
-    Check if card is suspended by its ID. Returns `true` if suspended, `false` otherwise.
+*   Check if card is suspended by its ID. Returns `true` if suspended, `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "suspended",
@@ -326,21 +360,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **areSuspended**
+#### `areSuspended`
 
-    Returns an array indicating whether each of the given cards is suspended (in the same order). If card doesn't
+*   Returns an array indicating whether each of the given cards is suspended (in the same order). If card doesn't
     exist returns `null`.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "areSuspended",
@@ -350,22 +390,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [false, true, null],
         "error": null
     }
     ```
+    </details>
 
-*   **areDue**
+#### `areDue`
 
-    Returns an array indicating whether each of the given cards is due (in the same order). *Note*: cards in the
+*   Returns an array indicating whether each of the given cards is due (in the same order). *Note*: cards in the
     learning queue with a large interval (over 20 minutes) are treated as not due until the time of their interval has
     passed, to match the way Anki treats them when reviewing.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "areDue",
@@ -375,21 +421,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [false, true],
         "error": null
     }
     ```
+    </details>
 
-*   **getIntervals**
+#### `getIntervals`
 
-    Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
+*   Returns an array of the most recent intervals for each given card ID, or a 2-dimensional array of all the intervals
     for each given card ID when `complete` is `true`. Negative intervals are in seconds and positive intervals in days.
 
-    *Sample request 1*:
+    <details>
+    <summary><i>Sample request 1:</i></summary>
+
     ```json
     {
         "action": "getIntervals",
@@ -399,16 +451,22 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result 1*:
+    <details>
+    <summary><i>Sample result 1:</i></summary>
+
     ```json
     {
         "result": [-14400, 3],
         "error": null
     }
     ```
+    </details>
 
-    *Sample request 2*:
+    <details>
+    <summary><i>Sample request 2:</i></summary>
+
     ```json
     {
         "action": "getIntervals",
@@ -419,8 +477,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result 2*:
+    <details>
+    <summary><i>Sample result 2:</i></summary>
+
     ```json
     {
         "result": [
@@ -430,13 +491,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **findCards**
+#### `findCards`
 
-    Returns an array of card IDs for a given query. Functionally identical to `guiBrowse` but doesn't use the GUI for
+*   Returns an array of card IDs for a given query. Functionally identical to `guiBrowse` but doesn't use the GUI for
     better performance.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "findCards",
@@ -446,21 +510,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1494723142483, 1494703460437, 1494703479525],
         "error": null
     }
     ```
+    </details>
 
-*   **cardsToNotes**
+#### `cardsToNotes`
 
-    Returns an unordered array of note IDs for the given card IDs. For cards with the same note, the ID is only given
+*   Returns an unordered array of note IDs for the given card IDs. For cards with the same note, the ID is only given
     once in the array.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "cardsToNotes",
@@ -470,21 +540,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1502098029797, 1502298025183],
         "error": null
     }
     ```
+    </details>
 
-*   **cardsModTime**
+#### `cardsModTime`
 
-    Returns a list of objects containings for each card ID the modification time.
+*   Returns a list of objects containings for each card ID the modification time.
     This function is about 15 times faster than executing `cardsInfo`.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "cardsModTime",
@@ -494,8 +570,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [
@@ -507,14 +586,17 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
 
-*   **cardsInfo**
+#### `cardsInfo`
 
-    Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
+*   Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
     type, the note that the card belongs to, and deck name, last modification timestamp as well as ease and interval.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "cardsInfo",
@@ -524,8 +606,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [
@@ -578,12 +663,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **forgetCards**
+#### `forgetCards`
 
-    Forget cards, making the cards new again.
+*   Forget cards, making the cards new again.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "forgetCards",
@@ -593,20 +681,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **relearnCards**
+#### `relearnCards`
 
-    Make cards be "relearning".
+*   Make cards be "relearning".
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "relearnCards",
@@ -616,63 +710,83 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-#### Deck Actions
+---
 
-*   **deckNames**
+### Deck Actions
 
-    Gets the complete list of deck names for the current user.
+#### `deckNames`
 
-    *Sample request*:
+*   Gets the complete list of deck names for the current user.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "deckNames",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["Default"],
         "error": null
     }
     ```
+    </details>
 
-*   **deckNamesAndIds**
+#### `deckNamesAndIds`
 
-    Gets the complete list of deck names and their respective IDs for the current user.
+*   Gets the complete list of deck names and their respective IDs for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "deckNamesAndIds",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {"Default": 1},
         "error": null
     }
     ```
+    </details>
 
-*   **getDecks**
+#### `getDecks`
 
-    Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
+*   Accepts an array of card IDs and returns an object with each deck name as a key, and its value an array of the given
     cards which belong to it.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getDecks",
@@ -682,8 +796,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -693,12 +810,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **createDeck**
+#### `createDeck`
 
-    Create a new empty deck. Will not overwrite a deck that exists with the same name.
+*   Create a new empty deck. Will not overwrite a deck that exists with the same name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "createDeck",
@@ -708,19 +828,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1519323742721,
         "error": null
     }
     ```
-*   **changeDeck**
+    </details>
 
-    Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+#### `changeDeck`
 
-    *Sample request*:
+*   Moves cards with the given IDs to a different deck, creating the deck if it doesn't exist yet.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "changeDeck",
@@ -731,21 +858,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **deleteDecks**
+#### `deleteDecks`
 
-    Deletes decks with the given names. 
+*   Deletes decks with the given names. 
     The argument `cardsToo` *must* be specified and set to `true`.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "deleteDecks",
@@ -756,20 +889,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **getDeckConfig**
+#### `getDeckConfig`
 
-    Gets the configuration group object for the given deck.
+*   Gets the configuration group object for the given deck.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getDeckConfig",
@@ -779,8 +918,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -822,13 +964,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **saveDeckConfig**
+#### `saveDeckConfig`
 
-    Saves the given configuration group, returning `true` on success or `false` if the ID of the configuration group is
+*   Saves the given configuration group, returning `true` on success or `false` if the ID of the configuration group is
     invalid (such as when it does not exist).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "saveDeckConfig",
@@ -873,21 +1018,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **setDeckConfigId**
+#### `setDeckConfigId`
 
-    Changes the configuration group for the given decks to the one with the given ID. Returns `true` on success or
+*   Changes the configuration group for the given decks to the one with the given ID. Returns `true` on success or
     `false` if the given configuration group or any of the given decks do not exist.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "setDeckConfigId",
@@ -898,22 +1049,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **cloneDeckConfigId**
+#### `cloneDeckConfigId`
 
-    Creates a new configuration group with the given name, cloning from the group with the given ID, or from the default
+*   Creates a new configuration group with the given name, cloning from the group with the given ID, or from the default
     group if this is unspecified. Returns the ID of the new configuration group, or `false` if the specified group to
     clone from does not exist.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "cloneDeckConfigId",
@@ -924,21 +1081,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1502972374573,
         "error": null
     }
     ```
+    </details>
 
-*   **removeDeckConfigId**
+#### `removeDeckConfigId`
 
-    Removes the configuration group with the given ID, returning `true` if successful, or `false` if attempting to
+*   Removes the configuration group with the given ID, returning `true` if successful, or `false` if attempting to
     remove either the default configuration group (ID = 1) or a configuration group that does not exist.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "removeDeckConfigId",
@@ -948,20 +1111,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **getDeckStats**
+#### `getDeckStats`
 
-    Gets statistics such as total cards and cards due for the given decks.
+*   Gets statistics such as total cards and cards due for the given decks.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getDeckStats",
@@ -971,8 +1140,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -996,15 +1168,20 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-#### Graphical Actions
+---
 
-*   **guiBrowse**
+### Graphical Actions
 
-    Invokes the *Card Browser* dialog and searches for a given query. Returns an array of identifiers of the cards that
+#### `guiBrowse`
+
+*   Invokes the *Card Browser* dialog and searches for a given query. Returns an array of identifiers of the cards that
     were found. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiBrowse",
@@ -1014,39 +1191,49 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1494723142483, 1494703460437, 1494703479525],
         "error": null
     }
     ```
+    </details>
 
-*   **guiSelectedNotes**
+#### `guiSelectedNotes`
 
-    Finds the open instance of the *Card Browser* dialog and returns an array of identifiers of the notes that are
+*   Finds the open instance of the *Card Browser* dialog and returns an array of identifiers of the notes that are
     selected. Returns an empty list if the browser is not open.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiSelectedNotes",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1494723142483, 1494703460437, 1494703479525],
         "error": null
     }
     ```
+    </details>
 
-*   **guiAddCards**
+#### `guiAddCards`
 
-    Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
+*   Invokes the *Add Cards* dialog, presets the note using the given deck and model, with the provided field values and tags.
     Invoking it multiple times closes the old window and _reopen the window_ with the new provided values.
 
     Audio, video, and picture files can be embedded into the fields via the `audio`, `video`, and `picture` keys, respectively.
@@ -1054,7 +1241,9 @@ corresponding to when the API was available for use.
 
     The result is the ID of the note which would be added, if the user chose to confirm the *Add Cards* dialogue.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiAddCards",
@@ -1081,25 +1270,32 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1496198395707,
         "error": null
     }
     ```
+    </details>
 
-*   **guiEditNote**
+#### `guiEditNote`
 
-    Opens the *Edit* dialog with a note corresponding to given note ID.
+*   Opens the *Edit* dialog with a note corresponding to given note ID.
     The dialog is similar to the *Edit Current* dialog, but:
+
     * has a Preview button to preview the cards for the note
     * has a Browse button to open the browser with these cards
     * has Previous/Back buttons to navigate the history of the dialog
     * has no bar with the Close button
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiEditNote",
@@ -1109,28 +1305,37 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **guiCurrentCard**
+#### `guiCurrentCard`
 
-    Returns information about the current card or `null` if not in review mode.
+*   Returns information about the current card or `null` if not in review mode.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiCurrentCard",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -1151,75 +1356,96 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **guiStartCardTimer**
+#### `guiStartCardTimer`
 
-    Starts or resets the `timerStarted` value for the current card. This is useful for deferring the start time to when
+*   Starts or resets the `timerStarted` value for the current card. This is useful for deferring the start time to when
     it is displayed via the API, allowing the recorded time taken to answer the card to be more accurate when calling
     `guiAnswerCard`.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiStartCardTimer",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiShowQuestion**
+#### `guiShowQuestion`
 
-    Shows question text for the current card; returns `true` if in review mode or `false` otherwise.
+*   Shows question text for the current card; returns `true` if in review mode or `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiShowQuestion",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiShowAnswer**
+#### `guiShowAnswer`
 
-    Shows answer text for the current card; returns `true` if in review mode or `false` otherwise.
+*   Shows answer text for the current card; returns `true` if in review mode or `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiShowAnswer",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiAnswerCard**
+#### `guiAnswerCard`
 
-    Answers the current card; returns `true` if succeeded or `false` otherwise. Note that the answer for the current
+*   Answers the current card; returns `true` if succeeded or `false` otherwise. Note that the answer for the current
     card must be displayed before before any answer can be accepted by Anki.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiAnswerCard",
@@ -1229,20 +1455,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiDeckOverview**
+#### `guiDeckOverview`
 
-    Opens the *Deck Overview* dialog for the deck with the given name; returns `true` if succeeded or `false` otherwise.
+*   Opens the *Deck Overview* dialog for the deck with the given name; returns `true` if succeeded or `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiDeckOverview",
@@ -1252,40 +1484,52 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiDeckBrowser**
+#### `guiDeckBrowser`
 
-    Opens the *Deck Browser* dialog.
+*   Opens the *Deck Browser* dialog.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiDeckBrowser",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **guiDeckReview**
+#### `guiDeckReview`
 
-    Starts review for the deck with the given name; returns `true` if succeeded or `false` otherwise.
+*   Starts review for the deck with the given name; returns `true` if succeeded or `false` otherwise.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiDeckReview",
@@ -1295,66 +1539,86 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **guiExitAnki**
+#### `guiExitAnki`
 
-    Schedules a request to gracefully close Anki. This operation is asynchronous, so it will return immediately and
+*   Schedules a request to gracefully close Anki. This operation is asynchronous, so it will return immediately and
     won't wait until the Anki process actually terminates.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiExitAnki",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **guiCheckDatabase**
+#### `guiCheckDatabase`
 
-    Requests a database check, but returns immediately without waiting for the check to complete. Therefore, the action will always return `true` even if errors are detected during the database check.
+*   Requests a database check, but returns immediately without waiting for the check to complete. Therefore, the action will always return `true` even if errors are detected during the database check.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "guiCheckDatabase",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-#### Media Actions
+---
 
-*   **storeMediaFile**
+### Media Actions
 
-    Stores a file with the specified base64-encoded contents inside the media folder. Alternatively you can specify a
+#### `storeMediaFile`
+
+*   Stores a file with the specified base64-encoded contents inside the media folder. Alternatively you can specify a
     absolute file path, or a url from where the file shell be downloaded. If more than one of `data`, `path` and `url` are provided, the `data` field will be used first, then `path`, and finally `url`. To prevent Anki from removing files not used by any cards (e.g. for configuration files), prefix the filename with an underscore. These files are still synchronized to AnkiWeb.
     Any existing file with the same name is deleted by default. Set `deleteExisting` to false to prevent that
     by [letting Anki give the new file a non-conflicting name](https://github.com/ankitects/anki/blob/aeba725d3ea9628c73300648f748140db3fdd5ed/rslib/src/media/files.rs#L194).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request (relative path):</i></summary>
+
     ```json
     {
         "action": "storeMediaFile",
@@ -1366,20 +1630,27 @@ corresponding to when the API was available for use.
     }
     ```
 
-    *Sample result*:
+    *Content of `_hello.txt`*:
+
+    ```
+    Hello world!
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result (relative path):</i></summary>
+
     ```json
     {
         "result": "_hello.txt",
         "error": null
     }
     ```
+    </details>
 
-    *Content of `_hello.txt`*:
-    ```
-    Hello world!
-    ```
+    <details>
+    <summary><i>Sample request (absolute path):</i></summary>
 
-    *Sample request*:
     ```json
     {
         "action": "storeMediaFile",
@@ -1390,16 +1661,22 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result (absolute path):</i></summary>
+
     ```json
     {
         "result": "_hello.txt",
         "error": null
     }
     ```
+    </details>
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request (url):</i></summary>
+
     ```json
     {
         "action": "storeMediaFile",
@@ -1410,20 +1687,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result (url):</i></summary>
+
     ```json
     {
         "result": "_hello.txt",
         "error": null
     }
     ```
+    </details>
 
-*   **retrieveMediaFile**
+#### `retrieveMediaFile`
 
-    Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
+*   Retrieves the base64-encoded contents of the specified file, returning `false` if the file does not exist.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "retrieveMediaFile",
@@ -1433,20 +1716,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": "SGVsbG8sIHdvcmxkIQ==",
         "error": null
     }
     ```
+    </details>
 
-*   **getMediaFilesNames**
+#### `getMediaFilesNames`
 
-    Gets the names of media files matched the pattern. Returning all names by default.
+*   Gets the names of media files matched the pattern. Returning all names by default.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getMediaFilesNames",
@@ -1456,20 +1745,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["_hello.txt"],
         "error": null
     }
     ```
+    </details>
 
-*   **deleteMediaFile**
+#### `deleteMediaFile`
 
-    Deletes the specified file inside the media folder.
+*   Deletes the specified file inside the media folder.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "deleteMediaFile",
@@ -1479,20 +1774,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-#### Miscellaneous Actions
+---
 
-*   **requestPermission**
+### Miscellaneous Actions
 
-    Requests permission to use the API exposed by this plugin. This method does not require the API key, and is the
+#### `requestPermission`
+
+*   Requests permission to use the API exposed by this plugin. This method does not require the API key, and is the
     only one that accepts requests from any origin; the other methods only accept requests from trusted origins,
     which are listed under `webCorsOriginList` in the add-on config. `localhost` is trusted by default.
 
@@ -1509,15 +1810,20 @@ corresponding to when the API was available for use.
     properly with each other. New versions of Anki-Connect are backwards compatible; as long as you are using actions
     which are available in the reported Anki-Connect version or earlier, everything should work fine.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "requestPermission",
         "version": 6
     }
     ```
+    </details>
 
-    *Samples results*:
+    <details>
+    <summary><i>Samples results:</i></summary>
+
     ```json
     {
         "result": {
@@ -1528,6 +1834,7 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+
     ```json
     {
         "result": {
@@ -1536,31 +1843,38 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **version**
+#### `version`
 
-    Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
+*   Gets the version of the API exposed by this plugin. Currently versions `1` through `6` are defined.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "version",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 6,
         "error": null
     }
     ```
+    </details>
 
 
-*   **apiReflect**
+#### `apiReflect`
 
-    Gets information about the AnkiConnect APIs available. The request supports the following params:
+*   Gets information about the AnkiConnect APIs available. The request supports the following params:
 
     * `scopes` - An array of scopes to get reflection information about.
       The only currently supported value is `"actions"`.
@@ -1571,7 +1885,9 @@ corresponding to when the API was available for use.
     The result will contain a list of which scopes were used and a value for each scope.
     For example, the `"actions"` scope will contain a `"actions"` property which contains a list of supported action names.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "apiReflect",
@@ -1582,8 +1898,11 @@ corresponding to when the API was available for use.
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -1593,52 +1912,67 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **sync**
+#### `sync`
 
-    Synchronizes the local Anki collections with AnkiWeb.
+*   Synchronizes the local Anki collections with AnkiWeb.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "sync",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **getProfiles**
+#### `getProfiles`
 
-    Retrieve the list of profiles.
+*   Retrieve the list of profiles.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getProfiles",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["User 1"],
         "error": null
     }
     ```
+    </details>
 
-*   **loadProfile**
+#### `loadProfile`
 
-    Selects the profile specified in request.
+*   Selects the profile specified in request.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "loadProfile",
@@ -1648,20 +1982,26 @@ corresponding to when the API was available for use.
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **multi**
+#### `multi`
 
-    Performs multiple actions in one request, returning an array with the response of each action (in the given order).
+*   Performs multiple actions in one request, returning an array with the response of each action (in the given order).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "multi",
@@ -1688,8 +2028,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [
@@ -1701,13 +2044,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **exportPackage**
+#### `exportPackage`
 
-    Exports a given deck in `.apkg` format. Returns `true` if successful or `false` otherwise. The optional property
+*   Exports a given deck in `.apkg` format. Returns `true` if successful or `false` otherwise. The optional property
     `includeSched` (default is `false`) can be specified to include the cards' scheduling data.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "exportPackage",
@@ -1719,21 +2065,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **importPackage**
+#### `importPackage`
 
-    Imports a file in `.apkg` format into the collection. Returns `true` if successful or `false` otherwise.
+*   Imports a file in `.apkg` format into the collection. Returns `true` if successful or `false` otherwise.
     Note that the file path is relative to Anki's collection.media folder, not to the client.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "importPackage",
@@ -1743,70 +2095,93 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-*   **reloadCollection**
+#### `reloadCollection`
 
-    Tells anki to reload all data from the database.
+*   Tells anki to reload all data from the database.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "reloadCollection",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-#### Model Actions
+---
 
-*   **modelNames**
+### Model Actions
 
-    Gets the complete list of model names for the current user.
+#### `modelNames`
 
-    *Sample request*:
+*   Gets the complete list of model names for the current user.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelNames",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["Basic", "Basic (and reversed card)"],
         "error": null
     }
     ```
+    </details>
 
-*   **modelNamesAndIds**
+#### `modelNamesAndIds`
 
-    Gets the complete list of model names and their corresponding IDs for the current user.
+*   Gets the complete list of model names and their corresponding IDs for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelNamesAndIds",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -1818,12 +2193,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldNames**
+#### `modelFieldNames`
 
-    Gets the complete list of field names for the provided model name.
+*   Gets the complete list of field names for the provided model name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldNames",
@@ -1833,20 +2211,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["Front", "Back"],
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldDescriptions**
+#### `modelFieldDescriptions`
 
-    Gets the complete list of field descriptions (the text seen in the gui editor when a field is empty) for the provided model name.
+*   Gets the complete list of field descriptions (the text seen in the gui editor when a field is empty) for the provided model name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldDescriptions",
@@ -1856,20 +2240,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["", ""],
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldFonts**
+#### `modelFieldFonts`
 
-    Gets the complete list of fonts along with their font sizes.
+*   Gets the complete list of fonts along with their font sizes.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldFonts",
@@ -1879,8 +2269,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -1896,13 +2289,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldsOnTemplates**
+#### `modelFieldsOnTemplates`
 
-    Returns an object indicating the fields on the question and answer side of each card template for the given model
+*   Returns an object indicating the fields on the question and answer side of each card template for the given model
     name. The question side is given first in each array.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldsOnTemplates",
@@ -1912,8 +2308,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -1923,16 +2322,19 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **createModel**
+#### `createModel`
 
-    Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
+*   Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
     used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
 
     Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
     card names will be `Card 1`, `Card 2`, and so on.
 
-    *Sample request*
+    <details>
+    <summary><i>Sample request</i></summary>
+
     ```json
     {
         "action": "createModel",
@@ -1952,8 +2354,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*
+    <details>
+    <summary><i>Sample result</i></summary>
+
     ```json
     {
         "result":{
@@ -2021,12 +2426,15 @@ corresponding to when the API was available for use.
         "error":null
     }
     ```
+    </details>
 
-*   **modelTemplates**
+#### `modelTemplates`
 
-    Returns an object indicating the template content for each card connected to the provided model by name.
+*   Returns an object indicating the template content for each card connected to the provided model by name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelTemplates",
@@ -2036,8 +2444,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*
+    <details>
+    <summary><i>Sample result</i></summary>
+
     ```json
     {
         "result": {
@@ -2053,12 +2464,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **modelStyling**
+#### `modelStyling`
 
-    Gets the CSS styling for the provided model by name.
+*   Gets the CSS styling for the provided model by name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelStyling",
@@ -2068,8 +2482,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*
+    <details>
+    <summary><i>Sample result</i></summary>
+
     ```json
     {
         "result": {
@@ -2078,13 +2495,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **updateModelTemplates**
+#### `updateModelTemplates`
 
-    Modify the templates of an existing model by name. Only specifies cards and specified sides will be modified.
+*   Modify the templates of an existing model by name. Only specifies cards and specified sides will be modified.
     If an existing card or side is not included in the request, it will be left unchanged.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "updateModelTemplates",
@@ -2102,20 +2522,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **updateModelStyling**
+#### `updateModelStyling`
 
-    Modify the CSS styling of an existing model by name.
+*   Modify the CSS styling of an existing model by name.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "updateModelStyling",
@@ -2128,20 +2554,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **findAndReplaceInModels**
+#### `findAndReplaceInModels`
 
-    Find and replace string in existing model by model name. Customise to replace in front, back or css by setting to true/false.
+*   Find and replace string in existing model by model name. Customise to replace in front, back or css by setting to true/false.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "findAndReplaceInModels",
@@ -2158,20 +2590,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldRename**
+#### `modelFieldRename`
 
-    Rename the field name of a given model.
+*   Rename the field name of a given model.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldRename",
@@ -2183,22 +2621,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldReposition**
+#### `modelFieldReposition`
 
-    Reposition the field within the field list of a given model.
+*   Reposition the field within the field list of a given model.
 
     The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldReposition",
@@ -2210,22 +2654,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldAdd**
+#### `modelFieldAdd`
 
-    Creates a new field within a given model.
+*   Creates a new field within a given model.
 
     Optionally, the `index` value can be provided, which works exactly the same as the index in `modelFieldReposition`. By default, the field is added to the end of the field list.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldAdd",
@@ -2237,20 +2687,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldRemove**
+#### `modelFieldRemove`
 
-    Deletes a field within a given model.
+*   Deletes a field within a given model.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldRemove",
@@ -2261,20 +2717,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldSetFont**
+#### `modelFieldSetFont`
 
-    Sets the font for a field within a given model.
+*   Sets the font for a field within a given model.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldSetFont",
@@ -2286,20 +2748,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldSetFontSize**
+#### `modelFieldSetFontSize`
 
-    Sets the font size for a field within a given model.
+*   Sets the font size for a field within a given model.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldSetFont",
@@ -2311,22 +2779,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **modelFieldSetDescription**
+#### `modelFieldSetDescription`
 
-    Sets the description (the text seen in the gui editor when a field is empty) for a field within a given model.
+*   Sets the description (the text seen in the gui editor when a field is empty) for a field within a given model.
 
     Older versions of Anki (2.1.49 and below) do not have field descriptions. In that case, this will return with `false`.
 
-    *Sample Request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "modelFieldSetDescription",
@@ -2338,20 +2812,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": true,
         "error": null
     }
     ```
+    </details>
 
-#### Note Actions
+---
 
-*   **addNote**
+### Note Actions
 
-    Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
+#### `addNote`
+
+*   Creates a note using the given deck and model, with the provided field values and tags. Returns the identifier of
     the created note created on success, and `null` on failure.
 
     Anki-Connect can download audio, video, and picture files and embed them in newly created notes. The corresponding `audio`, `video`, and `picture` note members are
@@ -2372,7 +2852,9 @@ corresponding to when the API was available for use.
     * `duplicateScopeOptions.checkChildren` will change whether or not duplicate cards are checked in child decks. The default value is `false`.
     * `duplicateScopeOptions.checkAllModels` specifies whether duplicate checks are performed across all note types. The default value is `false`.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "addNote",
@@ -2425,22 +2907,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1496198395707,
         "error": null
     }
     ```
+    </details>
 
-*   **addNotes**
+#### `addNotes`
 
-    Creates multiple notes using the given deck and model, with the provided field values and tags. Returns an array of
+*   Creates multiple notes using the given deck and model, with the provided field values and tags. Returns an array of
     identifiers of the created notes (notes that could not be created will have a `null` identifier). Please see the
     documentation for `addNote` for an explanation of objects in the `notes` array.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "addNotes",
@@ -2486,21 +2974,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1496198395707, null],
         "error": null
     }
     ```
+    </details>
 
-*   **canAddNotes**
+#### `canAddNotes`
 
-    Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
+*   Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
     booleans indicating whether or not the parameters at the corresponding index could be used to create a new note.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "canAddNotes",
@@ -2522,26 +3016,32 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [true],
         "error": null
     }
     ```
+    </details>
 
-*   **updateNoteFields**
+#### `updateNoteFields`
 
-    Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
+*   Modify the fields of an exist note. You can also include audio, video, or picture files which will be added to the note with an
     optional `audio`, `video`, or `picture` property. Please see the documentation for `addNote` for an explanation of objects in the `audio`, `video`, or `picture` array.
 
-    > **Warning**
+    > **Warning**:
     > You must not be viewing the note that you are updating on your Anki browser, otherwise
     > the fields will not update. See [this issue](https://github.com/FooSoft/anki-connect/issues/82)
     > for further details.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "updateNoteFields",
@@ -2565,20 +3065,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **addTags**
+#### `addTags`
 
-    Adds tags to notes by note ID.
+*   Adds tags to notes by note ID.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "addTags",
@@ -2589,20 +3095,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **removeTags**
+#### `removeTags`
 
-    Remove tags from notes by note ID.
+*   Remove tags from notes by note ID.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "removeTags",
@@ -2613,60 +3125,78 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **getTags**
+#### `getTags`
 
-    Gets the complete list of tags for the current user.
+*   Gets the complete list of tags for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getTags",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": ["european-languages", "idioms"],
         "error": null
     }
     ```
+    </details>
 
-*   **clearUnusedTags**
+#### `clearUnusedTags`
 
-    Clears all the unused tags in the notes for the current user.
+*   Clears all the unused tags in the notes for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "clearUnusedTags",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **replaceTags**
+#### `replaceTags`
 
-    Replace tags in notes by note ID.
+*   Replace tags in notes by note ID.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "replaceTags",
@@ -2678,20 +3208,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **replaceTagsInAllNotes**
+#### `replaceTagsInAllNotes`
 
-    Replace tags in all the notes for the current user.
+*   Replace tags in all the notes for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "replaceTagsInAllNotes",
@@ -2702,20 +3238,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **findNotes**
+#### `findNotes`
 
-    Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
+*   Returns an array of note IDs for a given query. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "findNotes",
@@ -2725,21 +3267,27 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [1483959289817, 1483959291695],
         "error": null
     }
     ```
+    </details>
 
-*   **notesInfo**
+#### `notesInfo`
 
-    Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to
+*   Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to
     the note.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "notesInfo",
@@ -2749,8 +3297,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [
@@ -2767,13 +3318,16 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
 
-*   **deleteNotes**
+#### `deleteNotes`
 
-    Deletes notes with the given ids. If a note has several cards associated with it, all associated cards will be deleted.
+*   Deletes notes with the given ids. If a note has several cards associated with it, all associated cards will be deleted.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "deleteNotes",
@@ -2783,70 +3337,93 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-*   **removeEmptyNotes**
+#### `removeEmptyNotes`
 
-    Removes all the empty notes for the current user.
+*   Removes all the empty notes for the current user.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "removeEmptyNotes",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
 
-#### Statistic Actions
+---
 
-*   **getNumCardsReviewedToday**
+### Statistic Actions
 
-    Gets the count of cards that have been reviewed in the current day (with day start time as configured by user in anki)
+#### `getNumCardsReviewedToday`
 
-    *Sample request*:
+*   Gets the count of cards that have been reviewed in the current day (with day start time as configured by user in anki)
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getNumCardsReviewedToday",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 0,
         "error": null
     }
     ```
+    </details>
 
-*   **getNumCardsReviewedByDay**
+#### `getNumCardsReviewedByDay`
 
-    Gets the number of cards reviewed as a list of pairs of `(dateString, number)`
+*   Gets the number of cards reviewed as a list of pairs of `(dateString, number)`
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getNumCardsReviewedByDay",
         "version": 6
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result":  [
@@ -2856,12 +3433,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **getCollectionStatsHTML**
+#### `getCollectionStatsHTML`
 
-    Gets the collection statistics report
+*   Gets the collection statistics report
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getCollectionStatsHTML",
@@ -2871,22 +3451,28 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "error": null,
         "result": "<center> lots of HTML here </center>"
     }
     ```
+    </details>
 
-*   **cardReviews**
+#### `cardReviews`
 
-    Requests all card reviews for a specified deck after a certain time.
+*   Requests all card reviews for a specified deck after a certain time.
     `startID` is the latest unix time not included in the result.
     Returns a list of 9-tuples `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "cardReviews",
@@ -2897,8 +3483,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": [
@@ -2908,10 +3497,11 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **getReviewsOfCards**
+#### `getReviewsOfCards`
 
-    Requests all card reviews for each card ID.
+*   Requests all card reviews for each card ID.
     Returns a dictionary mapping each card ID to a list of dictionaries of the format:
     ```
     {
@@ -2928,7 +3518,9 @@ corresponding to when the API was available for use.
     The reason why these key values are used instead of the more descriptive counterparts
     is because these are the exact key values used in Anki's database.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getReviewsOfCards",
@@ -2940,8 +3532,11 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": {
@@ -2971,12 +3566,15 @@ corresponding to when the API was available for use.
         "error": null
     }
     ```
+    </details>
 
-*   **getLatestReviewID**
+#### `getLatestReviewID`
 
-    Returns the unix time of the latest review for the given deck. 0 if no review has ever been made for the deck.
+*   Returns the unix time of the latest review for the given deck. 0 if no review has ever been made for the deck.
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "getLatestReviewID",
@@ -2986,20 +3584,26 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": 1594194095746,
         "error": null
     }
     ```
+    </details>
 
-*   **insertReviews**
+#### `insertReviews`
 
-    Inserts the given reviews into the database. Required format: list of 9-tuples `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
+*   Inserts the given reviews into the database. Required format: list of 9-tuples `(reviewTime, cardID, usn, buttonPressed, newInterval, previousInterval, newFactor, reviewDuration, reviewType)`
 
-    *Sample request*:
+    <details>
+    <summary><i>Sample request:</i></summary>
+
     ```json
     {
         "action": "insertReviews",
@@ -3012,11 +3616,15 @@ corresponding to when the API was available for use.
         }
     }
     ```
+    </details>
 
-    *Sample result*:
+    <details>
+    <summary><i>Sample result:</i></summary>
+
     ```json
     {
         "result": null,
         "error": null
     }
     ```
+    </details>
