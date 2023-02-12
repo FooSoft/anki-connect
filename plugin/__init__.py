@@ -1502,6 +1502,7 @@ class AnkiConnect:
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
+                    'deckName': self.decks().get(model['did'])['name'],
                     'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
                 })
             except NotFoundError:

@@ -65,6 +65,8 @@ def test_notesInfo(setup):
     assert len(result) == 1
     assert result[0]["noteId"] == setup.note1_id
     assert result[0]["tags"] == ["tag1"]
+    assert result[0]["modelName"] == "test_model"
+    assert result[0]["deckName"] == "test_deck"
     assert result[0]["fields"]["field1"]["value"] == "note1 field1"
 
 
