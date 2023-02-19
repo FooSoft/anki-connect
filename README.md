@@ -46,9 +46,10 @@ plugin will start an HTTP server on port 8765 whenever Anki is launched. Other a
 extensions) can then communicate with it via HTTP requests.
 
 By default, Anki-Connect will only bind the HTTP server to the `127.0.0.1` IP address, so that you will only be able to
-access it from the same host on which it is running. If you need to access it over a network, you can set the
-environment variable `ANKICONNECT_BIND_ADDRESS` to change the binding address. For example, you can set it to `0.0.0.0`
-in order to bind it to all network interfaces on your host.
+access it from the same host on which it is running. If you need to access it over a network, you can change the
+binding address in the configuration. Go to Tools->Add-ons->AnkiConnect->Config and change the "webBindAddress"
+value. For example, you can set it to `0.0.0.0` in order to bind it to all network interfaces on your host. This also
+requires a restart for Anki.
 
 ### Sample Invocation
 
