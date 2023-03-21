@@ -722,6 +722,9 @@ class AnkiConnect:
         except AttributeError:
             self.media().trash_files([filename])
 
+    @util.api()
+    def getMediaDirPath(self):
+        return os.path.abspath(self.media().dir())
 
     @util.api()
     def addNote(self, note):
