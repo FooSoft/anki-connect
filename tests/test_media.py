@@ -1,4 +1,5 @@
 import base64
+import os.path
 
 from conftest import ac
 
@@ -49,3 +50,7 @@ def test_deleteMediaFile(session_with_profile_loaded):
     ac.deleteMediaFile(filename=filename_1)
     assert ac.retrieveMediaFile(filename=filename_1) is False
     assert ac.getMediaFilesNames(pattern="_tes*.txt") == [filename_2]
+
+
+def test_getMediaDirPath(session_with_profile_loaded):
+    assert os.path.isdir(ac.getMediaDirPath())

@@ -1759,6 +1759,32 @@ corresponding to when the API was available for use.
     ```
     </details>
 
+#### `getMediaDirPath`
+
+*   Gets the full path to the `collection.media` folder of the currently opened profile.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "getMediaDirPath",
+        "version": 6
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": "/home/user/.local/share/Anki2/Main/collection.media",
+        "error": null
+    }
+    ```
+    </details>
+
 #### `deleteMediaFile`
 
 *   Deletes the specified file inside the media folder.
