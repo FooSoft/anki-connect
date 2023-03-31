@@ -48,6 +48,24 @@ jobs:
           - name: Anki 2.1.53 (Qt6)
             python: 3.9
             environment: py39-anki2.1.53-qt6
+          - name: Anki 2.1.54 (Qt5)
+            python: 3.9
+            environment: py39-anki2.1.54-qt5
+          - name: Anki 2.1.54 (Qt6)
+            python: 3.9
+            environment: py39-anki2.1.54-qt6
+          - name: Anki 2.1.55 (Qt5)
+            python: 3.9
+            environment: py39-anki2.1.55-qt5
+          - name: Anki 2.1.55 (Qt6)
+            python: 3.9
+            environment: py39-anki2.1.55-qt6
+          - name: Anki 2.1.56 (Qt5)
+            python: 3.9
+            environment: py39-anki2.1.56-qt5
+          - name: Anki 2.1.56 (Qt6)
+            python: 3.9
+            environment: py39-anki2.1.56-qt6
       fail-fast: false
 
     steps:
