@@ -820,6 +820,37 @@ class AnkiConnect:
 
 
     @util.api()
+    def updateNote(self, note):
+        updated = False
+        if 'fields' in note.keys():
+            self.updateNoteFields(note)
+            updated = True
+        if 'tags' in note.keys():
+            self.updateNoteTags(note['id'], note['tags'])
+            updated = True
+        if not updated:
+            raise Exception('Must provide a "fields" or "tags" property.')
+
+
+    @util.api()
+    def updateNoteTags(self, note, tags):
+        if type(tags) == str:
+            tags = [tags]
+        if type(tags) != list or not all([type(t) == str for t in tags]):
+            raise Exception('Must provide tags as a list of strings')
+
+        for old_tag in self.getNoteTags(note):
+            self.removeTags([note], old_tag)
+        for new_tag in tags:
+            self.addTags([note], new_tag)
+
+
+    @util.api()
+    def getNoteTags(self, note):
+        return self.getNote(note).tags
+
+
+    @util.api()
     def addTags(self, notes, tags, add=True):
         self.startEditing()
         self.collection().tags.bulkAdd(notes, tags, add)
