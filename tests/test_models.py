@@ -156,8 +156,6 @@ class TestModelTemplates:
         )
 
     def test_modelTemplateAdd(self, setup):
-        # There currently isn't a way to test for order, so this is just a
-        # smoke test for now
         ac.modelTemplateAdd(
             modelName="test_model",
             template={
@@ -175,8 +173,6 @@ class TestModelTemplates:
         }
 
     def test_modelTemplateRemove(self, setup):
-        # There currently isn't a way to test for order, so this is just a
-        # smoke test for now
         ac.modelTemplateRemove(
             modelName="test_model",
             templateName="Card 2"
