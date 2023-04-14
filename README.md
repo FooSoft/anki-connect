@@ -2772,7 +2772,7 @@ corresponding to when the API was available for use.
         "params": {
             "modelName": "Basic",
             "oldFieldName": "Front",
-            "newFieldName": "Front2"
+            "newFieldName": "FrontRenamed"
         }
     }
     ```
