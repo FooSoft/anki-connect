@@ -2630,6 +2630,134 @@ corresponding to when the API was available for use.
     ```
     </details>
 
+#### `modelTemplateRename`
+
+*   Renames a template in an existing model.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "modelTemplateRename",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "oldTemplateName": "Card 1",
+            "newTemplateName": "Card 1 renamed"
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    </details>
+
+#### `modelTemplateReposition`
+
+*   Repositions a template in an existing model.
+
+    The value of `index` starts at 0. For example, an index of `0` puts the template in the first position, and an index of `2` puts the template in the third position.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "modelTemplateRemove",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "templateName": "Card 1",
+            "index": 1
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    </details>
+
+#### `modelTemplateAdd`
+
+*   Adds a template to an existing model by name. If you want to update an existing template, use `updateModelTemplates`.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "modelTemplateAdd",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "template": {
+                "Name": "Card 3",
+                "Front": "Front html {{Field1}}",
+                "Back": "Back html {{Field2}}"
+            }
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    </details>
+
+#### `modelTemplateRemove`
+
+*   Removes a template from an existing model.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "modelTemplateRemove",
+        "version": 6,
+        "params": {
+            "modelName": "Basic",
+            "templateName": "Card 1"
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    </details>
+
 #### `modelFieldRename`
 
 *   Rename the field name of a given model.

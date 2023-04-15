@@ -132,6 +132,58 @@ def test_findAndReplaceInModels(setup):
     }
 
 
+class TestModelTemplates:
+    def test_modelTemplateRename(self, setup):
+        ac.modelTemplateRename(
+            modelName="test_model",
+            oldTemplateName="Card 1",
+            newTemplateName="Card 1 Renamed",
+        )
+
+        result = ac.modelTemplates(modelName="test_model")
+        assert result == {
+            "Card 1 Renamed": {"Front": "{{field1}}", "Back": "{{field2}}"},
+            "Card 2": {"Front": "{{field2}}", "Back": "{{field1}}"}
+        }
+
+    def test_modelTemplateReposition(self, setup):
+        # There currently isn't a way to test for order, so this is just a
+        # smoke test for now
+        ac.modelTemplateReposition(
+            modelName="test_model",
+            templateName="Card 1",
+            index=1,
+        )
+
+    def test_modelTemplateAdd(self, setup):
+        ac.modelTemplateAdd(
+            modelName="test_model",
+            template={
+                "Name": "Card 3",
+                "Front": "{{field1}} Card 3",
+                "Back": "{{field2}}",
+            }
+        )
+
+        result = ac.modelTemplates(modelName="test_model")
+        assert result == {
+            "Card 1": {"Front": "{{field1}}", "Back": "{{field2}}"},
+            "Card 2": {"Front": "{{field2}}", "Back": "{{field1}}"},
+            "Card 3": {"Front": "{{field1}} Card 3", "Back": "{{field2}}"},
+        }
+
+    def test_modelTemplateRemove(self, setup):
+        ac.modelTemplateRemove(
+            modelName="test_model",
+            templateName="Card 2"
+        )
+
+        result = ac.modelTemplates(modelName="test_model")
+        assert result == {
+            "Card 1": {"Front": "{{field1}}", "Back": "{{field2}}"},
+        }
+
+
 class TestModelFieldNames:
     def test_modelFieldRename(self, setup):
         ac.modelFieldRename(
