@@ -102,6 +102,19 @@ class TestReviewActions:
         reviews_after = ac.cardReviews(deck="test_deck", startID=0)
         assert len(reviews_after) == len(reviews_before) + 1
 
+    def test_guiUndo(self, reviewing_started):
+        ac.guiShowAnswer()
+        reviews_before = ac.cardReviews(deck="test_deck", startID=0)
+        assert ac.guiAnswerCard(ease=4) is True
+
+        reviews_after_answer = ac.cardReviews(deck="test_deck", startID=0)
+        assert len(reviews_after_answer) == len(reviews_before) + 1
+
+        assert ac.guiUndo() is True
+
+        reviews_after_undo = ac.cardReviews(deck="test_deck", startID=0)
+        assert len(reviews_after_undo) == len(reviews_before)
+
 
 class TestSelectedNotes:
     def test_with_valid_deck_query(self, setup):
