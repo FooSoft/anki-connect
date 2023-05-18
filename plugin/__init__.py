@@ -1802,6 +1802,12 @@ class AnkiConnect:
 
 
     @util.api()
+    def guiUndo(self):
+        self.window().undo()
+        return True
+
+
+    @util.api()
     def guiDeckOverview(self, name):
         collection = self.collection()
         if collection is not None:
