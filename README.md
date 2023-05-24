@@ -1469,6 +1469,32 @@ corresponding to when the API was available for use.
     ```
     </details>
 
+#### `guiUndo`
+
+*   Undo the last action / card; returns `true` if succeeded or `false` otherwise.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "guiUndo",
+        "version": 6
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+    </details>
+
 #### `guiDeckOverview`
 
 *   Opens the *Deck Overview* dialog for the deck with the given name; returns `true` if succeeded or `false` otherwise.
