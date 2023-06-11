@@ -1531,6 +1531,22 @@ class AnkiConnect:
 
 
     @util.api()
+    def answerCards(self, cards, answers):
+        scheduler = self.scheduler()
+        success = []
+        for cid, answer in zip(cards, answers, strict=True):
+            try:
+                card = self.getCard(cid)
+                card.start_timer()
+                scheduler.answerCard(cid, answer)
+                success.append(True)
+            except ValueError:
+                success.append(False)
+
+        return success
+
+
+    @util.api()
     def cardReviews(self, deck, startID):
         return self.database().all(
             'select id, cid, usn, ease, ivl, lastIvl, factor, time, type from revlog ''where id>? and cid in (select id from cards where did=?)',

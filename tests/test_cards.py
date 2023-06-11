@@ -76,3 +76,25 @@ def test_forgetCards(setup):
 
 def test_relearnCards(setup):
     ac.relearnCards(cards=setup.card_ids)
+
+
+class TestAnswerCards:
+    def test_answerCards(self, setup):
+        result = ac.answerCards(cards=setup.card_ids, answers=[2, 1, 4, 3])
+        assert result == [True] * 4
+
+    def test_answerCards_with_invalid_card_id(self, setup):
+        result = ac.answerCards(cards=[123], answers=[2])
+        assert result == [False]
+
+    def test_answerCards_with_invalid_answer(self, setup):
+        result = ac.answerCards(cards=[123], answers=["test"])
+        assert result == [False]
+
+    def test_answerCards_with_more_answers(self, setup):
+        result = ac.answerCards(cards=setup.card_ids, answers=[3] * 5)
+        assert result == [True] * 4
+
+    def test_answerCards_with_fewer_answers(self, setup):
+        result = ac.answerCards(cards=setup.card_ids, answers=[3] * 3)
+        assert result == [True, True, True, False]
