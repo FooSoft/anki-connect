@@ -1531,14 +1531,16 @@ class AnkiConnect:
 
 
     @util.api()
-    def answerCards(self, cards, answers):
+    def answerCards(self, answers):
         scheduler = self.scheduler()
         success = []
-        for i, cid in enumerate(cards):
+        for answer in answers:
             try:
+                cid = answer['cardId']
+                ease = answer['ease']
                 card = self.getCard(cid)
                 card.start_timer()
-                scheduler.answerCard(card, answers[i])
+                scheduler.answerCard(card, ease)
                 success.append(True)
             except NotFoundError:
                 success.append(False)

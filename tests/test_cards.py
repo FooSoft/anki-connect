@@ -81,10 +81,13 @@ def test_relearnCards(setup):
 class TestAnswerCards:
     def test_answerCards(self, setup):
         ac.scheduler().reset()
-        result = ac.answerCards(cards=setup.card_ids, answers=[2, 1, 4, 3])
+        answers = [
+            {"cardId": a, "ease": b} for a, b in zip(setup.card_ids, [2, 1, 4, 3])
+        ]
+        result = ac.answerCards(answers)
         assert result == [True] * 4
 
     def test_answerCards_with_invalid_card_id(self, setup):
         ac.scheduler().reset()
-        result = ac.answerCards(cards=[123], answers=[2])
+        result = ac.answerCards([{"cardId": 123, "ease": 2}])
         assert result == [False]

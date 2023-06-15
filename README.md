@@ -726,7 +726,7 @@ corresponding to when the API was available for use.
 
 #### `answerCards`
 
-*   Answer cards. Answers are between 1 (Again) and 4 (Easy). Will start the timer immediately before answering. Returns `true` if card exists, `false` otherwise.
+*   Answer cards. Ease is between 1 (Again) and 4 (Easy). Will start the timer immediately before answering. Returns `true` if card exists, `false` otherwise.
 
     <details>
     <summary><i>Sample request:</i></summary>
@@ -736,8 +736,16 @@ corresponding to when the API was available for use.
         "action": "answerCards",
         "version": 6,
         "params": {
-            "cards": [1498938915662, 1502098034048],
-            "answers": [2, 4],
+            "answers": [
+                {
+                    "cardId": 1498938915662,
+                    "ease": 2
+                },
+                {
+                    "cardId": 1502098034048,
+                    "ease": 4
+                }
+            ]
         }
     }
     ```
