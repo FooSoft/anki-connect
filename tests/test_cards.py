@@ -76,3 +76,18 @@ def test_forgetCards(setup):
 
 def test_relearnCards(setup):
     ac.relearnCards(cards=setup.card_ids)
+
+
+class TestAnswerCards:
+    def test_answerCards(self, setup):
+        ac.scheduler().reset()
+        answers = [
+            {"cardId": a, "ease": b} for a, b in zip(setup.card_ids, [2, 1, 4, 3])
+        ]
+        result = ac.answerCards(answers)
+        assert result == [True] * 4
+
+    def test_answerCards_with_invalid_card_id(self, setup):
+        ac.scheduler().reset()
+        result = ac.answerCards([{"cardId": 123, "ease": 2}])
+        assert result == [False]

@@ -724,6 +724,44 @@ corresponding to when the API was available for use.
     ```
     </details>
 
+#### `answerCards`
+
+*   Answer cards. Ease is between 1 (Again) and 4 (Easy). Will start the timer immediately before answering. Returns `true` if card exists, `false` otherwise.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "answerCards",
+        "version": 6,
+        "params": {
+            "answers": [
+                {
+                    "cardId": 1498938915662,
+                    "ease": 2
+                },
+                {
+                    "cardId": 1502098034048,
+                    "ease": 4
+                }
+            ]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": [true, true],
+        "error": null
+    }
+    ```
+    </details>
+
 ---
 
 ### Deck Actions
