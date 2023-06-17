@@ -41,6 +41,7 @@ from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.errors import NotFoundError
+from aqt.import_export.importing import import_file, prompt_for_file_then_import
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
 from .web import format_exception_reply, format_success_reply
@@ -1850,6 +1851,32 @@ class AnkiConnect:
             return True
 
         return False
+
+
+    @util.api()
+    def guiImportFile(self, path=None):
+        """
+        Open Import File (Ctrl+Shift+I) dialog with provided file path.
+        If no path is given, the user will be prompted to select a file.
+
+        path: string
+            import file path, note on Windows you must use forward slashes.
+        """
+
+        # Bring window to top for user to review import settings.
+        try:
+            # [Step 1/2] set always on top flag, show window (it stays on top for now)
+            self.window().setWindowFlags(self.window().windowFlags() | Qt.WindowStaysOnTopHint)  
+            self.window().show()
+        finally:
+            # [Step 2/2] clear always on top flag, show window (it doesn't stay on top anymore)
+            self.window().setWindowFlags(self.window().windowFlags() & ~Qt.WindowStaysOnTopHint) 
+            self.window().show()
+
+        if path is None:
+            prompt_for_file_then_import(self.window())
+        else:
+            import_file(self.window(), path)
 
 
     @util.api()
