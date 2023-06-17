@@ -1617,6 +1617,35 @@ corresponding to when the API was available for use.
     ```
     </details>
 
+#### `guiImportFile`
+
+*   Invokes the *Import... (Ctrl+Shift+I)* dialog with an optional file path. Brings up the dialog for user to review the import. Supports all file types that Anki supports. Brings open file dialog if no path is provided. Forward slashes must be used in the path on Windows.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "guiImportFile",
+        "version": 6,
+        "params": {
+            "path": "C:/Users/Desktop/cards.txt"
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+    </details>
+
 #### `guiExitAnki`
 
 *   Schedules a request to gracefully close Anki. This operation is asynchronous, so it will return immediately and
