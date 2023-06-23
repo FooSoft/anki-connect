@@ -248,7 +248,7 @@ class WebServer:
     def buildHeaders(self, corsOrigin, body):
         return [
             ['HTTP/1.1 200 OK', None],
-            ['Content-Type', 'text/json'],
+            ['Content-Type', 'application/json'],
             ['Access-Control-Allow-Origin', corsOrigin],
             ['Access-Control-Allow-Headers', '*'],
             ['Content-Length', str(len(body))]
