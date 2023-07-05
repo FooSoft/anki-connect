@@ -28,6 +28,10 @@ def test_guiDeckOverview(setup):
     assert ac.guiDeckOverview(name="test_deck") is True
 
 
+def test_guiImportFile(setup):
+    ac.guiImportFile()
+
+
 class TestAddCards:
     note = {
         "deckName": "test_deck",
