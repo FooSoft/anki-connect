@@ -1619,7 +1619,7 @@ corresponding to when the API was available for use.
 
 #### `guiImportFile`
 
-*   Invokes the *Import... (Ctrl+Shift+I)* dialog with an optional file path. Brings up the dialog for user to review the import. Supports all file types that Anki supports. Brings open file dialog if no path is provided. Forward slashes must be used in the path on Windows.
+*   Invokes the *Import... (Ctrl+Shift+I)* dialog with an optional file path. Brings up the dialog for user to review the import. Supports all file types that Anki supports. Brings open file dialog if no path is provided. Forward slashes must be used in the path on Windows. Only supported for Anki 2.1.52+.
 
     <details>
     <summary><i>Sample request:</i></summary>

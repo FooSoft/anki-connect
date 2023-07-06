@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import ac, wait_until, \
+from conftest import ac, anki_version, wait_until, \
         close_all_dialogs_and_wait_for_them_to_run_closing_callbacks, \
         get_dialog_instance
 
@@ -29,7 +29,8 @@ def test_guiDeckOverview(setup):
 
 
 def test_guiImportFile(setup):
-    ac.guiImportFile()
+    if anki_version >= (2, 1, 52):
+        ac.guiImportFile()
 
 
 class TestAddCards:

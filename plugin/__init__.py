@@ -41,7 +41,6 @@ from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.errors import NotFoundError
-from aqt.import_export.importing import import_file, prompt_for_file_then_import
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
 from .web import format_exception_reply, format_success_reply
@@ -1858,20 +1857,36 @@ class AnkiConnect:
         """
         Open Import File (Ctrl+Shift+I) dialog with provided file path.
         If no path is given, the user will be prompted to select a file.
+        Only supported from Anki version >=2.1.52
 
         path: string
             import file path, note on Windows you must use forward slashes.
         """
+        if anki_version >= (2, 1, 52):
+            from aqt.import_export.importing import import_file, prompt_for_file_then_import
+        else:
+            raise Exception('guiImportFile is only supported from Anki version >=2.1.52')
+
+        if hasattr(Qt, 'WindowStaysOnTopHint'):
+            # Qt5
+            WindowOnTopFlag = Qt.WindowStaysOnTopHint
+        elif hasattr(Qt, 'WindowType') and hasattr(Qt.WindowType, 'WindowStaysOnTopHint'):
+            # Qt6
+            WindowOnTopFlag = Qt.WindowType.WindowStaysOnTopHint
+        else:
+            # Unsupported, don't try to bring window to top
+            WindowOnTopFlag = None
 
         # Bring window to top for user to review import settings.
-        try:
-            # [Step 1/2] set always on top flag, show window (it stays on top for now)
-            self.window().setWindowFlags(self.window().windowFlags() | Qt.WindowStaysOnTopHint)  
-            self.window().show()
-        finally:
-            # [Step 2/2] clear always on top flag, show window (it doesn't stay on top anymore)
-            self.window().setWindowFlags(self.window().windowFlags() & ~Qt.WindowStaysOnTopHint) 
-            self.window().show()
+        if WindowOnTopFlag is not None:
+            try:
+                # [Step 1/2] set always on top flag, show window (it stays on top for now)
+                self.window().setWindowFlags(self.window().windowFlags() | WindowOnTopFlag)  
+                self.window().show()
+            finally:
+                # [Step 2/2] clear always on top flag, show window (it doesn't stay on top anymore)
+                self.window().setWindowFlags(self.window().windowFlags() & ~WindowOnTopFlag) 
+                self.window().show()
 
         if path is None:
             prompt_for_file_then_import(self.window())
