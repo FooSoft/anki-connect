@@ -1,4 +1,5 @@
 import pytest
+from unittest import mock
 
 from conftest import ac, anki_version, wait_until, \
         close_all_dialogs_and_wait_for_them_to_run_closing_callbacks, \
@@ -30,7 +31,9 @@ def test_guiDeckOverview(setup):
 
 def test_guiImportFile(setup):
     if anki_version >= (2, 1, 52):
-        ac.guiImportFile()
+        with mock.patch('aqt.import_export.importing.prompt_for_file_then_import') as mock_prompt_for_file_then_import:
+            mock_prompt_for_file_then_import.return_value = True
+            ac.guiImportFile()
 
 
 class TestAddCards:
