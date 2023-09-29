@@ -156,6 +156,13 @@ const result = await invoke('deckNames', 6);
 console.log(`got list of decks: ${result}`);
 ```
 
+### Authentication
+
+Anki-Connect supports requiring authentication in order to make API requests.
+This support is *disabled* by default, but can be enabled by setting the `apiKey` field of Anki-Config's settings (Tools->Add-ons->AnkiConnect->Config) to a desired string.
+If you have done so, you should see the [`requestPermission`](#requestpermission) API request return `true` for `requireApiKey`.
+You then must include an additional parameter called `key` in any further API request bodies, whose value must match the configured API key.
+
 ### Hey, could you add a new action to support $FEATURE?
 
 The primary goal for Anki-Connect was to support real-time flash card creation from the
