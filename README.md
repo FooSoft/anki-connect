@@ -184,6 +184,7 @@ be serviced*. Make sure that your pull request meets the following criteria:
 Documentation for currently supported actions is split up by category and is referenced below. Note that deprecated APIs
 will continue to function despite not being listed on this page as long as your request is labeled with a version number
 corresponding to when the API was available for use.
+Search parameters are passed to Anki, check the docs for more information: https://docs.ankiweb.net/searching.html
 
 * [Card Actions](#card-actions)
 * [Deck Actions](#deck-actions)
