@@ -1,6 +1,6 @@
 # Anki-Connect API v1
 
-**Status: specification for a future rewrite; the current add-on does not implement this API.**
+**Status: implemented development runtime; native regression coverage passes, with GUI and network validation tracked in IMPLEMENTATION_HANDOFF.md.**
 Baseline: local Anki 26.09.3, audited on 2026-10-10. Support for later versions
 requires capability checks and integration verification, not just version comparison.
 
@@ -8,7 +8,7 @@ This API serves existing Anki-Connect features with consistent domain objects,
 explicit operation completion, and a legacy adapter sharing the same services.
 The [machine-readable contract](api-v1.schema.json) contains request/result
 schemas and method metadata. The [legacy mapping](LEGACY_API_MAPPING.md) covers
-all 122 current actions and the integration audit. The current runtime remains
+all 122 legacy forwarders and the integration audit. Runtime structure is
 described by [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Protocol and shared conventions
@@ -17,7 +17,7 @@ described by [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Use `POST http://127.0.0.1:8765/api/v1` with UTF-8 JSON and
 `Content-Type: application/json`. The existing root endpoint keeps its legacy
-protocol. The rewritten listener must route by path; the current parser does not.
+protocol. The listener routes requests by path.
 Use [JSON-RPC 2.0](https://www.jsonrpc.org/specification), named parameters only.
 Omitted params mean `{}`. Positional arrays produce invalid-params errors.
 The `jsonrpc` value is the protocol version; `/api/v1` is the API major version.
@@ -199,6 +199,9 @@ When skipIfHash matches incoming bytes, status=skipped and filename=null: no sto
 file is promised and no field reference should be inserted.
 The skip hash compares incoming bytes. On rename use native collision handling;
 replace must be explicit and preserves existing media until acquisition succeeds.
+Replacement writes journal the original; a failed native write restores it when
+request ownership can be established. Rollback conflicts retain the journal and
+are reported in error details.
 Download/file reads run outside Qt and enforce configured timeouts and size caps.
 Media writes are not collection-undoable. The legacy staging protocol is specified
 separately; filesystem and database operations do not form one atomic transaction.
@@ -218,7 +221,7 @@ values, validates the whole batch, rejects duplicate IDs, derives timestamps fro
 IDs and assigns unsynced metadata locally. It imports history only, not live answers
 or implicit FSRS rescheduling; it can affect future native statistics/recomputation.
 Publish changes, invalidate relevant queues/caches and disclose clearing undo.
-Advertise unavailable until this completion behavior is verified on the baseline.
+The native regression suite verifies transactional import and undo clearing on the baseline; GUI refresh integration still requires separate checks.
 
 ### Rewrite architecture
 
@@ -240,13 +243,13 @@ Network/file acquisition uses non-collection workers and applies results only af
 session revalidation. The HTTP listener must keep Qt responsive and support deferred
 responses rather than running nested/blocking event loops.
 
-Register all open editor variants. Flush pending web-view change messages and detect
-dirty state before note/type/deck writes; return editorConflict without auto-saving
-or discarding edits. Lock/recheck the affected editor during commit and reload only
-clean editors after native changes. If a variant cannot provide safe coordination,
-report unsupportedCapability for that feature. Draft-targeted edits are explicit;
-changing a dirty draft's type or replacing existing supplied content returns conflict.
-Append may preserve existing content, but never bypass type-change conflict checks.
+Affected open editors conservatively block collection writes, including saved/clean
+editors and potentially pending webview changes. Close affected editors before
+retrying; saving alone does not remove the gate. Lifecycle changes require editors
+to be closed. This is a conservative coordination policy, not a verified dirty-state
+handshake across every editor variant. Draft-targeted edits are explicit; changing
+a populated draft's type or replacing fields returns editorConflict. Append preserves
+existing content. GUI validation status is tracked in the handoff.
 
 Use native note-type conversion, deck moves and coordinated preset updates.
 Preset adapters merge against current values and preserve collection-global settings,
@@ -255,13 +258,13 @@ declares undo support; grouped means merged Anki undo entries, not database atom
 For multi-stage failures report committed work in error details and publish changes
 for that work. Lifecycle operations serialize against admitted collection requests.
 
-Roll out the runtime by domain, keeping unimplemented new methods unavailable
-and legacy calls on their old implementation until their full translation/integration
-tests pass. At completion all legacy calls use the shared services. Gate the new
-endpoint release on complete feature mapping and the audit regression suite.
+All 94 method entry points and 122 legacy forwarders are implemented. Discovery
+checks adapter presence and selected required native APIs on the active collection;
+missing checked capabilities fail explicitly. Without an open collection the native
+probes are deferred until admission. Availability does not certify GUI behavior,
+sync, every optional native subfeature or compatibility with later Anki versions.
 Record method duration, completion/failure/cancellation and compatibility errors
-without secrets/content. Push events, remote hosting, schema migrations and package
-production are outside this specification.
+without secrets/content. Push events and remote hosting are outside this API.
 
 ## Method reference
 
@@ -1223,6 +1226,11 @@ Carry original field/template ordinals to preserve card identity. Added entries 
 
 Inspect question/answer template field references.
 
+A Python adapter mirrors Anki’s template token grammar; the native parsed tree is
+not exposed to Python. Include conditional fields and filtered replacements,
+ignore HTML comments and special fields, and support the legacy alternate delimiter
+directive. Return each actual field once in first-reference order.
+
 Scope: collection. Effect: read. Completion: completed. Undo: none.
 
 | Parameter | Type | Required/default |
@@ -1232,7 +1240,7 @@ Scope: collection. Effect: read. Completion: completed. Undo: none.
 
 Result: `Array<TemplateUsage>`.
 
-Errors: `collectionUnavailable`, `internalError`, `invalidParams`, `notFound`, `staleSession`.
+Errors: `collectionUnavailable`, `internalError`, `invalidParams`, `notFound`, `staleSession`, `validationFailed`.
 
 ### `noteTypes.replaceText`
 
@@ -1869,7 +1877,7 @@ records include all required properties even when their values are null or empty
 - **`TemplateUsage`**: `{templateName: string, questionFields: Array<string>, answerFields: Array<string>}`.
 - **`ConversionMapping`**: `{target: string, source: string | null}`.
 - **`ConversionPlan`**: `{source: EntitySummary, target: EntitySummary, fields: Array<ConversionMapping>, templates: Array<ConversionMapping>, token: string}`.
-- **`PresetSettings`**: `{learnStepsMinutes?: Array<number>, relearnStepsMinutes?: Array<number>, fsrsParameters4?: Array<number>, fsrsParameters5?: Array<number>, fsrsParameters6?: Array<number>, newPerDay?: integer, reviewsPerDay?: integer, leechThreshold?: integer, answerTimeLimitSeconds?: integer, maximumIntervalDays?: integer, minimumLapseIntervalDays?: integer, graduatingGoodDays?: integer, graduatingEasyDays?: integer, initialEase?: number, easyMultiplier?: number, hardMultiplier?: number, lapseMultiplier?: number, intervalMultiplier?: number, desiredRetention?: number, historicalRetention?: number, newInsertOrder?: "due" | "random", newGatherOrder?: "deck" | "deckThenRandomNotes" | "lowestPosition" | "highestPosition" | "randomNotes" | "randomCards", newSortOrder?: "template" | "none" | "templateThenRandom" | "randomNoteThenTemplate" | "randomCard", reviewOrder?: "day" | "dayThenDeck" | "deckThenDay" | "intervalAscending" | "intervalDescending" | "easeAscending" | "easeDescending" | "retrievabilityAscending" | "retrievabilityDescending" | "relativeOverdueness" | "random" | "added" | "reverseAdded", newMix?: "mixed" | "afterReviews" | "beforeReviews", dayLearningMix?: "mixed" | "afterReviews" | "beforeReviews", leechAction?: "suspend" | "tagOnly", questionAction?: "showAnswer" | "showReminder", answerAction?: "buryCard" | "again" | "good" | "hard" | "showReminder", easyDaysPercentages?: Array<number>, ignoreReviewsBefore?: string, parameterSearch?: string, questionDisplaySeconds?: number, answerDisplaySeconds?: number, disableAutoplay?: boolean, showTimer?: boolean, stopTimerOnAnswer?: boolean, waitForAudio?: boolean, skipQuestionOnAnswerReplay?: boolean, buryNew?: boolean, buryReviews?: boolean, buryDayLearning?: boolean}`.
+- **`PresetSettings`**: `{learnStepsMinutes?: Array<number>, relearnStepsMinutes?: Array<number>, fsrsParameters4?: Array<number>, fsrsParameters5?: Array<number>, fsrsParameters6?: Array<number>, newPerDay?: integer, newPerDayMinimum?: integer, reviewsPerDay?: integer, leechThreshold?: integer, answerTimeLimitSeconds?: integer, maximumIntervalDays?: integer, minimumLapseIntervalDays?: integer, graduatingGoodDays?: integer, graduatingEasyDays?: integer, initialEase?: number, easyMultiplier?: number, hardMultiplier?: number, lapseMultiplier?: number, intervalMultiplier?: number, desiredRetention?: number, historicalRetention?: number, newInsertOrder?: "due" | "random", newGatherOrder?: "deck" | "deckThenRandomNotes" | "lowestPosition" | "highestPosition" | "randomNotes" | "randomCards", newSortOrder?: "template" | "none" | "templateThenRandom" | "randomNoteThenTemplate" | "randomCard", reviewOrder?: "day" | "dayThenDeck" | "deckThenDay" | "intervalAscending" | "intervalDescending" | "easeAscending" | "easeDescending" | "retrievabilityAscending" | "retrievabilityDescending" | "relativeOverdueness" | "random" | "added" | "reverseAdded", newMix?: "mixed" | "afterReviews" | "beforeReviews", dayLearningMix?: "mixed" | "afterReviews" | "beforeReviews", leechAction?: "suspend" | "tagOnly", questionAction?: "showAnswer" | "showReminder", answerAction?: "buryCard" | "again" | "good" | "hard" | "showReminder", easyDaysPercentages?: Array<number>, ignoreReviewsBefore?: string, parameterSearch?: string, questionDisplaySeconds?: number, answerDisplaySeconds?: number, disableAutoplay?: boolean, showTimer?: boolean, stopTimerOnAnswer?: boolean, waitForAudio?: boolean, skipQuestionOnAnswerReplay?: boolean, buryNew?: boolean, buryReviews?: boolean, buryDayLearning?: boolean}`.
 - **`PresetPatch`**: `PresetSettings`.
 - **`DeckPreset`**: `{id: EntityId, name: string, settings: PresetSettings, modifiedAt: Timestamp}`.
 - **`Review`**: `{id: EntityId, cardId: EntityId, answeredAt: Timestamp, rating: Rating | null, interval: Interval, previousInterval: Interval, factor: {encoding: "legacySm2EasePermille" | "fsrsNormalizedDifficulty" | "unknown", value: integer}, elapsedMs: integer, kind: "learning" | "review" | "relearning" | "filtered" | "manual" | "rescheduled", syncSequence: integer}`.
@@ -2603,8 +2611,8 @@ the user/client to explicitly save or discard edits through the normal editor.
   open browser/editor/reviewer, undo, reopen and incremental sync.
 - Exercise genuine asynchronous completion; existing action fixtures replace
   background operations and cannot validate production ordering by themselves.
-- Audit-specific expected behavior is listed in LEGACY_API_MAPPING.md. These are
-  required future runtime tests, not claims that the new runtime has been tested.
+- Audit-specific expected behavior is listed in LEGACY_API_MAPPING.md. Native regressions are implemented in tests_api; remaining GUI/network scenarios
+  and their verification status are tracked in IMPLEMENTATION_HANDOFF.md.
 
 Run `python3 tools/check_api_spec.py` for standalone coverage/reference/example
 checks without importing Anki. Install jsonschema to additionally validate against

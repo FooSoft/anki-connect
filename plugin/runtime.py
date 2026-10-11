@@ -16,6 +16,32 @@ GUI_METHODS = {'collection.refresh', 'collection.sync', 'profiles.list', 'profil
                'profiles.switch', 'application.navigate', 'application.exit', 'application.importFile'}
 GUI_METHODS.update(name for name in SCHEMA['x-methods'] if name.startswith(('browser.', 'editors.', 'reviewer.')))
 
+NATIVE_REQUIREMENTS = {
+    'notes.create': ('add_note', '_backend.render_uncommitted_card_legacy'),
+    'notes.createMany': ('add_notes', '_backend.render_uncommitted_card_legacy'),
+    'notes.validate': ('_backend.render_uncommitted_card_legacy',),
+    'notes.planConversion': ('models.change_notetype_info',),
+    'notes.convert': ('models.change_notetype_of_notes',),
+    'notes.update': ('update_note',),
+    'cards.move': ('set_deck',),
+    'scheduling.predict': ('_backend.get_scheduling_states', '_backend.describe_next_states'),
+    'scheduling.answer': ('sched.build_answer', 'sched.answer_card'),
+    'scheduling.answerMany': ('sched.build_answer', 'sched.answer_card'),
+    'scheduling.reset': ('_backend.schedule_cards_as_new',),
+    'reviewer.answer': ('sched.build_answer', 'sched.answer_card', 'sched.state_is_leech'),
+    'deckPresets.get': ('_backend.get_deck_config',),
+    'deckPresets.create': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
+    'deckPresets.update': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
+    'deckPresets.assign': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
+    'deckPresets.delete': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
+    'media.store': ('media.write_data', 'media.trash_files'),
+    'packages.export': ('export_anki_package',),
+    'packages.import': ('import_anki_package',),
+    'collection.checkIntegrity': ('fix_integrity',),
+    'collection.undo': ('undo',),
+    'statistics.getSummary': ('_backend.graphs',),
+}
+
 
 class Runtime:
     def __init__(self, owner, schedule=None):
@@ -45,6 +71,8 @@ class Runtime:
     def session(self):
         col = self.mw.col if self.mw else None
         if col is not self._collection:
+            from .edit import history
+            history.note_ids.clear()
             self._collection = col
             self._session = uuid.uuid4().hex if col else None
             self.profile_name = self.mw.pm.name if col else None
@@ -59,6 +87,13 @@ class Runtime:
         self.tokens.clear()
         self.cursors.clear()
         self.gui.editors.clear()
+        from .edit import history
+        history.note_ids.clear()
+
+    def register_hooks(self):
+        from aqt import gui_hooks
+        gui_hooks.profile_will_close.append(self.invalidate_session)
+        gui_hooks.collection_will_temporarily_close.append(self.invalidate_session)
 
     def service(self):
         session = self.session
@@ -124,11 +159,37 @@ class Runtime:
             selected = [id for id in selected if self._collection.db.scalar('select 1 from cards where id=?', id)]
         return {'ids': [str(id) for id in selected], 'nextCursor': next_cursor}
 
+    def capability_reason(self, method):
+        if method in ('api.describe', 'api.execute', 'operations.get', 'operations.cancel', 'access.requestPermission', 'media.store'):
+            handler = True
+        else:
+            adapter = self.gui if method in GUI_METHODS else Services
+            handler = callable(getattr(adapter, method.replace('.', '_'), None))
+        if not handler:
+            return 'No adapter for ' + method
+        col = self.mw.col if self.mw else None
+        if col:
+            for path in NATIVE_REQUIREMENTS.get(method, ()):
+                value = col
+                for part in path.split('.'):
+                    value = getattr(value, part, None)
+                if not callable(value):
+                    return 'Native capability missing: ' + path
+        return None
+
+    def require_capability(self, method):
+        reason = self.capability_reason(method)
+        if reason:
+            raise ApiError('unsupportedCapability', reason)
+
     def describe(self):
         import aqt
+        methods = []
+        for name in SCHEMA['x-methods']:
+            reason = self.capability_reason(name)
+            methods.append({'name': name, 'available': reason is None, 'reason': reason})
         return {'apiMajor': 1, 'ankiVersion': aqt.appVersion, 'schema': copy.deepcopy(SCHEMA),
-                'methods': [{'name': name, 'available': True, 'reason': None}
-                            for name in SCHEMA['x-methods']], 'limits': copy.deepcopy(SCHEMA['x-limits'])}
+                'methods': methods, 'limits': copy.deepcopy(SCHEMA['x-limits'])}
 
     def finish_changes(self, service, initiator=None):
         from aqt.operations import on_op_finished
@@ -165,9 +226,9 @@ class Runtime:
         self.active_reviewer_card = reviewer.card.id if reviewer and reviewer.card and self.mw.state == 'review' else None
         def task():
             from .media import MediaTransaction
-            MediaTransaction.recover(service)
             if self._collection is not col or self._session != session:
                 raise ApiError('staleSession', 'Collection changed before execution.')
+            MediaTransaction.recover(service)
             return work(service)
         def finished(future):
             self.mw._decrease_background_ops()
@@ -187,6 +248,7 @@ class Runtime:
         return result
 
     def invoke(self, method, params):
+        self.require_capability(method)
         if method == 'api.describe':
             return completed(self.describe())
         if method == 'operations.get':
@@ -212,12 +274,15 @@ class Runtime:
         if method in GUI_METHODS and meta['scope'] == 'collection' and self.mw._background_op_count:
             raise ApiError('busy', 'A collection operation is active.')
         def start(key=None):
+            self.require_capability(method)
             if self.lifecycle_active and (meta['scope'] == 'collection' or meta['effect'] == 'lifecycle'):
                 raise ApiError('busy', 'Collection lifecycle operation is active.')
             if meta['effect'] in ('write', 'advancedWrite'):
                 self.gui.guard(method, params)
             if meta['scope'] == 'collection':
                 self.capture(session)
+                if method in GUI_METHODS and self.mw._background_op_count:
+                    raise ApiError('busy', 'A collection operation is active.')
             if method in GUI_METHODS:
                 value = self.gui.execute(method, params, operation_id=key)
                 return value if isinstance(value, Deferred) else completed(value)

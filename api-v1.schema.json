@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:anki-connect:api:v1",
   "title": "Anki-Connect API v1 specification",
-  "description": "Design contract; not implemented by the current plugin. Validate envelopes at the root, then use x-methods to validate the named method and its response.",
+  "description": "Implemented API contract. Validate envelopes at the root, then use x-methods to validate the named method and its response. Runtime availability is reported by api.describe; GUI and sync verification remain incomplete.",
   "oneOf": [
     {
       "$ref": "#/$defs/RpcRequest"
@@ -2131,6 +2131,10 @@
         },
         "buryDayLearning": {
           "type": "boolean"
+        },
+        "newPerDayMinimum": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [],
@@ -14949,9 +14953,10 @@
         "internalError",
         "invalidParams",
         "notFound",
-        "staleSession"
+        "staleSession",
+        "validationFailed"
       ],
-      "notes": ""
+      "notes": "Python adapter mirrors native token rules because the parsed tree is not exposed to Python. Includes conditional fields and filtered replacements, ignores HTML comments and special fields, supports legacy alternate delimiters, and returns real fields once in first-reference order."
     },
     "noteTypes.replaceText": {
       "params": {
@@ -15980,7 +15985,7 @@
             "name": "Japanese"
           },
           "fields": {
-            "Front": "猫",
+            "Front": "\u732b",
             "Back": "cat"
           },
           "tags": [
@@ -16022,7 +16027,7 @@
             "name": "Basic"
           },
           "fields": {
-            "Front": "猫",
+            "Front": "\u732b",
             "Back": "cat"
           },
           "tags": [],
@@ -16197,7 +16202,7 @@
                   "name": "Japanese"
                 },
                 "fields": {
-                  "Front": "猫",
+                  "Front": "\u732b",
                   "Back": "cat"
                 }
               }
@@ -16236,7 +16241,7 @@
               },
               "fields": {
                 "Front": "one",
-                "Back": "一"
+                "Back": "\u4e00"
               }
             },
             {
@@ -16248,7 +16253,7 @@
               },
               "fields": {
                 "Front": "two",
-                "Back": "二"
+                "Back": "\u4e8c"
               }
             }
           ],

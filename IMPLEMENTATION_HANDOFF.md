@@ -1,206 +1,140 @@
 # New Anki API implementation handoff
 
-Updated: 2026-10-10. Work is **not finished**. Core implementation exists; final
-review, documentation updates, and GUI validation remain. No implementation
-changes have been committed. Current base commit: `4a4bc2b` (`Schema`).
+Updated: 2026-10-10. The runtime and forwarders are implemented and reviewed;
+representative native and real GUI regressions pass. **Full integration validation
+is not finished**, especially network sync and extended GUI stress/variant testing.
 
-## Resume request
+Base commit for this continuation: `63d62ff` (`handoff`). The previous implementation
+was transferred in that commit. This continuation's changes are uncommitted; no
+commit, push, publication or packaging was requested or performed. Transfer the
+whole working tree, including `tools/smoke_gui.py` and `tests/README.md`.
 
-Continue implementing and validating the new API and legacy forwarders. Read
-this file, `API_V1.md`, `api-v1.schema.json`, `LEGACY_API_MAPPING.md`, and
-`INTEGRATION_ISSUES.md`, then inspect the implementation before editing.
+## Resume context
 
-The user authorized a broad rewrite and removal of obsolete repository content:
-“Everything in this repo should be seen as legacy pretty much.” Preserve useful
-external compatibility through forwarders, but do not feel constrained by old
-internal architecture. Do not spawn subagents unless explicitly requested.
+The user authorized the API rewrite and obsolete-content replacement. Read
+`API_V1.md`, `api-v1.schema.json`, `LEGACY_API_MAPPING.md`, `INTEGRATION_ISSUES.md`
+and the implementation before further changes. Do not spawn subagents unless
+explicitly requested. Preserve legacy signatures and transport/access behavior
+through the shared services. Do not use personal collections for validation.
 
-## Moving to another PC
+The runtime has 94 v1 methods and 122 legacy entry points. The module boundaries,
+execution model and media journal are described in the rewritten `ARCHITECTURE.md`.
+`README.md` now documents both endpoints, minimum Anki 26.9.3, dependencies,
+compatibility limitations, and the new validation workflow. The schema, mapping,
+audit follow-up and repository guidance have been reconciled with implementation.
+The old `tests/` suite is retained as legacy reference, outside default pytest.
 
-**Transfer the entire working tree, including untracked files.** A normal push
-of the current commit will not include the implementation. Either commit these
-changes before pushing, or copy the checkout with all files listed below. This
-session has not committed or pushed anything.
+## Changes completed in this continuation
 
-Modified tracked files:
+- V1 media replacement now uses the request-owned transaction journal. A native
+  write failure after trash restores the original bytes; ownership conflicts
+  retain the journal and expose rollback failures. Legacy installs use the same
+  primitive without recursively opening another transaction.
+- Nested legacy multi preflights the entire request tree before work: malformed
+  nodes/signatures, depth 16, total 100 request nodes (including containers), and
+  exit only as the final executable action. Per-item credentials remain independent.
+- Discovery checks adapter presence and selected native dependencies; missing
+  checked capabilities produce unsupportedCapability at admission/execution.
+  Availability remains a capability probe, not full integration certification.
+- Template usage mirrors the baseline's token grammar, handling HTML comments,
+  conditional fields, filters and the alternate delimiter directive. Anki's
+  parsed tree is not exposed to Python; the contract now accurately says this.
+- Typed presets and legacy saveDeckConfig support newPerDayMinimum.
+- Native profile/temporary-close hooks invalidate sessions, tokens, cursors,
+  editor registrations and custom-editor history. Collection identity changes
+  also clear history. Stale queued work cannot run media recovery before rejection.
+- Queued GUI jobs recheck active collection work. Editor conflict messages now
+  explicitly require closing affected editors, including saved/clean ones.
+- Terminal operation successes are checked against their final result schemas.
+  Import/full-sync dialogs expose waitingForUser and running states.
+- Svelte editor readiness waits for its exported functions without assuming a
+  global require. Empty Add snapshots await native note/deck initialization;
+  draft snapshots/updates await pending native field saves.
+- Custom editor uses the current Anki form, retains its main-window reference,
+  and cleans up idempotently to avoid callbacks touching deleted widgets.
+- Browser opening awaits its editor before native search/sort calls. This removed
+  observed saveNow-is-undefined errors. Legacy guiBrowse awaits that completion.
+- Exit uses native main-window close(), replacing the removed onClose method.
+  A real HTTP test verifies the acceptance reply and native profile shutdown.
+- Missing add-on configuration falls back to DEFAULT_CONFIG. During GUI testing,
+  getConfig returned None and the old blanket exception misleadingly reported
+  "setting webBindAddress not found". The fallback and permission dictionaries
+  now handle absent config; overrides still take precedence.
+- Added a reproducible optional GUI harness, tools/smoke_gui.py. Each scenario
+  uses a separate process and newly created disposable profile. The harness has
+  bounded waits and reports uncaught Qt/Python callback errors.
 
-- `package.sh`
-- `plugin/__init__.py`
-- `plugin/web.py`
+## Validation evidence
 
-New, currently untracked implementation files:
+Native environment: `/tmp/anki-api-runtime-env/bin/python3`, Python 3.13.5,
+Anki/aqt 26.9.3, PyQt6 6.11.0, bundled Qt/WebEngine 6.11.2, pytest 9.1.1,
+jsonschema 4.26.0. Source reference staged by the user:
+`/home/alex/projects/anki/anki-26.09.3` (`.version`: 26.09.3).
 
-- `plugin/contract.py`
-- `plugin/gui.py`
-- `plugin/legacy.py`
-- `plugin/media.py`
-- `plugin/protocol.py`
-- `plugin/runtime.py`
-- `plugin/services.py`
-- `pyproject.toml`
-- `tests_api/` (especially `test_runtime.py`)
-- `tools/build_api_contract.py`
-- `tools/package_addon.py`
-- This handoff file
+**32 tests pass** in the default tests_api suite. The previous 19 tests remain;
+new regressions cover failed replacement rollback, full nested multi preflight,
+preset translation, native template tokens, capability/dispatch consistency,
+same-object reopen invalidation, cancellation preserving completed outcomes,
+source/bundled contract and adapter consistency, queued GUI admission,
+stale-work recovery prevention, terminal result validation, absent config defaults,
+and legacy browser completion.
 
-The temporary Python environment and GUI smoke script live under `/tmp` on the
-original PC and will not travel with Git. Recreate the environment on the new
-machine. Generated caches need not be transferred.
+Specification checks pass with official Draft 2020-12 validation: 94 methods,
+122 actions, 27 audit/lifecycle dispositions, 15 positive and 16 negative fixtures.
+Compilation and git diff --check pass.
 
-## Implemented so far
+Real desktop GUI scenarios have passed individually using temporary profiles:
 
-The committed specification defines 94 new methods and maps 122 legacy actions.
-The working tree now implements the new runtime and all 122 forwarder entry
-points. This means code exists, not that every GUI or network-dependent path has
-been verified end to end.
+- editors: empty and populated Add drafts, append updates, actual native saves,
+  and close for both legacy and Svelte variants;
+- browser: search, note selection, numeric sorting ascending/descending both on
+  first selection and when already active, plus legacy forwarding completion;
+- custom: custom editor open, native field save and close;
+- reviewer: question/answer state tokens, hook veto, native answer/revlog completion;
+- imports: CSV import success, cancellation, invalid-package failure;
+- profiles: native switch and fresh session;
+- colpkg: cancellation, replacement from this temporary profile's own backup,
+  reopen, preserved note and invalidated session (confirmation decision stubbed);
+- exit: real HTTP acceptance reply followed by native Anki close/profile unload.
 
-- `plugin/__init__.py`: add-on startup, minimum Anki version 26.9.3, facade,
-  exact legacy signatures/decorators, authentication and permissions, async
-  legacy dispatch, sequential `multi` completion barriers, delayed exit.
-- `plugin/web.py`: nonblocking HTTP server, `/api/v1` JSON-RPC routing, legacy
-  root routing, body/header limits, strict JSON, CORS, Bearer authentication,
-  notification responses, deferred socket replies.
-- `plugin/protocol.py`: typed errors, schema validation, Deferred composition,
-  operation records/cancellation, batch dispatch, metadata-only request logging.
-- `plugin/runtime.py`: Qt main-thread admission, serialized native collection
-  background work, session pins, native change notifications, lifecycle gates,
-  operation execution, ordered `api.execute`, paging and prediction tokens.
-- `plugin/services.py`: native collection services for notes, cards, scheduling,
-  decks, note types, presets, media, reviews, statistics, packages, and undo.
-  Native scheduler states drive answers; native APIs drive structural changes.
-- `plugin/gui.py`: browser, legacy/Svelte add editors, custom editors, reviewer,
-  profile changes, sync, native import dialogs, and collection package import.
-- `plugin/legacy.py`: compatibility translations, typed/native projections,
-  accepted-operation timing and barriers, attachment acquisition, preset
-  translation, and explicit errors for unsafe legacy behavior.
-- `plugin/media.py`: request-owned media journal, backups, rollback, and recovery
-  after interruption, with ownership checks to avoid removing unrelated files.
-- `tools/build_api_contract.py`: generates bundled `plugin/contract.py` from the
-  schema and legacy mapping. Regenerate when either source contract changes.
-- `tools/package_addon.py` and `package.sh`: nondestructive packaging replaces
-  the old `git clean -xdf` script. Packaging has not been run.
-- `pyproject.toml`: dependency/test configuration. Default tests are `tests_api`.
-  Old `tests/` depend on obsolete pytest-anki and are not the default suite.
+The last aggregate run passed every scenario except a harness-only browser model
+index error. That harness error was fixed and the browser scenario rerun passed.
+Subsequent browser initialization/legacy completion changes were validated by the
+browser scenario and native regression suite. An aggregate rerun is optional;
+do not claim a single aggregate passing run unless rerun successfully.
 
-Most recent fixes: grouped text replacement now produces one native undo entry;
-normal-to-cloze conversion uses the native cloze mapping rules. Both regression
-tests pass.
+Expected invalid-package errors produce a native Anki traceback in the import
+scenario. Qt emits portal/graphics/MathJax warnings. Native shutdown can emit a
+Waitress shutdown race warning. Earlier combined-process GUI runs also segfaulted
+(exit 139) after repeated editor destruction/import cancellation. Isolated runs
+pass, but they do not establish that repeated production window churn is crash-free.
+Most scenarios deliberately terminate their process after checks; only exit uses
+and verifies the native application shutdown path.
 
-## Remaining work, in priority order
+## Remaining validation and limitations
 
-### 1. Finish implementation review and close concrete gaps
+1. Network sync, full upload/download, media sync, failures and cancellation need
+   a suitable **disposable** test account. No account/credentials were supplied;
+   do not inspect or use personal profiles. Code paths were source-reviewed but
+   have not been exercised against AnkiWeb.
+2. Stress repeated editor/browser/import open/close in one process; investigate
+   the combined-run Qt/WebEngine crash rather than treating process isolation as
+   proof of stability. Check alternate OS/Qt versions and native shutdown warnings.
+3. Broaden GUI coverage: user typing still pending in JavaScript, draft replacement
+   conflicts, custom-editor history/navigation/preview across reopen, user-cancelled
+   profile close, import failures after collection unload, custom scheduling and
+   FSRS/leech reviewer hooks, and cancelled exit. Conservative affected-editor
+   gates intentionally remain in place.
+4. Capability probes check selected native API dependencies and adapter presence,
+   not every protobuf field or native optional feature on later Anki releases.
+   Expand them if a supported release differs; add explicit unsupported failures.
+5. Third-party hooks and filesystem/database operations are outside a shared
+   atomicity guarantee. Media recovery conservatively preserves referenced files
+   when interruption leaves native note-commit status uncertain.
+6. Packaging is nondestructive but has not been exercised in this continuation.
+   Do not restore the old git clean -xdf packaging behavior.
 
-- **New API media replacement:** inspect `Runtime.acquire_media` and
-  `Services.store_bytes`. The new `media.store` replacement path currently uses
-  a low-level trash/write sequence; unlike the legacy path it needs the media
-  transaction journal so a failed native write restores the previous file.
-  Add a meaningful failure/rollback regression test.
-- Audit capabilities: `api.describe` currently advertises all 94 methods as
-  available. Ensure availability reflects actual supported native capabilities
-  and that unsupported subfeatures fail explicitly. Do not equate implemented
-  entry points with verified GUI behavior.
-- Review template field-usage parsing: current implementation uses regex token
-  scanning, while the specification promises native parsing. Investigate native
-  support or implement robust parsing and accurately revise the contract.
-- Review legacy preset coverage: changes to unmapped legacy settings are
-  rejected. In particular, `newPerDayMinimum` is absent from the typed v1 preset
-  fields. Decide whether to extend the new API to preserve this feature.
-- Review affected-editor gates. They conservatively reject affected open
-  editors, including clean editors, and may reject pending JavaScript state.
-  Messages/docs should reflect actual behavior; improve safe cases if feasible.
-- Review session invalidation on native collection unload/reopen outside the
-  adapter. Current detection mostly uses collection identity; explicit profile
-  and full-sync paths invalidate sessions. Native unload hooks may be needed.
-- Review nested `multi` exit ordering and queued GUI admission checks. Exit is
-  restricted to the final immediate action, but nested cases need inspection.
-- Add contract consistency checks if useful: bundled schema equals source,
-  all 122 legacy targets exist, and all 94 methods have handlers.
-- Exercise cancellation between `api.execute` commands and preservation of
-  completed outcomes if further tests are needed. Running native operations
-  cannot all be interrupted; GUI operations register native cancellation hooks.
-
-### 2. Update documentation to describe the actual implementation
-
-Documentation still largely describes the old runtime or a future design.
-
-- `README.md`: new endpoint/example, minimum Anki 26.9.3, dependencies and test
-  setup, compatibility behavior, known limitations.
-- `ARCHITECTURE.md`: rewrite around the modules above, main-thread admission,
-  serialized collection work, sessions, operation completion barriers, native
-  change notifications, and media transactions.
-- `API_V1.md` and `api-v1.schema.json`: replace future/design-only status language;
-  reconcile promises with actual implementation and explicit unsupported cases.
-- `LEGACY_API_MAPPING.md`: explain that forwarders are implemented; preserve the
-  historical audit/mapping where useful and document compatibility failures.
-- `INTEGRATION_ISSUES.md`: record implementation dispositions against the
-  original issues, distinguishing resolved code from unverified integration.
-- Clearly mark old `tests/` as legacy if retained; avoid documenting the broken
-  pytest-anki workflow as the primary validation path.
-- Regenerate `plugin/contract.py` after contract/mapping updates.
-
-### 3. Complete GUI integration validation
-
-Actual native collection integration is tested. GUI integration is incomplete.
-
-An offscreen Anki smoke test loaded a temporary profile, exercised new collection
-reads/native note creation, and verified a populated legacy Add draft with its
-typed snapshot. However, Qt WebEngine subsequently segfaulted (exit 139).
-Software-rendering retries and a Svelte-only attempt also crashed. There was no
-Python traceback identifying an implementation error. Do not claim full GUI
-validation from these runs.
-
-On the new PC, use a working display and **temporary Anki profiles** to validate:
-
-- Legacy and Svelte Add editors: open, populate, update, inspect, save/close.
-- Browser selection/search and custom edit windows.
-- Reviewer question/answer tokens, hooks, native answer completion, UI refresh.
-- Import dialogs: success, failure, cancellation, final operation result.
-- Profile switching and collection package import/reopen/session invalidation.
-- Sync/full sync/media sync, when a suitable disposable test account is available.
-- GUI exit after queued HTTP replies finish.
-
-Original temporary smoke script: `/tmp/anki_api_gui_smoke.py`. It is not checked
-in and is not a reliable passing test. Recreate or recover it only as a starting
-point. Avoid personal collections and destructive sync testing.
-
-### 4. Final checks and completion report
-
-Run the commands below after edits; inspect `git diff --check` and the final diff.
-Report the actual tests run and remaining GUI/network validation limitations.
-Do not mark the entire task done while known implementation gaps remain.
-No commit or publication was requested; leave changes reviewable unless asked.
-
-## Validation already completed
-
-Most recent run: **19 tests passed** in `tests_api/test_runtime.py` (about 1 second).
-They use real temporary native Anki collections plus fake Qt admission where
-appropriate. Coverage includes native CRUD, legacy forwarding/signatures,
-schema/HTTP authentication/CORS/notifications, operations, atomic validation,
-media ownership/recovery, decks/presets/tags, historical review transactions,
-cursor binding, conversion and undo, scheduling tokens, package export/import,
-HTTP `multi` barriers, and ordered execution after errors.
-
-`tools/check_api_spec.py` passed with the official JSON Schema validator:
-94 methods, 122 legacy actions, 27 issue dispositions, 15 positive and 16
-negative fixtures. Compilation passed earlier; rerun after final edits.
-
-## Environment and commands
-
-Original environment: `/tmp/anki-api-runtime-env/bin/python3`, Python 3.13,
-Anki/aqt 26.9.3, PyQt6 and Qt WebEngine 6.11, jsonschema, pytest 9.
-Reference source: `/home/alex/projects/anki/anki-26.09.3`; the user's original
-reference location was `~/projects/anki`. Locate the equivalent on the new PC.
-
-Suggested new environment (adapt Python executable/path to the new PC):
-
-```bash
-python3 -m venv /tmp/anki-api-runtime-env
-/tmp/anki-api-runtime-env/bin/python3 -m pip install 'anki==26.9.3' 'aqt==26.9.3' 'jsonschema>=4.18' 'pytest>=8'
-```
-
-Do not install pytest-anki for the new suite. Its installed version on the old
-PC imports removed `anki.importing.apkg` and PyQt5; pytest configuration disables
-its plugin, as well as xvfb auto-loading.
+## Commands
 
 From the repository root:
 
@@ -210,10 +144,16 @@ From the repository root:
 /tmp/anki-api-runtime-env/bin/python3 tools/check_api_spec.py
 /tmp/anki-api-runtime-env/bin/python3 -m compileall -q plugin tools
 git diff --check
-git status --short
 ```
 
-For GUI smoke tests, the old PC used `QT_QPA_PLATFORM=offscreen` and
-`QTWEBENGINE_DISABLE_SANDBOX=1`, but the WebEngine crashes remain unresolved.
-A working desktop display on the new PC is preferable. Sandbox permissions and
-approved command prefixes from the old session will not necessarily transfer.
+Optional GUI checks with a working display (may require display/socket permissions):
+
+```bash
+QTWEBENGINE_DISABLE_SANDBOX=1 /tmp/anki-api-runtime-env/bin/python3 tools/smoke_gui.py all
+# Or one scenario: editors, browser, custom, reviewer, imports, profiles, colpkg, exit.
+```
+
+Temporary profiles are retained under `/tmp/anki-api-gui-*` for diagnosis. No
+personal collection is read or written by the harness. On another machine recreate
+the separate environment using the README commands; temporary environments are
+not tracked. Regenerate plugin/contract.py after source schema/mapping edits.

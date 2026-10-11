@@ -6,7 +6,7 @@ Anki-Connect is a Python add-on loaded by Anki Desktop. It lets external program
 including browser extensions such as Yomichan, query and modify the active Anki
 collection and control parts of the GUI through a JSON-over-HTTP API. Anki must
 be running; the default endpoint is `http://127.0.0.1:8765` and the API version
-is 6. The source currently enforces a minimum Anki version of 23.10.0.
+is 6. The source currently enforces a minimum Anki version of 26.9.3; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure and
 [README.md](README.md) for action documentation and request examples. Where the
@@ -15,8 +15,11 @@ documenting a change.
 
 ## Source map
 
-- `plugin/__init__.py`: version check, add-on startup, `AnkiConnect` dispatcher,
-  and API actions for notes, cards, decks, models, media, statistics, and GUI.
+- `plugin/__init__.py`: startup, legacy signatures/dispatch and permissions.
+- `plugin/runtime.py` and `plugin/protocol.py`: Qt admission, sessions, schema
+  dispatch, asynchronous completion, operations, and ordered execution.
+- `plugin/services.py`, `plugin/gui.py`, `plugin/legacy.py`, `plugin/media.py`:
+  native domain services, Qt adapters, forwarders, and media recovery.
 - `plugin/web.py`: socket HTTP transport, JSON schema validation, CORS, and reply
   formatting.
 - `plugin/edit.py`: custom note editor, note history, browser integration, and
@@ -25,21 +28,25 @@ documenting a change.
   compatibility helpers.
 - `plugin/config.json`: shipped add-on settings; `plugin/config.md` supplies the
   configuration help text.
-- `tests/`: pytest tests using real Anki/Qt sessions and temporary profiles.
+- `tests_api/`: default native collection and admission regression tests.
+- `tests/`: retained legacy tests with obsolete pytest-anki dependencies.
+- `tools/smoke_gui.py`: optional GUI scenarios with disposable profiles.
 - `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
-- `package.sh`: cleans the checkout and creates `AnkiConnect.zip` with `7za`.
+- `package.sh`: creates `AnkiConnect.zip` through the nondestructive Python builder.
 
 ## Making changes
 
 - Match the surrounding Python style, including existing public camelCase action
   names and parameter names. They are part of the external API.
-- Expose new actions with `@util.api()`. Preserve versioned aliases and the
-  dispatcher rules when changing existing actions.
+- Add new v1 methods to the source schema and shared adapters, then regenerate
+  `plugin/contract.py`. Legacy actions use `@util.api()`; preserve versioned aliases
+  and the dispatcher rules when changing them.
 - Add README documentation with request/result examples and behavior tests for
   new or changed API features, following the contribution guidance in README.
-- Keep Anki collection and GUI access on the Qt main thread. The HTTP server is
-  advanced by a timer, so blocking work can also block the UI.
+- Keep GUI access and request admission on Qt's main thread. Use Anki's
+  serialized task manager for collection work and completion callbacks for native
+  notifications. Avoid blocking Qt or running nested event loops in production.
 - Use the existing collection, scheduler, model, and media helpers. Preserve
   mutation/reset behavior and account for editor state and asynchronous Anki
   operations when changing writes.
@@ -53,30 +60,24 @@ documenting a change.
 
 ## Validation
 
-The repository has no dependency manifest or checked-in test runner config.
-Tests need an environment with a compatible Anki/`aqt`, its Qt dependencies,
-`jsonschema`, `pytest`, `pytest-anki`, `pytest-forked`, and `waitress`.
-The fixtures access pytest's `forked` option, so `pytest-forked` must be available
-even when running without `--forked`. Qt tests need a working display or a
-configured headless environment that supports Anki's web views.
-
-From the repository root, in that environment:
+The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
+`anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
+environment. Do not install pytest-anki for this suite.
 
 ```bash
-python -m pytest tests/test_notes.py
-python -m pytest tests/test_server.py
-python -m pytest tests/
+python tools/build_api_contract.py
+python -m pytest -q --tb=short
+python tools/check_api_spec.py
+python -m compileall -q plugin tools
+git diff --check
 ```
 
-Choose the action-category test module relevant to the change. Transport,
-validation, CORS, and serialization changes should also exercise
-`tests/test_server.py`; editor changes belong in `tests/test_edit.py`.
-On platforms supporting process forking, `--forked` provides per-test process
-isolation. The fixtures otherwise recreate the temporary profile by default.
-`-T` disables that recreation and provides weaker cleanup; use it deliberately.
-Report missing dependencies or display failures as validation limitations.
+Native tests use disposable collections; controlled admission tests do not
+certify real GUI completion. Optional GUI scenarios use a working display:
+`python tools/smoke_gui.py all`. They create temporary profiles, use no sync
+credentials, and isolate processes. Check the output for Qt/JavaScript failures;
+the exit scenario checks HTTP reply delivery before native shutdown. See the handoff for remaining
+integration limitations. Network sync needs a disposable account.
 
-Use temporary test profiles rather than a personal collection. Inspect
-`package.sh` before packaging: its `git clean -xdf` deletes untracked and ignored
-files, including local environments and newly created files. Do not run it as a
-routine validation step.
+Use temporary profiles rather than personal collections. Packaging is not a
+routine validation step and must not clean untracked or ignored files.

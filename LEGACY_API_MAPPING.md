@@ -1,8 +1,8 @@
 # Legacy API translation and integration dispositions
 
-**Status: specification only; no legacy action has been rewritten by these documents.**
-This map covers the 122 `@util.api()` methods in the current source at commit
-`2a076b2`, plus its versioned decorator aliases. The source contains no such
+**Status: all 122 legacy forwarders are implemented through shared services. Native regressions pass; GUI/network verification remains tracked in IMPLEMENTATION_HANDOFF.md.**
+This map preserves the 122 `@util.api()` signatures audited at commit
+`2a076b2`, plus the versioned decorator alias rules. The source contains no such
 aliases today. Keep the dispatcher's latest-applicable-alias rule when later
 aliases are introduced. The new contract is [API_V1.md](API_V1.md), with schemas
 in [api-v1.schema.json](api-v1.schema.json).
@@ -23,7 +23,7 @@ legacy numbers. Convert timestamps to Unix seconds for mod and IDs to numeric
 milliseconds for revlog. Raw type/queue/due/left and legacy model/config records
 are projections from verified adapter snapshots, not new writable public records.
 Snapshot conversion may use native reads, but no adapter bypasses domain mutation
-services. Retain baseline backend extension keys privately when translating a
+services. Typed presets include newPerDayMinimum. Retain baseline backend extension keys privately when translating a
 legacy dictionary; reject unmappable requested changes instead of silently dropping
 them. Reconstruct legacy template/field metadata and order with these snapshots.
 
@@ -52,7 +52,7 @@ Failed/cancelled switching leaves the current session in use. The new api.execut
 prohibits profile switching to keep its session contract simple. Nested multi is
 flattened through a sequential continuation, preserving nested result shape and
 credential checks; no nested blocking event loop. Limit nesting to 16 levels and
-total actions to 100; malformed/over-limit batches error before execution.
+total request nodes (including nested multi containers) to 100; malformed/over-limit batches error before execution.
 guiExitAnki must be the last executable item (including nested items); otherwise
 reject the batch before work. Flush the complete batch reply before close begins.
 No batch implies database or media atomicity.
@@ -132,7 +132,9 @@ such combinations. The old arbitrary setattr escape hatch is intentionally remov
 modelFieldsOnTemplates preserves its established projection: ignore FrontSide;
 on the answer side omit fields already referenced on the question side. The new
 getTemplateUsage reports all real question/answer field references, not this lossy
-projection. Preserve template order and use the native template parser.
+projection. Preserve template order. The Python adapter mirrors native token rules because
+Anki does not expose its parsed template tree to Python. HTML comments are ignored;
+conditionals, filters and the alternate delimiter directive are supported.
 
 ## Complete action map
 
@@ -268,7 +270,9 @@ action. I04 applies to all collection mutations even when not repeated in each r
 
 ## Integration issue dispositions and required regressions
 
-These are design fixes and future test requirements, not completed runtime fixes.
+The owner column identifies implemented adapters. Acceptance scenarios include
+both native regressions and integration checks still awaiting verification; see
+IMPLEMENTATION_HANDOFF.md for the current evidence.
 L01–L04 identify the additional lifecycle bullets in INTEGRATION_ISSUES.md.
 
 | Finding | Owner | Required behavior | Acceptance scenario |

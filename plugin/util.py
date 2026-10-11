@@ -81,10 +81,10 @@ DEFAULT_CONFIG = {
 }
 
 def setting(key):
-    try:
-        return aqt.mw.addonManager.getConfig(__name__).get(key, DEFAULT_CONFIG[key])
-    except:
+    if key not in DEFAULT_CONFIG:
         raise Exception('setting {} not found'.format(key))
+    config = aqt.mw.addonManager.getConfig(__name__) or {}
+    return config.get(key, DEFAULT_CONFIG[key])
 
 
 # see https://github.com/FooSoft/anki-connect/issues/308

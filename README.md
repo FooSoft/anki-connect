@@ -1,10 +1,12 @@
 # Anki-Connect
 
-Anki-Connect enables external applications such as Yomichan to communicate with [Anki](https://apps.ankiweb.net/) over a simple HTTP API. Its capabilities include executing queries against the user's card deck, automatically creating new cards, and more. Anki-Connect is compatible with the latest stable (2.1.x) releases of Anki; older versions (2.0.x and below) are no longer supported.
+Anki-Connect enables external applications such as Yomichan to communicate with [Anki](https://apps.ankiweb.net/) over a simple HTTP API. Its capabilities include executing queries against the user's card deck, automatically creating new cards, and more. This checkout implements the new API and legacy forwarders for Anki Desktop **26.9.3 or later**. The tested baseline is 26.9.3; later versions require capability and integration checks.
 
 ## Installation
 
-The installation process is similar to other Anki plugins and can be accomplished in three steps:
+For this development rewrite, link `plugin/` with `link.sh` or build a source ZIP with `package.sh` and install it through Anki. The ZIP builder does not clean the checkout. The add-on requires `jsonschema>=4.18` in Anki’s Python environment.
+
+The published add-on has the historical installation steps below; it is not a distribution of this development checkout:
 
 1.  Open the `Install Add-on` dialog by selecting `Tools` | `Add-ons` | `Get Add-ons...` in Anki.
 2.  Input [2055492159](https://ankiweb.net/shared/info/2055492159) into the text box labeled `Code` and press the `OK` button to proceed.
@@ -31,10 +33,64 @@ Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks)
 
 ## Application Interface for Developers
 
-The proposed rewrite is specified in [API_V1.md](API_V1.md), with a
-[machine-readable schema](api-v1.schema.json) and a
-[complete legacy translation map](LEGACY_API_MAPPING.md). These are design
-documents; the running add-on still implements the actions documented below.
+The new endpoint is `POST http://127.0.0.1:8765/api/v1`, using JSON-RPC 2.0.
+See [API_V1.md](API_V1.md), the [schema](api-v1.schema.json), and the
+[legacy translation map](LEGACY_API_MAPPING.md).
+
+```bash
+curl http://127.0.0.1:8765/api/v1 -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"decks.list"}'
+```
+
+Example result:
+
+```json
+{"jsonrpc":"2.0","id":1,"result":[{"id":"1","name":"Default","kind":"normal","presetId":"1"}]}
+```
+
+Use `Authorization: Bearer <key>` when an API key is configured. Entity IDs are
+strings in v1. `collection.get` returns a session token for guarding subsequent
+collection requests. Long or interactive methods return operation handles;
+`operations.get` reports their final outcome. Use `api.execute` for ordered
+commands and `api.describe` for runtime capability discovery.
+
+All 122 legacy actions have forwarders at `/`. The reference below documents
+that protocol; the translation map records intentional corrections and explicit
+compatibility errors. `multi` waits for final item outcomes and does not create
+a transaction. Unsafe raw card/scheduler writes and unmapped preset changes fail
+explicitly. Affected open editors must be closed before collection writes, even
+if saved. Representative GUI/import paths have smoke coverage; network sync and broader
+GUI behavior still require integration validation. Current coverage and limitations are in [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md).
+
+Typed preset patches include the native minimum new-card limit:
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"deckPresets.update","params":{"preset":{"id":"1"},"settings":{"newPerDayMinimum":10}}}
+```
+
+The result is the updated preset; its `settings.newPerDayMinimum` is `10`.
+Omitted settings retain their current values. Legacy `saveDeckConfig` translates
+this setting through the same native update service.
+
+### Development validation
+
+Use a separate environment and temporary collections/profiles:
+
+```bash
+python3 -m venv /tmp/anki-api-runtime-env
+/tmp/anki-api-runtime-env/bin/python3 -m pip install 'anki==26.9.3' 'aqt==26.9.3' 'jsonschema>=4.18' 'pytest>=8'
+/tmp/anki-api-runtime-env/bin/python3 tools/build_api_contract.py
+/tmp/anki-api-runtime-env/bin/python3 -m pytest -q
+/tmp/anki-api-runtime-env/bin/python3 tools/check_api_spec.py
+```
+
+`tests_api/` is the default suite. `tests/` is retained as legacy reference and
+uses obsolete pytest-anki interfaces; do not use it as the primary test setup.
+The default native tests do not certify Qt WebEngine, GUI timing or network sync.
+With a working display, run `/tmp/anki-api-runtime-env/bin/python3 tools/smoke_gui.py all`
+for isolated GUI scenarios using disposable profiles.
+
+### Legacy protocol
 
 Anki-Connect exposes internal Anki features to external applications via an easy to use API. After being installed, this plugin will start an HTTP server on port 8765 whenever Anki is launched. Other applications (including browser extensions) can then communicate with it via HTTP requests.
 
@@ -63,7 +119,7 @@ execution completed successfully).
 
 For compatibility with clients designed to work with older versions of Anki-Connect, failing to provide a `version`
 field in the request will make the version default to 4. Furthermore, when the provided version is level 4 or below, the
-API response will only contain the value of the `result`; no `error` field is available for error handling.
+successful API response contains only the result value. Exceptions at every version return a `result`/`error` object.
 
 You can use whatever language or tool you like to issue request to Anki-Connect, but a couple of simple examples are
 included below as reference.

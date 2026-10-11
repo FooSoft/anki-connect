@@ -27,7 +27,8 @@ TEMPLATE_KEYS = {'questionHtml': 'qfmt', 'answerHtml': 'afmt', 'browserQuestionH
 PRESET_KEYS = {
     'learnStepsMinutes': 'learn_steps', 'relearnStepsMinutes': 'relearn_steps',
     'fsrsParameters4': 'fsrs_params_4', 'fsrsParameters5': 'fsrs_params_5', 'fsrsParameters6': 'fsrs_params_6',
-    'newPerDay': 'new_per_day', 'reviewsPerDay': 'reviews_per_day', 'initialEase': 'initial_ease',
+    'newPerDay': 'new_per_day', 'newPerDayMinimum': 'new_per_day_minimum',
+    'reviewsPerDay': 'reviews_per_day', 'initialEase': 'initial_ease',
     'easyMultiplier': 'easy_multiplier', 'hardMultiplier': 'hard_multiplier', 'lapseMultiplier': 'lapse_multiplier',
     'intervalMultiplier': 'interval_multiplier', 'maximumIntervalDays': 'maximum_review_interval',
     'minimumLapseIntervalDays': 'minimum_lapse_interval', 'graduatingGoodDays': 'graduating_interval_good',
@@ -66,6 +67,38 @@ def interval(value):
 def normalized_field(value):
     from anki.utils import strip_html_media
     return unicodedata.normalize('NFC', strip_html_media(value))
+
+
+def template_fields(text, names):
+    """Mirror Anki's template tokens; its parsed tree is not exposed to Python."""
+    directive = '{{=<% %>=}}'
+    if text.lstrip().startswith(directive):
+        text = text.lstrip()
+        while text.startswith(directive):
+            text = text[len(directive):]
+        start, end = '<%', '%>'
+    else:
+        start, end = '{{', '}}'
+    pattern = re.compile(re.escape(start) + r'(.*?)' + re.escape(end) + r'|<!--.*?-->', re.S)
+    fields, stack = [], []
+    for match in pattern.finditer(text):
+        if match.group(1) is None:
+            continue
+        token = match.group(1).lstrip('{').strip()
+        if len(token) >= 2 and token[0] in '#^/':
+            name = token[1:].lstrip()
+            if token[0] == '/':
+                if not stack or stack.pop() != name:
+                    raise ApiError('validationFailed', 'Mismatched template conditional.')
+                continue
+            stack.append(name)
+        else:
+            name = token.rsplit(':', 1)[-1]
+        if name in names and name not in fields:
+            fields.append(name)
+    if stack:
+        raise ApiError('validationFailed', 'Unclosed template conditional.')
+    return fields
 
 
 class Services:
@@ -721,14 +754,7 @@ class Services:
         names = {field['name'] for field in model['flds']}
         result = []
         for template in model['tmpls']:
-            fields = []
-            for key in ('qfmt', 'afmt'):
-                seen = []
-                for token in re.findall(r'{{([^{}]+)}}', template[key]):
-                    name = token.lstrip('#/^').split(':')[-1].strip()
-                    if name in names and name not in seen:
-                        seen.append(name)
-                fields.append(seen)
+            fields = [template_fields(template[key], names) for key in ('qfmt', 'afmt')]
             result.append({'templateName': template['name'], 'questionFields': fields[0], 'answerFields': fields[1]})
         return result
 
@@ -880,6 +906,22 @@ class Services:
         return {'path': os.path.abspath(self.col.media.dir())}
 
     def store_bytes(self, filename, data, collision='rename', skipIfHash=None):
+        if collision != 'replace':
+            return self._store_bytes(filename, data, collision, skipIfHash)
+        from .media import MediaTransaction
+        transaction = MediaTransaction(self)
+        try:
+            actual = transaction.install(filename, data, skipIfHash, collision)
+            transaction.commit()
+            return {'filename': actual, 'status': 'skipped' if actual is None else 'stored',
+                    'sha256': hashlib.sha256(data).hexdigest()}
+        except Exception as error:
+            failures = transaction.rollback()
+            if isinstance(error, ApiError) and not failures:
+                raise
+            raise ApiError('ioError', 'Media replacement failed.', {'rollbackFailures': failures}) from error
+
+    def _store_bytes(self, filename, data, collision='rename', skipIfHash=None):
         filename = self.media_filename(filename)
         sha = hashlib.sha256(data).hexdigest()
         if skipIfHash and hashlib.new(skipIfHash['algorithm'], data).hexdigest() == skipIfHash['digest']:
@@ -889,7 +931,7 @@ class Services:
             if collision == 'error':
                 raise ApiError('conflict', 'Media filename already exists.')
             if collision == 'replace' and path.read_bytes() != data:
-                # Acquisition has already succeeded. Native trash preserves a recoverable old copy.
+                # Replacement callers journal the original before this native write.
                 self.col.media.trash_files([filename])
         actual = self.col.media.write_data(filename, data)
         return {'filename': actual, 'status': 'stored', 'sha256': sha}

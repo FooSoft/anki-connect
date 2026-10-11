@@ -127,6 +127,12 @@ class Operations:
                              'cancellable': True, 'progress': None}
         future = self.completions[key] = Deferred()
         def finish(source):
+            if not source.error and method in SCHEMA['x-methods']:
+                from jsonschema import Draft202012Validator
+                meta = SCHEMA['x-methods'][method]
+                schema = meta.get('operationResult', meta['result'])
+                if not Draft202012Validator({**SCHEMA, 'oneOf': [schema]}).is_valid(source.value):
+                    source = completed(error=ApiError('internalError', 'Operation produced an invalid result.'))
             record = self.records[key]
             record.update(updatedAt=timestamp(self.now()), cancellable=False)
             if source.error:

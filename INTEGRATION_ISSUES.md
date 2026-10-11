@@ -1,5 +1,31 @@
 # Integration audit: Anki-Connect against Anki 26.09.3
 
+## Implementation follow-up
+
+The findings below are a historical audit of the old implementation; source line
+links refer to that snapshot. The rewrite now supplies all 94 v1 entry points and
+122 shared-service legacy forwarders. The 27 issue/lifecycle dispositions are
+mapped individually in [LEGACY_API_MAPPING.md](LEGACY_API_MAPPING.md).
+
+Native regression tests cover dedicated conversion (I01), deck moves/presets
+(I02/I20), native scheduling and due/interval projections (I03/I08–I11),
+post-write notifications and undo (I04), note validation and atomic bulk creation
+(I12–I14), persisted template changes and safe empty-note handling (I15/I16),
+transactional historical review import (I17), resolved IDs/filter membership
+(I18), missing-item projections (I22) and shared legacy results. Media replacement
+failure restores original bytes through the request journal. Unmapped legacy
+settings/raw scheduler edits fail explicitly; newPerDayMinimum is now mapped.
+
+GUI adapters exist for both Add variants (I05–I07), browser sorting/selection
+(I23), reviewer hooks and answer completion, import dialogs, profiles and sync
+(I19). Their presence is not integration certification. Affected editors are
+conservatively gated even when saved. Sessions and editor history are invalidated
+on native unload hooks; nested multi checks exit ordering before any work.
+
+See [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md) for actual tests run and
+remaining GUI/network scenarios. Do not read the historical audit's statement
+that dependencies were absent as a statement about the current environment.
+
 ## Scope and evidence
 
 Reviewed on 2026-10-10 against the local source tree at
@@ -521,7 +547,7 @@ editor/reviewer windows. Existing fixtures replace background operations with
 immediate main-thread execution; test production async completion separately.
 [Fixture override](tests/conftest.py:220).
 
-No plugin behavior was changed by this audit.
+The original audit changed no behavior. Implementation follow-up is described above.
 
 ## Action coverage index
 

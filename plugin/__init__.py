@@ -75,7 +75,7 @@ class AnkiConnect:
         self.server.advance()
         if self.runtime.exit_requested and not self.server.clients:
             self.runtime.exit_requested = False
-            self.window().onClose()
+            self.window().close()
 
     def window(self):
         return aqt.mw
@@ -171,6 +171,28 @@ class AnkiConnect:
         except Exception as error:
             return format_exception_reply(version, error)
 
+    def validate_multi(self, actions, depth=0, state=None):
+        """Preflight the entire tree before admitting any executable action."""
+        if state is None:
+            state = {'count': 0, 'exit': False}
+        if depth > 16:
+            raise Exception('multi nesting limit exceeded')
+        if not isinstance(actions, list):
+            raise Exception('multi actions must be an array')
+        for item in actions:
+            state['count'] += 1
+            if state['count'] > 100:
+                raise Exception('multi action limit exceeded')
+            if not isinstance(item, dict):
+                raise Exception('multi actions must be request objects')
+            name, params = self.resolve_action(item.get('action', ''), item.get('version', 4), item.get('params', {}))
+            if name == 'multi':
+                self.validate_multi(params['actions'], depth + 1, state)
+            else:
+                if state['exit']:
+                    raise Exception('guiExitAnki must be the last executable multi action')
+                state['exit'] = name == 'guiExitAnki'
+
     def handler_async(self, request, barrier=False, depth=0):
         version = request.get('version', 4)
         try:
@@ -183,10 +205,8 @@ class AnkiConnect:
             self.guard_legacy(name, params)
             if name == 'multi':
                 actions = params['actions']
-                if len(actions) > 100:
-                    raise Exception('multi action limit exceeded')
-                if any(item.get('action') == 'guiExitAnki' for item in actions[:-1]):
-                    raise Exception('guiExit must be the last multi action')
+                if depth == 0:
+                    self.validate_multi(actions)
                 pending = Deferred()
                 results = []
                 def step(index):
@@ -232,13 +252,13 @@ class AnkiConnect:
             msg.setWindowFlags(WindowOnTopFlag)
             pressedButton = msg.exec()
             if pressedButton == QMessageBox.StandardButton.Yes:
-                config = aqt.mw.addonManager.getConfig(__name__)
+                config = aqt.mw.addonManager.getConfig(__name__) or {}
                 config['webCorsOriginList'] = list(util.setting('webCorsOriginList'))
                 config['webCorsOriginList'].append(origin)
                 aqt.mw.addonManager.writeConfig(__name__, config)
                 results = {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
             elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
-                config = aqt.mw.addonManager.getConfig(__name__)
+                config = aqt.mw.addonManager.getConfig(__name__) or {}
                 config['ignoreOriginList'] = list(util.setting('ignoreOriginList'))
                 config['ignoreOriginList'].append(origin)
                 aqt.mw.addonManager.writeConfig(__name__, config)
@@ -735,5 +755,6 @@ class AnkiConnect:
 if __name__ != "plugin":
     Edit.register_with_anki()
     ac = AnkiConnect()
+    ac.runtime.register_hooks()
     ac.initLogging()
     ac.startWebServer()

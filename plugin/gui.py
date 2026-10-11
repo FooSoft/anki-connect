@@ -4,7 +4,7 @@ import json
 import uuid
 import time
 
-from .protocol import ApiError, Deferred, completed
+from .protocol import ApiError, Deferred, completed, timestamp
 from .services import RATINGS, entity_id
 
 
@@ -35,6 +35,13 @@ class Gui:
             self.runtime.operations.cancellations[self.operation_id] = callback
             self.runtime.operations.records[self.operation_id]['cancellable'] = True
 
+    def operation_state(self):
+        key = self.operation_id
+        def update(state):
+            if key and not self.runtime.operations.completions[key].done:
+                self.runtime.operations.records[key].update(state=state, updatedAt=timestamp())
+        return update
+
     def browser(self):
         import aqt
         return aqt.dialogs._dialogs.get('Browser', (None, None))[1]
@@ -49,19 +56,23 @@ class Gui:
         import aqt
         browser = aqt.dialogs.open('Browser', self.mw)
         browser.activateWindow()
-        if query is not None:
-            browser.form.searchEdit.lineEdit().setText(query)
-            browser.onSearchActivated()
-        if sort:
-            from aqt.qt import Qt
-            index = browser.table._model.active_column_index(sort['column'])
-            if index is None:
-                raise ApiError('invalidParams', 'Browser sort column is not active.')
-            direction = Qt.SortOrder.AscendingOrder if sort['direction'] == 'ascending' else Qt.SortOrder.DescendingOrder
-            # Set column first, then explicitly apply direction to defeat first-click defaults.
-            browser.table._on_sort_column_changed(index, direction)
-            browser.table._on_sort_column_changed(index, direction)
-        return self.browser_getSelection()
+        def opened(_):
+            if query is not None:
+                browser.form.searchEdit.lineEdit().setText(query)
+                browser.onSearchActivated()
+            if sort:
+                from aqt.qt import Qt
+                index = browser.table._model.active_column_index(sort['column'])
+                if index is None:
+                    raise ApiError('invalidParams', 'Browser sort column is not active.')
+                direction = Qt.SortOrder.AscendingOrder if sort['direction'] == 'ascending' else Qt.SortOrder.DescendingOrder
+                # Set column first, then explicitly apply direction to defeat first-click defaults.
+                browser.table._on_sort_column_changed(index, direction)
+                browser.table._on_sort_column_changed(index, direction)
+            return self.browser_getSelection()
+        # Native search/selection saves the editor first. Do not ask it to call
+        # saveNow before the webview has installed that function.
+        return self.javascript(browser.editor, 'return true;', ready='typeof saveNow === "function"').map(opened)
 
     def browser_select(self, cardIds=None, noteIds=None):
         browser = self.browser()
@@ -94,14 +105,16 @@ class Gui:
             self.editors[key] = (dialog, kind, self.runtime.session)
         return key
 
-    def javascript(self, editor, code):
+    def javascript(self, editor, code, ready=None):
         """Await a webview promise through callbacks, without a nested event loop."""
         from aqt.qt import QTimer
         result = Deferred()
         key = '__ankiConnect_' + uuid.uuid4().hex
         session = self.runtime.session
         started = time.monotonic()
-        editor.web.eval('(async () => { await require("anki/ui").loaded; ' + code + ' })().then(value => { globalThis[' + json.dumps(key) + '] = {value}; }, error => { globalThis[' + json.dumps(key) + '] = {error: String(error)}; });')
+        launched = [False]
+        ready = ready or 'typeof getNoteInfo === "function" && typeof loadNote === "function"'
+        script = '(async () => { ' + code + ' })().then(value => { globalThis[' + json.dumps(key) + '] = {value}; }, error => { globalThis[' + json.dumps(key) + '] = {error: String(error)}; });'
         def poll():
             if result.done:
                 return
@@ -112,7 +125,12 @@ class Gui:
                 result.resolve(error=ApiError('ioError', 'Editor did not respond.'))
                 return
             def checked(value):
-                if value is None:
+                if not launched[0]:
+                    if value:
+                        launched[0] = True
+                        editor.web.eval(script)
+                    QTimer.singleShot(20, poll)
+                elif value is None:
                     QTimer.singleShot(20, poll)
                 elif 'error' in value:
                     result.resolve(error=ApiError('ioError', value['error']))
@@ -120,7 +138,8 @@ class Gui:
                     editor.web.eval('delete globalThis[' + json.dumps(key) + '];')
                     result.resolve(value.get('value'))
             try:
-                editor.web.evalWithCallback('globalThis[' + json.dumps(key) + '] ?? null', checked)
+                probe = ready if not launched[0] else 'globalThis[' + json.dumps(key) + '] ?? null'
+                editor.web.evalWithCallback(probe, checked)
             except RuntimeError as error:
                 result.resolve(error=ApiError('notFound', 'Editor closed.'))
         poll()
@@ -136,7 +155,8 @@ class Gui:
                     'noteType': self.service().summary(model), 'deck': self.service().summary(deck) if deck else None,
                     'fields': fields, 'tags': value['tags'], 'dirty': any(fields.values()) or bool(value['tags']),
                     'session': self.runtime.session}
-        return self.javascript(dialog.editor, "document.activeElement?.blur(); await new Promise(resolve => setTimeout(resolve, 0)); const info = getNoteInfo(); return {...info, tags: [...document.querySelectorAll('.tag-editor [data-addon-tag]')].map(element => element.dataset.addonTag).filter(Boolean), deck: document.querySelector('.deck-chooser .chooser-button')?.textContent?.trim() ?? null};").map(projected)
+        ready = '(() => { try { return !!getNoteInfo().mid' + (" && !!document.querySelector('.deck-chooser .chooser-button')?.textContent?.trim()" if kind == 'add' else '') + '; } catch { return false; } })()'
+        return self.javascript(dialog.editor, "document.activeElement?.blur(); await saveNow(); const info = getNoteInfo(); return {...info, tags: [...document.querySelectorAll('.tag-editor [data-addon-tag]')].map(element => element.dataset.addonTag).filter(Boolean), deck: document.querySelector('.deck-chooser .chooser-button')?.textContent?.trim() ?? null};", ready=ready).map(projected)
 
     def editor_record(self, dialog, kind):
         key = self.register(dialog, kind)
@@ -183,7 +203,7 @@ class Gui:
 
     def populate_svelte(self, dialog, note, deck_id):
         args = {'nid': None, 'notetypeId': str(note.mid), 'deckId': str(deck_id), 'initial': True, 'focusTo': 0}
-        code = 'await loadNote(' + json.dumps(args) + '); setFields(' + json.dumps(list(note.keys())) + ', ' + json.dumps(list(note.fields)) + '); setTags(' + json.dumps(list(note.tags)) + '); return true;'
+        code = 'await loadNote(' + json.dumps(args) + '); setFields(' + json.dumps(list(note.keys())) + ', ' + json.dumps(list(note.fields)) + '); setTags(' + json.dumps(list(note.tags)) + '); await saveNow(); return true;'
         return self.javascript(dialog.editor, code).map(lambda _: self.editor_record(dialog, 'add'))
 
     def editors_updateDraft(self, editorId, patch, mode='replace'):
@@ -323,17 +343,20 @@ class Gui:
         from aqt.import_export.import_dialog import ImportDialog, AnkiPackageArgs, CsvArgs, JsonFileArgs
         from aqt.import_export.importing import ColpkgImporter
         session = self.runtime.session
+        state = self.operation_state()
         if path is None:
+            state('waitingForUser')
             path, _ = QFileDialog.getOpenFileName(self.mw, 'Import', '',
                 'Import files (*.apkg *.zip *.colpkg *.csv *.txt *.json *.anki-json)')
             if not path:
                 raise ApiError('cancelled', 'Import file selection cancelled.')
+            state('running')
         self.runtime.capture(session)
         if not Path(path).is_file():
             raise ApiError('notFound', 'Import file not found.')
         if ColpkgImporter.can_import(Path(path).name.lower()):
             return self.import_collection_package(path)
-        if any(isinstance(window, ImportDialog) for window in self.mw.app.topLevelWidgets()):
+        if any(isinstance(window, ImportDialog) and window.isVisible() for window in self.mw.app.topLevelWidgets()):
             raise ApiError('busy', 'Another import dialog is open.')
         suffix = Path(path).suffix.lower()
         args = AnkiPackageArgs(path) if suffix in ('.apkg', '.zip') else JsonFileArgs(path) if suffix in ('.json', '.anki-json') else CsvArgs(path) if suffix in ('.csv', '.txt') else None
@@ -342,6 +365,7 @@ class Gui:
         result = Deferred()
         dialog = ImportDialog(self.mw, args)
         self.runtime.lifecycle_active = True
+        state('waitingForUser')
         def finish(value=None, error=None):
             if result.done:
                 return
@@ -358,6 +382,7 @@ class Gui:
         def poll():
             if result.done:
                 return
+            state('running' if self.mw._background_op_count else 'waitingForUser')
             if self.runtime.session != session:
                 finish(error=ApiError('staleSession', 'Collection changed during import.'))
                 return
@@ -472,6 +497,7 @@ class Gui:
             raise ApiError('authenticationRequired', 'Sync authentication is not configured.')
         self.guard_lifecycle()
         pending = Deferred()
+        state = self.operation_state()
         self.runtime.lifecycle_active = True
         col = self.mw.col
         self.cancellable(lambda: (col.abort_sync(), col.abort_media_sync()))
@@ -502,6 +528,7 @@ class Gui:
                 self.mw.taskman.run_in_background(col.media_sync_status, checked, uses_collection=False)
             poll()
         def full(out, upload):
+            state('running')
             gui_hooks.collection_will_temporarily_close(col)
             def work():
                 if not upload:
@@ -528,6 +555,7 @@ class Gui:
                 if out.required in (out.NO_CHANGES, out.NORMAL_SYNC):
                     media()
                 else:
+                    state('waitingForUser')
                     from aqt.utils import ask_user_dialog
                     directions = [False] if out.required == out.FULL_DOWNLOAD else [True] if out.required == out.FULL_UPLOAD else [True, False]
                     def choice(index):
@@ -558,4 +586,4 @@ class Gui:
             if method.startswith(('notes.', 'tags.')):
                 affected = bool(note_id) and (str(note_id) in ids or params.get('allNotes', False))
             if affected:
-                raise ApiError('editorConflict', 'Close or save the affected editor before this API write.')
+                raise ApiError('editorConflict', 'Close the affected editor before this API write, even if its content is saved.')

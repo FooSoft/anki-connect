@@ -256,8 +256,10 @@ class Legacy:
         if name == 'guiBrowse':
             sort = p['reorderCards']
             sort = {'column': sort['columnId'], 'direction': sort['order']} if sort else None
-            call('browser.open', query=p['query'], sort=sort)
-            return [] if p['query'] is None else [int(id) for id in self.all_pages('cards.search', query=p['query'])]
+            value = call('browser.open', query=p['query'], sort=sort)
+            def project(_):
+                return [] if p['query'] is None else [int(id) for id in self.all_pages('cards.search', query=p['query'])]
+            return value.map(project) if isinstance(value, Deferred) else project(value)
         if name in ('guiSelectNote', 'guiSelectCard'):
             if not gui.browser():
                 return False
@@ -731,7 +733,8 @@ class Legacy:
             settings['newInsertOrder'] = {0: 'random', 1: 'due'}[data['new']['order']]
         if 'leechAction' in data.get('lapse', {}) and data['lapse']['leechAction'] != baseline['lapse']['leechAction']:
             settings['leechAction'] = PRESET_ENUMS['leechAction'][1][data['lapse']['leechAction']]
-        mapping = {'maxTaken': 'answerTimeLimitSeconds', 'timer': 'showTimer', 'autoplay': 'disableAutoplay',
+        mapping = {'newPerDayMinimum': 'newPerDayMinimum',
+                   'maxTaken': 'answerTimeLimitSeconds', 'timer': 'showTimer', 'autoplay': 'disableAutoplay',
                    'desiredRetention': 'desiredRetention', 'ignoreRevlogsBeforeDate': 'ignoreReviewsBefore',
                    'buryInterdayLearning': 'buryDayLearning', 'fsrsWeights': 'fsrsParameters4',
                    'fsrsParams5': 'fsrsParameters5', 'fsrsParams6': 'fsrsParameters6',

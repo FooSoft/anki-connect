@@ -368,3 +368,184 @@ def test_cloze_native_validation_and_conversion(native):
     call(service, 'notes.convert', ids=[created['noteId']], target={'name': 'Cloze'},
          fields=plan['fields'], templates=plan['templates'], planToken=plan['token'])
     assert call(service, 'notes.get', id=created['noteId'])['noteType']['name'] == 'Cloze'
+
+
+def test_v1_replacement_restores_original_after_native_failure(admitted, monkeypatch):
+    import base64
+    owner, service, drain, work, notifications = admitted
+    service.store_bytes('replace.txt', b'original')
+    original_write = service.col.media.write_data
+    def fail_incoming(filename, data):
+        if data == b'incoming':
+            raise OSError('simulated native write failure after trash')
+        return original_write(filename, data)
+    monkeypatch.setattr(service.col.media, 'write_data', fail_incoming)
+    response = owner.runtime.dispatcher.request({'jsonrpc': '2.0', 'id': 1, 'method': 'media.store',
+        'params': {'filename': 'replace.txt', 'source': {'data': base64.b64encode(b'incoming').decode()}, 'collision': 'replace'}})
+    drain()
+    operation = owner.runtime.operations.get(response.value['result']['operationId'])
+    assert operation['state'] == 'failed'
+    assert operation['error']['data']['type'] == 'ioError'
+    assert operation['error']['data']['details']['rollbackFailures'] == []
+    assert (Path(service.col.media.dir()) / 'replace.txt').read_bytes() == b'original'
+    assert not list((Path(service.col.media.dir()).parent / '.anki-connect-media-journal').iterdir())
+
+
+def test_nested_multi_preflights_exit_limits_and_shapes(admitted):
+    owner, service, drain, work, notifications = admitted
+    nested = lambda actions: {'action': 'multi', 'version': 6, 'params': {'actions': actions}}
+    exit_request = {'action': 'guiExitAnki', 'version': 6}
+    create = {'action': 'createDeck', 'version': 6, 'params': {'deck': 'Must not exist'}}
+    for actions in ([create, nested([exit_request]), {'action': 'version'}],
+                    [create, nested([{'action': 'version'}] * 99)],
+                    [create, nested([None])]):
+        response = owner.handler_async(nested(actions))
+        assert response.done and response.value['error']
+        assert not work and not owner.runtime.exit_requested
+    assert service.col.decks.id_for_name('Must not exist') is None
+    response = owner.handler_async(nested([{'action': 'version'}, nested([exit_request])]))
+    drain()
+    assert response.value['error'] is None
+    assert owner.runtime.exit_requested
+
+
+def test_new_per_day_minimum_round_trip(native):
+    owner, service = native
+    preset = call(service, 'deckPresets.update', preset={'id': '1'}, settings={'newPerDayMinimum': 7})
+    assert preset['settings']['newPerDayMinimum'] == 7
+    legacy = Legacy(owner, service)
+    config = legacy.call('getDeckConfig', {'deck': 'Default'})
+    assert config['newPerDayMinimum'] == 7
+    config['newPerDayMinimum'] = 11
+    assert legacy.call('saveDeckConfig', {'config': config})
+    assert call(service, 'deckPresets.get', preset={'id': '1'})['settings']['newPerDayMinimum'] == 11
+
+
+def test_template_usage_respects_native_token_rules(native):
+    owner, service = native
+    call(service, 'noteTypes.create', name='Usage', fields=[{'name': 'F'}, {'name': 'G'}],
+         templates=[{'name': 'Normal', 'questionHtml': '<!-- {{G}} -->{{#G}}{{text:F}}{{/G}}',
+                     'answerHtml': '{{=<% %>=}}<%^F%><%G%><%/F%><!-- <%F%> -->'}])
+    assert call(service, 'noteTypes.getTemplateUsage', noteType={'name': 'Usage'}) == [
+        {'templateName': 'Normal', 'questionFields': ['G', 'F'], 'answerFields': ['F', 'G']}]
+
+
+def test_discovery_and_dispatch_agree_on_missing_native_capability(admitted, monkeypatch):
+    owner, service, drain, work, notifications = admitted
+    monkeypatch.setattr(service.col, 'export_anki_package', None)
+    methods = {item['name']: item for item in owner.runtime.describe()['methods']}
+    assert not methods['packages.export']['available']
+    assert 'export_anki_package' in methods['packages.export']['reason']
+    with pytest.raises(ApiError, match='export_anki_package') as error:
+        owner.runtime.invoke('packages.export', {})
+    assert error.value.kind == 'unsupportedCapability'
+    assert not work
+
+
+def test_unload_hook_invalidates_same_collection_identity(admitted):
+    from aqt import gui_hooks
+    from plugin.edit import history
+    owner, service, drain, work, notifications = admitted
+    runtime = owner.runtime
+    runtime.register_hooks()
+    previous = runtime.session
+    runtime.tokens['old'] = None
+    runtime.cursors['old'] = None
+    history.note_ids.append(123)
+    try:
+        gui_hooks.collection_will_temporarily_close(service.col)
+        assert runtime.session != previous
+        assert not runtime.tokens and not runtime.cursors and not history.note_ids
+    finally:
+        gui_hooks.profile_will_close.remove(runtime.invalidate_session)
+        gui_hooks.collection_will_temporarily_close.remove(runtime.invalidate_session)
+
+
+def test_execute_cancel_preserves_completed_outcomes(admitted):
+    owner, service, drain, work, notifications = admitted
+    runtime = owner.runtime
+    handle = runtime.invoke('api.execute', {'commands': [
+        {'method': 'decks.create', 'params': {'name': 'Committed prefix'}},
+        {'method': 'decks.create', 'params': {'name': 'Cancelled suffix'}}]}).value
+    runtime.operations.schedule.__self__.pop(0)()
+    work.pop(0)()
+    runtime.operations.cancel(handle['operationId'])
+    drain()
+    record = runtime.operations.get(handle['operationId'])
+    assert record['state'] == 'cancelled'
+    assert record['error']['data']['details']['items'][0]['result']['name'] == 'Committed prefix'
+    assert service.col.decks.id_for_name('Cancelled suffix') is None
+
+
+def test_bundled_contract_and_adapters_match_source():
+    import json
+    from plugin.contract import LEGACY_TARGETS
+    from plugin.gui import Gui
+    from plugin.runtime import GUI_METHODS
+    root = Path(__file__).resolve().parents[1]
+    assert SCHEMA == json.loads((root / 'api-v1.schema.json').read_text())
+    assert set(LEGACY_TARGETS) == set(AnkiConnect().legacy_actions())
+    for targets in LEGACY_TARGETS.values():
+        assert all(target in SCHEMA['x-methods'] for target in targets)
+    specials = {'api.describe', 'api.execute', 'access.requestPermission', 'operations.get', 'operations.cancel', 'media.store'}
+    for name in SCHEMA['x-methods'].keys() - specials:
+        assert callable(getattr(Gui if name in GUI_METHODS else Services, name.replace('.', '_'), None)), name
+
+
+def test_queued_gui_operation_rechecks_collection_work(admitted, monkeypatch):
+    import aqt
+    owner, service, drain, work, notifications = admitted
+    invoked = []
+    monkeypatch.setattr(owner.runtime.gui, 'execute', lambda *args, **kwargs: invoked.append(args))
+    handle = owner.runtime.invoke('editors.openAdd', {}).value
+    aqt.mw._background_op_count = 1
+    drain()
+    record = owner.runtime.operations.get(handle['operationId'])
+    assert record['state'] == 'failed'
+    assert record['error']['data']['type'] == 'busy'
+    assert not invoked
+
+
+def test_stale_queued_work_does_not_recover_media(admitted, monkeypatch):
+    from plugin.media import MediaTransaction
+    owner, service, drain, work, notifications = admitted
+    recovered = []
+    monkeypatch.setattr(MediaTransaction, 'recover', lambda *args: recovered.append(args))
+    future = owner.runtime.background(lambda service: pytest.fail('stale work executed'))
+    owner.runtime.invalidate_session()
+    drain()
+    assert future.error.kind == 'staleSession'
+    assert not recovered
+
+
+def test_operation_rejects_invalid_terminal_result():
+    tasks = []
+    operations = Operations(tasks.append)
+    handle = operations.submit('media.store', None, lambda key: completed({'filename': 123}))
+    tasks.pop(0)()
+    record = operations.get(handle['operationId'])
+    assert record['state'] == 'failed'
+    assert record['error']['data']['type'] == 'internalError'
+    assert 'result' not in record
+
+
+def test_missing_addon_configuration_uses_shipped_defaults(admitted, monkeypatch):
+    import aqt
+    from plugin import util
+    monkeypatch.setattr(aqt.mw.addonManager, 'getConfig', lambda module: None)
+    assert util.setting('webBindAddress') == util.DEFAULT_CONFIG['webBindAddress']
+    assert util.setting('apiKey') is None
+    monkeypatch.setattr(aqt.mw.addonManager, 'getConfig', lambda module: {'webBindPort': 9876})
+    assert util.setting('webBindPort') == 9876
+    assert util.setting('webBacklog') == util.DEFAULT_CONFIG['webBacklog']
+
+
+def test_legacy_browser_reply_waits_for_gui_initialization(admitted, monkeypatch):
+    from plugin.protocol import Deferred
+    owner, service, drain, work, notifications = admitted
+    browser_ready = Deferred()
+    monkeypatch.setattr(owner.runtime.gui, 'execute', lambda *args, **kwargs: browser_ready)
+    reply = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': ''}})
+    assert not reply.done
+    browser_ready.resolve({})
+    assert reply.value == {'result': [], 'error': None}

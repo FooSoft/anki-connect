@@ -188,6 +188,8 @@ class Edit(aqt.editcurrent.EditCurrent):
     # the manager will call either the constructor or the `reopen` method
     def __init__(self, note):
         QMainWindow.__init__(self, None, Qt.WindowType.Window)
+        self.mw = aqt.mw
+        self._cleaned_up = False
         self.form = aqt.forms.editcurrent.Ui_Dialog()
         self.form.setupUi(self)
         self.setWindowTitle("Edit")
@@ -195,7 +197,6 @@ class Edit(aqt.editcurrent.EditCurrent):
         self.setMinimumHeight(400)
         restoreGeom(self, self.dialog_geometry_tag)
 
-        self.form.buttonBox.setVisible(False)   # hides the Close button bar
         self.setup_editor_buttons()
 
         self.show()
@@ -214,6 +215,9 @@ class Edit(aqt.editcurrent.EditCurrent):
         self.bring_to_foreground()
 
     def cleanup(self):
+        if self._cleaned_up:
+            return
+        self._cleaned_up = True
         gui_hooks.editor_did_load_note.remove(self.editor_did_load_note)
         gui_hooks.operation_did_execute.remove(self.on_operation_did_execute)
 
@@ -222,6 +226,9 @@ class Edit(aqt.editcurrent.EditCurrent):
         aqt.dialogs.markClosed(self.dialog_registry_tag)
 
     def closeEvent(self, evt: QCloseEvent) -> None:
+        if self._cleaned_up:
+            evt.accept()
+            return
         self.editor.call_after_note_saved(self.cleanup)
 
     # This method (mostly) solves (at least on my Windows 10 machine) three issues

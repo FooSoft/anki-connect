@@ -1,4 +1,4 @@
-"""Recoverable, request-owned media replacements for legacy note writes."""
+"""Recoverable, request-owned media replacements for both API transports."""
 import hashlib
 import json
 import shutil
@@ -44,7 +44,7 @@ class MediaTransaction:
         # Journal the original before the native manager moves it to trash.
         self.persist()
         existing_names = {path.name for path in self.media.iterdir()}
-        actual = self.service.store_bytes(filename, data, collision)['filename']
+        actual = self.service._store_bytes(filename, data, collision)['filename']
         if actual != filename:
             entry = self.entries.pop(filename)
             backup = None
