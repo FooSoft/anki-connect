@@ -388,3 +388,34 @@ def test_legacy_note_type_structure_and_conversion(native):
     old(native, 'updateNoteModel', note={'id': id, 'modelName': 'Legacy Type', 'fields': {'Front': 'converted', 'Back': 'answer'}})
     converted = service.col.get_note(id)
     assert converted.mid == model['id'] and converted['Front'] == 'converted'
+
+
+def test_sync_native_interfaces_without_credentials(native):
+    """Offline dependency checks for collection.sync and legacy sync, not a completed sync."""
+    from anki.sync import SyncAuth, SyncOutput
+
+    owner, service = native
+    col = service.col
+    # Bind the exact call shapes used by Gui.collection_sync without making
+    # network requests or closing the collection for a full upload/download.
+    auth = SyncAuth()
+    for include_media in (False, True):
+        inspect.signature(col.sync_collection).bind(auth, include_media)
+    for upload in (False, True):
+        for server_usn in (None, 0):
+            inspect.signature(col.full_upload_or_download).bind(
+                auth=auth, server_usn=server_usn, upload=upload)
+    inspect.signature(col.close_for_full_sync).bind()
+    inspect.signature(col._load_scheduler).bind()
+    output = SyncOutput()
+    for field in ('host_number', 'new_endpoint', 'server_media_usn', 'required'):
+        assert field in output.DESCRIPTOR.fields_by_name
+    for state in ('NO_CHANGES', 'NORMAL_SYNC', 'FULL_UPLOAD', 'FULL_DOWNLOAD'):
+        assert isinstance(getattr(output, state), int)
+    # These calls enter the real Rust backend and are harmless while idle.
+    assert not col.media_sync_status().active
+    assert col.abort_sync() is None
+    assert col.abort_media_sync() is None
+    assert not col.media_sync_status().active
+    col._load_scheduler()
+    assert col.sched is not None

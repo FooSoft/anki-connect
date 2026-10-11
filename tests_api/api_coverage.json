@@ -828,7 +828,7 @@
       "legacy": [
         "sync"
       ],
-      "notes": "Real ProfileManager with no credentials; asserts authenticationRequired before network sync. Authenticated sync remains untested."
+      "notes": "Real ProfileManager with no credentials; asserts authenticationRequired before network sync. Authenticated sync remains untested. Also binds the adapter call shapes against real Qt task manager, profile manager, main window, media syncer, and lifecycle hook interfaces without invoking network sync."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -885,6 +885,19 @@
       ],
       "legacy": [],
       "notes": "26 parameterized cases compare persisted native protobuf enum numbers with independently named native enum descriptors, including every gather/review order. This catches semantic drift that a public get/update round trip alone would miss."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_sync_native_interfaces_without_credentials",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [
+        "collection.sync"
+      ],
+      "legacy": [
+        "sync"
+      ],
+      "notes": "Offline compatibility preflight: real Rust media status and idle cancellation calls, scheduler reload, native sync call signatures, and response fields/constants. Neither API completes a sync in this test; authenticated sync remains untested."
     }
   ],
   "unreferenced": {

@@ -140,7 +140,7 @@ def gap(protocol, name, evidence, deferred):
         return 'Real UI effect deferred. ' + deferred[(protocol, name)]['alternative']
     state = status(evidence)
     if name in {'collection.sync', 'sync'}:
-        return 'Add a sync scenario with a disposable account; currently untested, not excluded.'
+        return 'Offline native/GUI interface checks and missing-auth rejection are covered; authenticated sync still needs a disposable account.'
     if state in {'No method test', 'Validation/mock only', 'Failure execution only'}:
         return 'Exercise the real Anki dependency and assert its result/effect across supported versions.'
     if protocol == 'legacy':

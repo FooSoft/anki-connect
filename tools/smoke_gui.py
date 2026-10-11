@@ -328,6 +328,22 @@ try:
         dialog.reject()
         print('PASS expected invalid-package import failure (dialog closed automatically)', flush=True)
     if scenario == 'profiles':
+        import inspect
+        from aqt import gui_hooks
+        # Check real GUI sync dependencies without credentials or network I/O.
+        # Signature checks do not certify full-sync or media completion.
+        for function, args, kwargs in (
+            (aqt.mw.taskman.with_progress, (lambda: None, lambda future: None), {}),
+            (aqt.mw.taskman.run_in_background, (aqt.mw.col.media_sync_status, lambda future: None), {'uses_collection': False}),
+            (aqt.mw.reopen, (), {'after_full_sync': True}),
+            (aqt.mw._refresh_after_sync, (), {}),
+            (aqt.mw.create_backup_now, (), {}),
+            (aqt.mw.media_syncer.start_monitoring, (), {}),
+            (aqt.mw.pm.set_host_number, (0,), {}),
+            (aqt.mw.pm.set_current_sync_url, (None,), {}),
+            (gui_hooks.collection_will_temporarily_close, (aqt.mw.col,), {}),
+        ):
+            inspect.signature(function).bind(*args, **kwargs)
         old_session = owner.runtime.session
         assert 'User 1' in [profile['name'] for profile in call('profiles.list')]
         assert call('profiles.getActive')['name'] == 'User 1'
