@@ -398,7 +398,16 @@ class Gui:
                 else:
                     QTimer.singleShot(100, poll)
             if dialog.web is not None:
-                dialog.web.evalWithCallback("document.querySelector('.error-box .error-text')?.textContent ?? null", error_checked)
+                # 26.08 renders initial-load failures as a SvelteKit error page,
+                # which never releases Anki's queued DOM-ready evaluations.
+                dialog.web.page().runJavaScript("""
+                    (() => {
+                        const importError = document.querySelector('.error-box .error-text')?.textContent;
+                        const pageError = document.querySelector('.message')?.textContent;
+                        return importError
+                            ?? (/^[45]\\d{2}:/.test(pageError ?? '') ? pageError : null);
+                    })()
+                """, error_checked)
         poll()
         return result
 

@@ -20,8 +20,9 @@ For new or changed behavior:
 4. Run `./test.sh`. Add supported published Anki versions to its version array when
    expanding the compatibility matrix.
 
-Use temporary collections and profiles for tests. GUI smoke scenarios are separate
-from unit tests and require a display. Sync testing requires a disposable account.
+Use temporary collections and profiles for tests. `./test.sh` runs unit tests and
+GUI smoke scenarios by default; UI testing requires a display. Use `--no-ui` to
+run only unit and contract checks. Sync testing requires a disposable account.
 
 Describe the resulting behavior and validation in your pull request. Mention any
 remaining integration limits. Packaging is optional for validation; `package.sh`

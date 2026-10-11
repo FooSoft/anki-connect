@@ -6,7 +6,7 @@ Anki-Connect is a Python add-on loaded by Anki Desktop. It lets external program
 including browser extensions such as Yomichan, query and modify the active Anki
 collection and control parts of the GUI through a JSON-over-HTTP API. Anki must
 be running; the default endpoint is `http://127.0.0.1:8765` and the API version
-is 6. The source currently enforces a minimum Anki version of 26.9.3; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
+is 6. The source currently enforces a minimum Anki version of 26.08; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure and
 [API_V1.md](API_V1.md) and [API_LEGACY.md](API_LEGACY.md) for method documentation and request examples. Where the
@@ -30,7 +30,7 @@ documenting a change.
   configuration help text.
 - `tests_api/`: default native collection and admission regression tests.
 - `test.sh`: cached Anki version matrix for both APIs.
-- `tools/smoke_gui.py`: optional GUI scenarios with disposable profiles.
+- `tools/smoke_gui.py`: GUI scenarios with disposable profiles.
 - `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
 - `package.sh`: creates `AnkiConnect.zip` through the nondestructive Python builder.
@@ -60,7 +60,8 @@ documenting a change.
 
 ## Validation
 
-Run `./test.sh` for the cached version matrix. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
+Run `./test.sh` for the cached version matrix, including UI scenarios by default.
+Use `./test.sh --no-ui` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.
 
@@ -74,7 +75,7 @@ git diff --check
 ```
 
 Native tests use disposable collections; controlled admission tests do not
-certify real GUI completion. Optional GUI scenarios use a working display:
+certify real GUI completion. GUI scenarios use a working display and run by default through `test.sh`:
 `python tools/smoke_gui.py all`. They create temporary profiles, use no sync
 credentials, and isolate processes. Check the output for Qt/JavaScript failures;
 the exit scenario checks HTTP reply delivery before native shutdown. Network sync needs a disposable account.

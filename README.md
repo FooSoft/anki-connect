@@ -15,8 +15,9 @@ restrictions on unsafe historical operations.
 
 ## Install and run
 
-This checkout requires **Anki Desktop 26.9.3 or later**. Version 26.9.3 is the tested
-baseline; runtime capability checks identify unsupported methods on other versions.
+This checkout requires **Anki Desktop 26.08 or later**. The test matrix covers
+26.08 and 26.09.3; runtime capability checks identify unsupported methods on other
+versions.
 Official Anki Desktop includes `jsonschema`, which this add-on uses for validation.
 
 For this development checkout:
@@ -77,7 +78,7 @@ and responsive for requests to complete.
 
 ## Development and tests
 
-Run the current unit suite against isolated Anki environments:
+Run all maintained unit tests and UI scenarios against isolated Anki environments:
 
 ```bash
 ./test.sh
@@ -87,7 +88,7 @@ Edit the `ANKI_VERSIONS` array at the top of [test.sh](test.sh) to test several
 versions, or supply versions for a single run:
 
 ```bash
-./test.sh 26.9.3
+./test.sh 26.8 26.9.3
 ```
 
 Only list versions published as both `anki` and `aqt` Python packages. Append any additional released versions to the command; availability is checked
@@ -100,17 +101,27 @@ ordered completion. Failed versions are reported together and make the script ex
 with a failure status.
 
 The runner also checks documentation examples, the source/generated contract,
-Python compilation, and whitespace. Native tests use disposable collections and
-controlled GUI admission; they do not certify an installed Windows bundle or real
-Qt WebEngine timing. For real GUI scenarios, use a cached environment with a
-working display:
+Python compilation, and whitespace. UI tests launch real Anki windows with temporary
+profiles, running every scenario in a separate process. They require a working
+display; on headless Linux, use `xvfb-run ./test.sh` with Xvfb installed. Missing
+display support or a failing UI scenario makes the version fail.
+
+To skip UI testing:
 
 ```bash
-.test-cache/envs/anki-26.9.3/bin/python tools/smoke_gui.py all
+./test.sh --no-ui
+./test.sh --no-ui 26.9.3
 ```
 
-GUI scenarios use temporary profiles. Network sync needs separate testing with a
-disposable account. Avoid personal collections for tests.
+Unit tests use disposable collections and controlled GUI admission. UI scenarios
+cover editors, browser, reviewer, imports, profile switching, and shutdown. They do
+not certify an installed Windows bundle. Network sync needs separate testing with
+a disposable account. Avoid personal collections for tests. You can still run an
+individual UI scenario directly, for example:
+
+```bash
+.test-cache/envs/anki-26.9.3/bin/python tools/smoke_gui.py browser
+```
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure and
 [api-v1.schema.json](api-v1.schema.json) for the machine-readable contract. When

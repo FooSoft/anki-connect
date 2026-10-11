@@ -15,7 +15,7 @@
 
 import aqt
 
-required_anki_version = (26, 9, 3)
+required_anki_version = (26, 8, 0)
 VERSION_SUFFIXES = ["b", "rc"]
 
 version_string = aqt.appVersion

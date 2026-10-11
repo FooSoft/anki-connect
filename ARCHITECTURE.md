@@ -1,6 +1,6 @@
 # Anki-Connect architecture
 
-Anki-Connect runs inside Anki Desktop 26.9.3 or later. It serves JSON-RPC 2.0 at
+Anki-Connect runs inside Anki Desktop 26.08 or later. It serves JSON-RPC 2.0 at
 `POST /api/v1` and the legacy action protocol at `/`, on `127.0.0.1:8765` by
 default. The canonical contract is [API_V1.md](API_V1.md) and
 [api-v1.schema.json](api-v1.schema.json). The legacy API still reports version 6.
@@ -103,8 +103,9 @@ unsupported subfeatures can still produce explicit errors.
 
 `tests_api/` is the default suite and uses disposable native collections, with
 controlled Qt admission for ordering tests. Real GUI checks require a working
-display and temporary profiles; sync requires a disposable test account. Run `./test.sh` to execute the maintained unit suite for both protocols against
+display and temporary profiles; sync requires a disposable test account. Run `./test.sh` to execute unit tests and all GUI scenarios for both protocols against
 the Anki versions listed in its array, using isolated cached environments.
+Use `--no-ui` to skip GUI scenarios when a display is unavailable.
 The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
 
 `tools/build_api_contract.py` bundles the source contract, including the

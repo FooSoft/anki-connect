@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Edit this array to define the default Anki compatibility matrix.
 ANKI_VERSIONS=(
+    "26.8"
     "26.9.3"
 )
 
@@ -11,8 +12,25 @@ cd "$ROOT_DIR"
 CACHE_DIR="${ANKI_TEST_CACHE:-$ROOT_DIR/.test-cache}"
 BOOTSTRAP_PYTHON="${ANKI_TEST_BOOTSTRAP_PYTHON:-python3}"
 TEST_PYTHON="${ANKI_TEST_PYTHON:-3.13}"
-if (( $# > 0 )); then
-    ANKI_VERSIONS=("$@")
+RUN_UI=1
+requested_versions=()
+for argument in "$@"; do
+    case "$argument" in
+        --no-ui) RUN_UI=0 ;;
+        -h|--help)
+            printf 'Usage: ./test.sh [--no-ui] [ANKI_VERSION ...]\n'
+            printf 'Run unit and UI tests for each version; --no-ui skips UI scenarios.\n'
+            exit 0
+            ;;
+        -*)
+            printf 'Unknown option: %s\nUse --help for usage.\n' "$argument" >&2
+            exit 2
+            ;;
+        *) requested_versions+=("$argument") ;;
+    esac
+done
+if (( ${#requested_versions[@]} > 0 )); then
+    ANKI_VERSIONS=("${requested_versions[@]}")
 fi
 for version in "${ANKI_VERSIONS[@]}"; do
     if [[ ! "$version" =~ ^[0-9][0-9A-Za-z.+-]*$ ]]; then
@@ -27,7 +45,6 @@ export UV_PYTHON_INSTALL_DIR="$CACHE_DIR/python"
 export UV_NO_PROGRESS=1
 export UV_NO_CONFIG=1
 # All dependencies and interpreters belong to the cache; never use a personal collection.
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 UV_BIN="$("$BOOTSTRAP_PYTHON" tools/bootstrap_test_uv.py "$CACHE_DIR")"
 
@@ -61,7 +78,19 @@ PY
     "$interpreter" tools/check_api_spec.py
     "$interpreter" tools/check_api_docs.py
     # This is the complete maintained unit suite, including both API protocols.
-    "$interpreter" -m pytest -q --tb=short tests_api
+    QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$interpreter" -m pytest -q --tb=short tests_api
+    if (( RUN_UI )); then
+        printf '\nRunning all UI scenarios for Anki %s\n' "$version"
+        if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" && -z "${QT_QPA_PLATFORM:-}" ]]; then
+            printf 'UI tests require a display. Use xvfb-run ./test.sh or ./test.sh --no-ui.\n' >&2
+            exit 1
+        fi
+        # Disposable profiles and trusted test content; allow WebEngine in CI containers.
+        QTWEBENGINE_DISABLE_SANDBOX="${QTWEBENGINE_DISABLE_SANDBOX:-1}" \
+            "$interpreter" tools/smoke_gui.py all
+    else
+        printf 'UI scenarios disabled (--no-ui).\n'
+    fi
     "$interpreter" -m compileall -q plugin tools tests_api
 )
 

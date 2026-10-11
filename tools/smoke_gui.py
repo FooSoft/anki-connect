@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Optional real-GUI smoke checks; always creates disposable Anki profiles.
+"""Real-GUI smoke checks, run by test.sh by default; always creates disposable Anki profiles.
 
 Run with the pinned environment and a working display:
     python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|exit]
@@ -42,6 +42,9 @@ pm.profiles()
 pm.load(pm.profiles()[0])
 pm.meta['firstRun'] = False
 pm.meta['defaultLang'] = 'en'
+# Keep unattended tests offline and free of startup update dialogs.
+pm.set_update_check(False)
+pm.set_check_for_addon_updates(False)
 pm.profile['autoSync'] = False
 pm.profile['numBackups'] = 0
 pm.save()
@@ -187,12 +190,12 @@ try:
         from aqt.import_export.import_dialog import ImportDialog
         csv = base / 'sample.csv'
         csv.write_text('imported front,imported back\n')
-        def start_import(path):
+        def start_import(path, allow_error=False):
             wait_until(lambda: aqt.mw._background_op_count == 0)
             handle = result(owner.runtime.dispatcher.invoke('application.importFile', {'path': str(path)}))
             pending = owner.runtime.operations.completions[handle['operationId']]
             wait_until(lambda: pending.done or any(isinstance(w, ImportDialog) and w.isVisible() for w in app.topLevelWidgets()))
-            if pending.done:
+            if pending.done and not allow_error:
                 result(pending)
             dialog = next(w for w in app.topLevelWidgets() if isinstance(w, ImportDialog) and w.isVisible())
             return handle, dialog
@@ -222,7 +225,7 @@ try:
         print('PASS import success', flush=True)
         broken = base / 'broken.apkg'
         broken.write_bytes(b'not a package')
-        handle, dialog = start_import(broken)
+        handle, dialog = start_import(broken, allow_error=True)
         pending = owner.runtime.operations.completions[handle['operationId']]
         clicked = [False]
         def failed_import_finished():
@@ -231,8 +234,9 @@ try:
             return pending.done
         wait_until(failed_import_finished)
         assert getattr(pending.error, 'kind', None) == 'ioError', pending.error
+        assert 'invalid Zip archive' in str(pending.error), pending.error
         dialog.reject()
-        print('PASS import failure', flush=True)
+        print('PASS expected invalid-package import failure (dialog closed automatically)', flush=True)
     if scenario == 'profiles':
         old = owner.runtime.session
         aqt.mw.pm.create('Other')
