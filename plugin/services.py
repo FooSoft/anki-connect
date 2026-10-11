@@ -132,9 +132,11 @@ class Services:
         except ApiError:
             raise
         except Exception as error:
-            from anki.errors import NotFoundError
+            from anki.errors import BackendError, NotFoundError
             if isinstance(error, NotFoundError):
                 raise ApiError('notFound', str(error)) from error
+            if method in ('packages.import', 'packages.export', 'media.get', 'media.delete') and isinstance(error, (OSError, BackendError)):
+                raise ApiError('ioError', str(error)) from error
             raise
         finally:
             self.undo_target = previous_group
@@ -199,10 +201,19 @@ class Services:
         params = {'query': query, 'limit': limit, 'sort': sort}
         if cursor:
             return self.page(None, kind + '.search', {**params, 'cursor': cursor})
+        order = False
+        if sort:
+            from anki.collection import BrowserColumns
+            order = self.col.get_browser_column(sort['column'])
+            if order is None:
+                raise ApiError('invalidParams', 'Unknown browser sort column.')
+            sorting = order.sorting_notes if kind == 'notes' else order.sorting_cards
+            if sorting == BrowserColumns.SORTING_NONE:
+                raise ApiError('invalidParams', 'Browser sort column does not support this search.')
         try:
             finder = self.col.find_notes if kind == 'notes' else self.col.find_cards
-            ids = list(finder(query, order=sort['column'] if sort else False,
-                              reverse=sort and sort['direction'] == 'descending'))
+            ids = list(finder(query, order=order,
+                              reverse=bool(sort and sort['direction'] == 'descending')))
         except Exception as error:
             raise ApiError('invalidSearch', str(error)) from error
         if sort is None:
@@ -909,7 +920,11 @@ class Services:
 
     def store_bytes(self, filename, data, collision='rename', skipIfHash=None):
         if collision != 'replace':
-            return self._store_bytes(filename, data, collision, skipIfHash)
+            from anki.errors import BackendError
+            try:
+                return self._store_bytes(filename, data, collision, skipIfHash)
+            except (OSError, BackendError) as error:
+                raise ApiError('ioError', str(error)) from error
         from .media import MediaTransaction
         transaction = MediaTransaction(self)
         try:

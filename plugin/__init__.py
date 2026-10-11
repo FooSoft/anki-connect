@@ -121,6 +121,10 @@ class AnkiConnect:
         raise Exception('unsupported action')
 
     def guard_legacy(self, name, params):
+        gui_action = name.startswith('gui') and name != 'guiExitAnki'
+        if (gui_action or name == 'reloadCollection') and getattr(self.window(), '_background_op_count', 0):
+            from .protocol import ApiError
+            raise ApiError('busy', 'A collection operation is active.')
         if self.runtime.lifecycle_active and name not in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile'):
             from .protocol import ApiError
             raise ApiError('busy', 'Collection lifecycle operation is active.')
@@ -219,7 +223,9 @@ class AnkiConnect:
                 step(0)
             elif name.startswith('gui') or name in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile', 'loadProfile', 'sync', 'reloadCollection'):
                 value = Legacy(self).call(name, params)
-                pending = value.pending.map(value.project) if isinstance(value, Accepted) and barrier else completed(value.value) if isinstance(value, Accepted) else value if isinstance(value, Deferred) else completed(value)
+                def admitted(value):
+                    return value.pending.map(value.project) if isinstance(value, Accepted) and barrier else value.value if isinstance(value, Accepted) else value
+                pending = value.map(admitted) if isinstance(value, Deferred) else completed(value).map(admitted)
             else:
                 pending = self.runtime.background(lambda service: Legacy(self, service).call(name, params))
             reply = Deferred()
@@ -235,7 +241,7 @@ class AnkiConnect:
         elif origin in util.setting('ignoreOriginList'):
             pass
         else:
-            msg = QMessageBox(None)
+            msg = QMessageBox(self.window())
             msg.setWindowTitle('A website wants to access to Anki')
             msg.setText('"{}" requests permission to use Anki through AnkiConnect. Do you want to give it access?'.format(origin))
             msg.setInformativeText("By granting permission, you'll allow the website to modify your collection on your behalf, including the execution of destructive actions such as deck deletion.")
@@ -248,19 +254,31 @@ class AnkiConnect:
                 WindowOnTopFlag = Qt.WindowStaysOnTopHint
             elif hasattr(Qt, 'WindowType') and hasattr(Qt.WindowType, 'WindowStaysOnTopHint'):
                 WindowOnTopFlag = Qt.WindowType.WindowStaysOnTopHint
-            msg.setWindowFlags(WindowOnTopFlag)
-            pressedButton = msg.exec()
-            if pressedButton == QMessageBox.StandardButton.Yes:
-                config = aqt.mw.addonManager.getConfig(__name__) or {}
-                config['webCorsOriginList'] = list(util.setting('webCorsOriginList'))
-                config['webCorsOriginList'].append(origin)
-                aqt.mw.addonManager.writeConfig(__name__, config)
-                results = {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
-            elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
-                config = aqt.mw.addonManager.getConfig(__name__) or {}
-                config['ignoreOriginList'] = list(util.setting('ignoreOriginList'))
-                config['ignoreOriginList'].append(origin)
-                aqt.mw.addonManager.writeConfig(__name__, config)
+            msg.setWindowFlag(WindowOnTopFlag, True)
+            pending = Deferred()
+            def chosen(pressedButton):
+                try:
+                    value = {'permission': 'denied'}
+                    if pressedButton == QMessageBox.StandardButton.Yes:
+                        config = aqt.mw.addonManager.getConfig(__name__) or {}
+                        config['webCorsOriginList'] = list(util.setting('webCorsOriginList'))
+                        config['webCorsOriginList'].append(origin)
+                        aqt.mw.addonManager.writeConfig(__name__, config)
+                        value = {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
+                    elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
+                        config = aqt.mw.addonManager.getConfig(__name__) or {}
+                        config['ignoreOriginList'] = list(util.setting('ignoreOriginList'))
+                        config['ignoreOriginList'].append(origin)
+                        aqt.mw.addonManager.writeConfig(__name__, config)
+                    pending.resolve(value)
+                except Exception as error:
+                    pending.resolve(error=error)
+                finally:
+                    msg.deleteLater()
+            msg.finished.connect(chosen)
+            msg.setWindowModality(Qt.WindowModality.ApplicationModal)
+            msg.show()
+            return pending
         return results
 
     @util.api()

@@ -504,6 +504,7 @@ class Gui:
         if not auth:
             raise ApiError('authenticationRequired', 'Sync authentication is not configured.')
         self.guard_lifecycle()
+        includeMedia = includeMedia and self.mw.pm.media_syncing_enabled()
         pending = Deferred()
         state = self.operation_state()
         self.runtime.lifecycle_active = True

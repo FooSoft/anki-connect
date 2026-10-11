@@ -419,3 +419,23 @@ def test_sync_native_interfaces_without_credentials(native):
     assert not col.media_sync_status().active
     col._load_scheduler()
     assert col.sched is not None
+
+
+@pytest.mark.parametrize('method', ['notes.search', 'cards.search'])
+@pytest.mark.parametrize('direction', ['ascending', 'descending'])
+def test_search_uses_native_browser_sort_columns(native, method, direction):
+    owner, service = native
+    created = [call(service, 'notes.create', **note_input(front))
+               for front in ('zebra', 'apple', 'mango')]
+    key = 'noteId' if method == 'notes.search' else 'cardIds'
+    ids = [note[key] if key == 'noteId' else note[key][0] for note in created]
+    expected = [ids[1], ids[2], ids[0]]
+    if direction == 'descending':
+        expected.reverse()
+    sort = {'column': 'noteFld', 'direction': direction}
+    page = call(service, method, query='note:Basic', sort=sort, limit=2)
+    assert page['ids'] == expected[:2]
+    assert call(service, method, query='note:Basic', sort=sort, limit=2,
+                cursor=page['nextCursor'])['ids'] == expected[2:]
+    with pytest.raises(ApiError, match='sort column'):
+        call(service, method, query='', sort={'column': 'missingColumn', 'direction': direction})

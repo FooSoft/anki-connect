@@ -26,6 +26,10 @@ For this development checkout:
 2. In Anki, open **Tools → Add-ons → Install from file**, then select the ZIP.
 3. Restart Anki and keep it running while your application uses the API.
 
+The ZIP installs under the existing Anki-Connect add-on ID (`2055492159`), replacing
+its code while retaining Anki's saved add-on configuration. It disables a linked
+`AnkiConnectDev` copy to avoid starting two listeners on the same port.
+
 For development on Linux or macOS, `./link.sh` links `plugin/` into an existing Anki
 add-ons directory. The published add-on at code
 [2055492159](https://ankiweb.net/shared/info/2055492159) is the historical release;

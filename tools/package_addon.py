@@ -1,12 +1,28 @@
 #!/usr/bin/env python3
 """Package source files without modifying or cleaning the checkout."""
-import runpy
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[1]
-runpy.run_path(str(root / 'tools/build_api_contract.py'), run_name='__main__')
-with zipfile.ZipFile(root / 'AnkiConnect.zip', 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-    for path in sorted((root / 'plugin').rglob('*')):
-        if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc':
-            archive.write(path, path.relative_to(root))
+
+def build(source, target):
+    with zipfile.ZipFile(target, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(source.rglob('*')):
+            relative = path.relative_to(source)
+            # A linked development add-on writes per-installation metadata and
+            # user files into this directory. Never distribute that local state.
+            if (path.is_file() and path.suffix != '.pyc'
+                    and not any(part in ('__pycache__', 'user_files', 'meta.json') or part.startswith('.')
+                                for part in relative.parts)):
+                archive.write(path, relative)
+
+
+def main():
+    root = Path(__file__).resolve().parents[1]
+    subprocess.run([sys.executable, str(root / 'tools/build_api_contract.py'), '--check'], check=True)
+    build(root / 'plugin', root / 'AnkiConnect.zip')
+
+
+if __name__ == '__main__':
+    main()

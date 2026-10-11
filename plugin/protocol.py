@@ -205,7 +205,9 @@ class Dispatcher:
         if isinstance(request, list):
             if not request or len(request) > SCHEMA['x-limits']['maxBatchItems']:
                 return completed(self.reply(None, error=ApiError('invalidRequest', 'Invalid batch.')))
-            return settle([self.request(item, context) for item in request]).map(
+            return settle([self.request(item, context) if isinstance(item, dict) else
+                           completed(self.reply(None, error=ApiError('invalidRequest', 'Batch items must be request objects.')))
+                           for item in request]).map(
                 lambda replies: [reply for reply in replies if reply is not None] or None)
         request_id = None
         notification = False
@@ -221,9 +223,10 @@ class Dispatcher:
                 raise ApiError('invalidRequest', 'Invalid JSON-RPC request.')
             if set(request) - {'jsonrpc', 'id', 'method', 'params'}:
                 raise ApiError('invalidRequest', 'Unknown request property.')
-            request_id = request.get('id')
-            if request_id is not None and type(request_id) not in (str, int):
+            candidate_id = request.get('id')
+            if candidate_id is not None and type(candidate_id) not in (str, int):
                 raise ApiError('invalidRequest', 'Invalid request ID.')
+            request_id = candidate_id
             notification = 'id' not in request
             method = request['method']
             params = self.params(method, request.get('params', {}))

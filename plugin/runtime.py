@@ -364,4 +364,5 @@ class Runtime:
         # The facade owns the persisted user-facing permission flow, shared by both APIs.
         from . import util
         value = self.owner.permission(context.get('origin', ''), context.get('allowed', False))
-        return completed({'permission': value['permission'], 'requireApiKey': util.setting('apiKey') is not None})
+        pending = value if isinstance(value, Deferred) else completed(value)
+        return pending.map(lambda value: {'permission': value['permission'], 'requireApiKey': util.setting('apiKey') is not None})

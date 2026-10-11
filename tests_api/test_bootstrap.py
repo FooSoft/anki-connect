@@ -36,4 +36,3 @@ def test_windows_bootstrap_download(monkeypatch, exit_code):
     else:
         assert bootstrap.download(url, 30) == b'verified transport payload'
     assert not destinations[0].parent.exists()
-

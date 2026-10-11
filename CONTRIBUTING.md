@@ -32,6 +32,10 @@ certificate validation, and uv uses the system certificate store; HTTPS
 verification and wheel SHA-256 checks remain enabled. Run UI tests in an interactive
 desktop session. Sync testing requires a disposable account.
 
+The ZIP builder checks the generated contract and packages the add-on entry point
+and manifest at the archive root. It preserves the checkout and excludes caches,
+per-installation `meta.json`, and `user_files/` from the archive.
+
 The primary testing goal is compatibility with changing Anki internals. Prefer
 real native collection/service calls and observable effects over mocks of Anki.
 Use real GUI scenarios to check widget/editor/reviewer APIs, lifecycle hooks, and

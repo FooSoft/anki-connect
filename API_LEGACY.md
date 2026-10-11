@@ -298,7 +298,7 @@ otherwise.
 
 **Completion:** completed.
 
-**Behavior:** I22 documented return correction: old null becomes boolean.
+**Behavior:** Returns a boolean; the historical implementation returned null.
 
 **v1 equivalent:** [cards.setSuspended](API_V1.md#cardssetsuspended).
 
@@ -1102,7 +1102,7 @@ Open or activate the configured Add editor and optionally populate a note draft.
 
 **Completion:** accepted; multi awaits draft ready.
 
-**Behavior:** I05/active editor variant; reject dirty-draft replacement rather than wrong-target saves.
+**Behavior:** Uses the active editor variant and rejects replacement of an unsaved draft.
 
 **v1 equivalent:** [editors.openAdd](API_V1.md#editorsopenadd), [media.store](API_V1.md#mediastore).
 
@@ -1171,7 +1171,7 @@ Update a visible Add draft. Fields and tags replace supplied values by default; 
 
 **Completion:** draft final.
 
-**Behavior:** I06/explicit deck wins after note type; both editor variants, dirty-content conflicts.
+**Behavior:** An explicit deck takes precedence over the note type default. Both editor variants reject conflicting draft changes.
 
 **v1 equivalent:** [editors.updateDraft](API_V1.md#editorsupdatedraft), [media.store](API_V1.md#mediastore).
 
@@ -2666,7 +2666,7 @@ Create a note and return its numeric ID. Invalid content or missing references r
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.create](API_V1.md#notescreate), [media.store](API_V1.md#mediastore).
 
@@ -2702,7 +2702,7 @@ Create all supplied notes in one native atomic collection batch. Any failed pref
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.createMany](API_V1.md#notescreatemany), [media.store](API_V1.md#mediastore).
 
@@ -2746,7 +2746,7 @@ booleans indicating whether or not the parameters at the corresponding index cou
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.validateMany](API_V1.md#notesvalidatemany).
 
@@ -2788,7 +2788,7 @@ objects with fields `canAdd` and `error`.
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.validateMany](API_V1.md#notesvalidatemany).
 
@@ -3289,7 +3289,7 @@ Check whether a note can be added. Returns a boolean without downloading or stor
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.validate](API_V1.md#notesvalidate).
 
@@ -3325,7 +3325,7 @@ Check whether a note can be added and return an eligibility result with an error
 
 **Completion:** completed.
 
-**Behavior:** I12–native validation; pure canAdd checks; no compensating deletion; media guarantee is separate.
+**Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
 
 **v1 equivalent:** [notes.validate](API_V1.md#notesvalidate).
 

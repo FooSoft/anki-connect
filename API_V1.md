@@ -115,7 +115,7 @@ main().catch(console.error);
 
 The endpoint uses JSON-RPC 2.0 with **named parameters**. `params` may be omitted
 when empty. Always send an `id` for commands. Entity IDs are decimal strings;
-request IDs may be strings or numbers. `/api/v1` is the API version and `"2.0"`
+request IDs may be strings, integers, or null. `/api/v1` is the API version and `"2.0"`
 is the JSON-RPC protocol version.
 
 If `apiKey` is configured, include `Authorization: Bearer <key>`. Authentication
@@ -192,7 +192,8 @@ Undo grouping does not imply a transaction across multiple native calls.
 
 Search uses Anki's query syntax; an empty query matches everything. The default
 page size is 100 and the maximum is 1000. Search results use ascending ID order
-unless a browser column sort is supplied. Explicit sorts use ID as a tie breaker.
+unless a browser column sort is supplied. Explicit sorts use Anki's native browser
+ordering; `column` is a browser column key such as `noteFld` or `cardDue`.
 
 ```python
 session = call("collection.get")["session"]
@@ -244,6 +245,8 @@ Nested execute, profile switching, and application exit are prohibited inside it
 Notifications omit `id`, return HTTP 204, and execute only read methods;
 notifications requesting side effects are ignored. Batches are limited to 100
 requests. The maximum request body is 16 MiB.
+Batch items must be request objects; nested batch arrays are rejected without
+executing their contents. Invalid request IDs produce an error with `id:null`.
 
 ### Notes and media
 
@@ -595,7 +598,7 @@ Full sync choices are waitingForUser; never launch a second sync. includeMedia i
 
 [SyncResult](#type-syncresult).
 
-**Errors:** `authenticationRequired`, `busy`, `cancelled`, `collectionUnavailable`, `internalError`, `invalidParams`, `staleSession`.
+**Errors:** `authenticationRequired`, `busy`, `cancelled`, `collectionUnavailable`, `editorConflict`, `internalError`, `invalidParams`, `ioError`, `staleSession`.
 
 **Example request**
 

@@ -136,6 +136,13 @@ class Legacy:
     def store_media(self, params):
         return self.install(params, self.acquire(params))
 
+    def prepare_gui_media(self, fields, source):
+        session = self.runtime.session
+        def prepare(service):
+            self.service = service
+            self.attachments(fields, source)
+        return self.runtime.background(prepare, expected=session)
+
     def validate(self, source):
         try:
             result = self.s('notes.validate', note=self.created_note(source, pure=True))
@@ -269,23 +276,33 @@ class Legacy:
             return accepted('editors.openNote', None, lambda value: None, noteId=str(p['note']))
         if name == 'guiAddCards':
             note = self.created_note(p['note']) if p['note'] else None
-            if note:
-                self.attachments(note['fields'], p['note'])
-                note.pop('duplicates', None)
-            return accepted('editors.openAdd', 0, lambda value: int(value['noteId'] or 0), **({'note': note} if note else {}))
+            session = runtime.session
+            def open_add(_=None):
+                runtime.capture(session)
+                if note:
+                    note.pop('duplicates', None)
+                return accepted('editors.openAdd', 0, lambda value: int(value['noteId'] or 0), **({'note': note} if note else {}))
+            if note and any(p['note'].get(kind) for kind in ('audio', 'video', 'picture')):
+                return self.prepare_gui_media(note['fields'], p['note']).map(open_add)
+            return open_add()
         if name == 'guiAddNoteSetData':
             dialog = gui.add_dialog()
             if dialog is None:
                 return {'error': 'Add Note dialog is not open', 'code': 1}
-            source = p['note']
+            source = copy.deepcopy(p['note'])
             patch = {key: value for key, value in source.items() if key in ('fields', 'tags')}
             for old, new in [('deckName', 'deck'), ('modelName', 'noteType')]:
                 if old in source:
                     patch[new] = self.ref(source[old])
-            if 'fields' in patch:
-                self.attachments(patch['fields'], source)
-            value = call('editors.updateDraft', editorId=gui.register(dialog, 'add'), patch=patch,
-                         mode='append' if p['append'] else 'replace')
+            editor_id = gui.register(dialog, 'add')
+            session = runtime.session
+            def update(_=None):
+                runtime.capture(session)
+                return call('editors.updateDraft', editorId=editor_id, patch=patch,
+                            mode='append' if p['append'] else 'replace')
+            value = (self.prepare_gui_media(patch['fields'], source).map(update)
+                     if 'fields' in patch and any(source.get(kind) for kind in ('audio', 'video', 'picture'))
+                     else update())
             return value.map(lambda value: True) if isinstance(value, Deferred) else True
         if name == 'guiReviewActive':
             return call('reviewer.get')['active']
@@ -332,36 +349,48 @@ class Legacy:
         def success(value):
             if self.media_transaction:
                 self.media_transaction.commit()
+                self.media_transaction = None
             return value
         def failure(error):
             if self.media_transaction and not self.media_transaction.committed:
                 failures = self.media_transaction.rollback()
+                self.media_transaction = None
                 if failures:
                     raise ApiError('ioError', 'Media restoration failed.', {'failures': failures}) from error
             raise error
-        try:
-            value = self.dispatch(name, p)
+        def cleanup(value=None, error=None):
+            if self.media_transaction and name.startswith('gui'):
+                try:
+                    return self.runtime.background(lambda service: failure(error) if error else success(value),
+                                                   expected=self.service.session)
+                except Exception:
+                    # A profile switch can close the pinned collection before
+                    # cleanup admission. Retain its journal for recovery there.
+                    self.media_transaction._active.discard(self.media_transaction.path)
+                    self.media_transaction = None
+                    raise
+            return failure(error) if error else success(value)
+        def wrapped(value):
             if isinstance(value, Accepted):
-                pending = Deferred()
-                def finish(source):
-                    try:
-                        pending.resolve(success(source.value) if not source.error else failure(source.error))
-                    except Exception as error:
-                        pending.resolve(error=error)
-                value.pending.then(finish)
-                return Accepted(value.value, pending, value.project)
+                return Accepted(value.value, wrapped(value.pending), value.project)
             if isinstance(value, Deferred):
                 pending = Deferred()
                 def finish(source):
                     try:
-                        pending.resolve(success(source.value) if not source.error else failure(source.error))
+                        output = cleanup(error=source.error) if source.error else wrapped(source.value)
+                        if isinstance(output, Deferred):
+                            output.then(lambda final: pending.resolve(final.value, final.error))
+                        else:
+                            pending.resolve(output)
                     except Exception as error:
                         pending.resolve(error=error)
                 value.then(finish)
                 return pending
-            return success(value)
+            return cleanup(value)
+        try:
+            return wrapped(self.dispatch(name, p))
         except Exception as error:
-            return failure(error)
+            return cleanup(error=error)
 
     def dispatch(self, name, p):
         from . import util

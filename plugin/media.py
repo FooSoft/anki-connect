@@ -21,7 +21,11 @@ class MediaTransaction:
         self._active.add(self.path)
         self.entries = {}
         self.committed = False
-        self.persist()
+        try:
+            self.persist()
+        except BaseException:
+            self._active.discard(self.path)
+            raise
 
     def persist(self):
         pending = self.path / 'manifest.tmp'
@@ -59,16 +63,20 @@ class MediaTransaction:
 
     def commit(self):
         self.committed = True
-        self.persist()
-        shutil.rmtree(self.path)
-        self._active.discard(self.path)
+        try:
+            self.persist()
+            shutil.rmtree(self.path)
+        finally:
+            self._active.discard(self.path)
 
     def rollback(self):
-        failures = self.restore(self.service, self.path, self.entries)
-        if not failures:
-            shutil.rmtree(self.path)
-        self._active.discard(self.path)
-        return failures
+        try:
+            failures = self.restore(self.service, self.path, self.entries)
+            if not failures:
+                shutil.rmtree(self.path)
+            return failures
+        finally:
+            self._active.discard(self.path)
 
     @staticmethod
     def restore(service, directory, entries, interrupted=False):

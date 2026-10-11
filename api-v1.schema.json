@@ -13486,8 +13486,10 @@
         "busy",
         "cancelled",
         "collectionUnavailable",
+        "editorConflict",
         "internalError",
         "invalidParams",
+        "ioError",
         "staleSession"
       ],
       "notes": "Full sync choices are waitingForUser; never launch a second sync. includeMedia is intersected with profile media-sync settings.",

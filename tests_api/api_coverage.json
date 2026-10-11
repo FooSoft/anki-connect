@@ -805,7 +805,8 @@
         "notes.create",
         "profiles.getActive",
         "profiles.list",
-        "profiles.switch"
+        "profiles.switch",
+        "access.requestPermission"
       ],
       "legacy": [
         "getActiveProfile",
@@ -813,9 +814,10 @@
         "guiCheckDatabase",
         "guiUndo",
         "loadProfile",
-        "reloadCollection"
+        "reloadCollection",
+        "requestPermission"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred. Native permission prompts return without nested event loops; grant/deny responses and persisted origin settings are checked through both transport wrappers."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -898,6 +900,53 @@
         "sync"
       ],
       "notes": "Offline compatibility preflight: real Rust media status and idle cancellation calls, scheduler reload, native sync call signatures, and response fields/constants. Neither API completes a sync in this test; authenticated sync remains untested."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_search_uses_native_browser_sort_columns",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.search",
+        "cards.search"
+      ],
+      "legacy": [],
+      "notes": "Native browser sort columns in both directions for notes/cards, with pagination and invalid-column rejection. Regression for passing browser column keys as raw SQL."
+    },
+    {
+      "source": "tests_api/test_boundaries.py",
+      "case": "test_sync_respects_profile_media_setting",
+      "layer": "mocked-gui",
+      "outcome": "not-executed",
+      "v1": [
+        "collection.sync"
+      ],
+      "legacy": [],
+      "notes": "Controlled orchestration verifies that the request and profile media setting are intersected, monitoring follows that decision, and lifecycle admission is released. Network sync is replaced; this does not certify authenticated sync."
+    },
+    {
+      "source": "tests_api/test_boundaries.py",
+      "case": "test_legacy_gui_media_preparation_and_cleanup_are_queued",
+      "layer": "mocked-gui",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "guiAddCards",
+        "guiAddNoteSetData"
+      ],
+      "notes": "Real native media writes and queued preparation/cleanup; controlled GUI completion verifies accepted-result projection and restoration after editor conflict. GUI objects are substituted; real editor media persistence is separately checked by the editors scenario."
+    },
+    {
+      "source": "tests_api/test_boundaries.py",
+      "case": "test_native_package_io_failures_are_reported_without_closing_collection",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "packages.import",
+        "packages.export"
+      ],
+      "legacy": [],
+      "notes": "Native corrupt-package import and missing-directory export produce ioError while the collection remains usable."
     }
   ],
   "unreferenced": {

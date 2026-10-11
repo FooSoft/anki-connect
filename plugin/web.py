@@ -30,7 +30,7 @@ class WebClient:
     def advance(self, recvSize=65536):
         if self.sock is None:
             return False
-        if not self.pending and not self.writeBuff and time.monotonic() - self.started > 10:
+        if not self.pending and time.monotonic() - self.started > 10:
             self.close()
             return False
         rlist, wlist = select.select([self.sock] if not self.pending and not self.writeBuff else [], [self.sock] if self.writeBuff else [], [], 0)[:2]
@@ -40,6 +40,7 @@ class WebClient:
                 if not msg:
                     self.close()
                     return False
+                self.started = time.monotonic()
                 self.readBuff += msg
                 req, length = self.parseRequest(self.readBuff)
                 if req is not None:
@@ -48,6 +49,7 @@ class WebClient:
                     reply = self.handler(req)
                     def finish(source):
                         self.pending = False
+                        self.started = time.monotonic()
                         if self.sock is not None:
                             self.writeBuff = source.value if not source.error else b'HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n'
                     (reply if isinstance(reply, Deferred) else completed(reply)).then(finish)
@@ -63,6 +65,8 @@ class WebClient:
         if wlist and self.writeBuff:
             try:
                 length = self.sock.send(self.writeBuff)
+                if length:
+                    self.started = time.monotonic()
                 self.writeBuff = self.writeBuff[length:]
                 if not self.writeBuff:
                     self.close()

@@ -104,15 +104,29 @@ def call(method, **params):
                 raise
             app.processEvents()
 def old(action, **params):
-    wait_until(lambda: aqt.mw._background_op_count == 0)
-    previous = set(owner.runtime.operations.records)
-    reply = result(owner.handler_async({'action': action, 'version': 6, 'params': params}))
-    assert reply['error'] is None, (action, reply)
-    # Legacy GUI actions may acknowledge admission before native completion.
-    # Preserve that API behavior while checking the real operation's outcome.
-    for id in owner.runtime.operations.records.keys() - previous:
-        result(owner.runtime.operations.completions[id])
-    return reply['result']
+    deadline = time.monotonic() + 30
+    while True:
+        wait_until(lambda: aqt.mw._background_op_count == 0)
+        previous = set(owner.runtime.operations.records)
+        reply = result(owner.handler_async({'action': action, 'version': 6, 'params': params}))
+        if (reply['error'] == 'A collection operation is active.'
+                and time.monotonic() < deadline):
+            app.processEvents()
+            continue
+        assert reply['error'] is None, (action, reply)
+        try:
+            # Legacy GUI actions may acknowledge admission before completion.
+            # Preserve that timing while checking the real operation's outcome.
+            for id in owner.runtime.operations.records.keys() - previous:
+                result(owner.runtime.operations.completions[id])
+            return reply['result']
+        except Exception as error:
+            if (getattr(error, 'kind', None) != 'busy'
+                    or str(error) != 'A collection operation is active.'
+                    or time.monotonic() >= deadline):
+                raise
+            # Like call(), retry only this rejection before GUI execution.
+            app.processEvents()
 try:
     wait_until(lambda: aqt.mw.col is not None and aqt.mw.state == 'deckBrowser')
     print('PASS loaded disposable profile', base, flush=True)
@@ -123,7 +137,13 @@ try:
         from anki.collection import ExperimentFlag
         for svelte in [False, True]:
             aqt.mw.col._experiments[str(ExperimentFlag.SVELTE_EDITOR)] = svelte
-            assert old('guiAddCards') == 0
+            import base64
+            open_media = ('open-' + str(svelte) + '.txt').lower()
+            assert old('guiAddCards', note={'modelName': 'Basic', 'deckName': 'Default',
+                       'fields': {'Front': '', 'Back': ''},
+                       'audio': [{'filename': open_media, 'data': base64.b64encode(b'open media').decode(),
+                                  'fields': []}]}) == 0
+            assert (Path(aqt.mw.col.media.dir()) / open_media).read_bytes() == b'open media'
             empty = call('editors.openAdd')
             assert empty['noteId'] is None and not any(empty['fields'].values()), empty
             draft = call('editors.openAdd', note={'noteType': {'name': 'Basic'}, 'deck': {'name': 'Default'}, 'fields': {'Front': 'Draft question ' + str(svelte), 'Back': 'Draft answer'}, 'tags': ['gui-smoke']})
@@ -132,7 +152,12 @@ try:
             print('PASS open Add', draft['variant'], flush=True)
             updated = call('editors.updateDraft', editorId=draft['id'], mode='append', patch={'fields': {'Back': ' appended'}, 'tags': ['extra']})
             assert updated['fields']['Back'] == 'Draft answer appended', updated
-            assert old('guiAddNoteSetData', note={'fields': {'Back': ' legacy'}}, append=True)
+            import base64
+            media_name = ('draft-' + str(svelte) + '.txt').lower()
+            assert old('guiAddNoteSetData', note={'fields': {'Back': ' legacy'},
+                       'audio': [{'filename': media_name, 'data': base64.b64encode(b'draft media').decode(),
+                                  'fields': ['Back']}]}, append=True)
+            assert (Path(aqt.mw.col.media.dir()) / media_name).read_bytes() == b'draft media'
             print('PASS update Add', updated['variant'], flush=True)
             dialog = owner.runtime.gui.add_dialog()
             before = aqt.mw.col.note_count()
@@ -147,6 +172,8 @@ try:
                 result(owner.runtime.gui.javascript(dialog.editor, 'document.querySelectorAll("button").forEach(button => { if (button.textContent.trim() === "Add") button.click(); }); return true;'))
             wait_until(lambda: aqt.mw.col.note_count() == before + 1)
             wait_until(lambda: aqt.mw._background_op_count == 0)
+            saved = aqt.mw.col.find_notes('"Draft question ' + str(svelte) + '"')
+            assert len(saved) == 1 and aqt.mw.col.get_note(saved[0])['Back'] == 'Draft answer appended legacy[sound:' + media_name + ']'
             print('PASS save Add', draft['variant'], flush=True)
             if not hasattr(dialog.editor, 'note'):
                 wait_until(lambda: not any(result(owner.runtime.gui.javascript(dialog.editor, 'return getNoteInfo().fields;'))))
@@ -375,6 +402,32 @@ try:
     if scenario == 'profiles':
         import inspect
         from aqt import gui_hooks
+        from aqt.qt import QMessageBox
+        from plugin import util
+        from plugin.web import WebRequest
+        import json
+        # Use native add-on configuration persistence in this disposable base.
+        addon = Path(aqt.mw.addonManager.addonsFolder('plugin'))
+        addon.mkdir(exist_ok=True)
+        (addon / 'config.json').write_text(json.dumps(util.DEFAULT_CONFIG), encoding='utf-8')
+        for protocol, choice, ignore in (('v1', 'yes', False), ('legacy', 'no', True)):
+            origin = 'https://permission-' + protocol + '.example'
+            body = ({'jsonrpc': '2.0', 'id': 1, 'method': 'access.requestPermission', 'params': {}}
+                    if protocol == 'v1' else {'action': 'requestPermission', 'version': 6})
+            reply = owner.server.handlerWrapper(WebRequest(b'POST', {b'origin': origin.encode()},
+                                                         json.dumps(body).encode(),
+                                                         b'/api/v1' if protocol == 'v1' else b'/'))
+            assert isinstance(reply, Deferred) and not reply.done
+            # Returning here proves the prompt did not enter a nested event loop.
+            wait_until(lambda: any(isinstance(w, QMessageBox) and w.isVisible() for w in app.topLevelWidgets()))
+            prompt = next(w for w in app.topLevelWidgets() if isinstance(w, QMessageBox) and w.isVisible())
+            prompt.checkBox().setChecked(ignore)
+            prompt.button(QMessageBox.StandardButton.Yes if choice == 'yes' else QMessageBox.StandardButton.No).click()
+            response = json.loads(result(reply).split(b'\r\n\r\n', 1)[1])
+            assert response['result']['permission'] == ('granted' if choice == 'yes' else 'denied')
+            key = 'webCorsOriginList' if choice == 'yes' else 'ignoreOriginList'
+            assert origin in util.setting(key)
+        print('PASS native permission prompts and persistence for both protocols', flush=True)
         # Check real GUI sync dependencies without credentials or network I/O.
         # Signature checks do not certify full-sync or media completion.
         for function, args, kwargs in (
