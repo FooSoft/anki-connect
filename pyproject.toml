@@ -1,0 +1,13 @@
+[project]
+name = "anki-connect-api"
+version = "1.0.0"
+description = "A consistent Anki Desktop API with legacy Anki-Connect forwarders"
+requires-python = ">=3.10"
+dependencies = ["jsonschema>=4.18"]
+
+[project.optional-dependencies]
+test = ["anki==26.9.3", "aqt==26.9.3", "pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_api"]
+addopts = "-p no:anki -p no:xvfb"
