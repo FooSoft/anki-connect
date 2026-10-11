@@ -206,7 +206,6 @@ def source_actions():
 def main():
     schema = json.loads((ROOT / 'api-v1.schema.json').read_text())
     reference = (ROOT / 'API_V1.md').read_text()
-    mapping = (ROOT / 'LEGACY_API_MAPPING.md').read_text()
     validator = ExampleValidator(schema)
     validator.inspect(schema)
     methods = schema['x-methods']
@@ -230,22 +229,11 @@ def main():
             if 'default' in value:
                 validator.validate(value, value['default'])
     actions, aliases = source_actions()
-    mapped = re.findall(r'^\| `([A-Za-z0-9_]+)\((.*?)\)` \|', mapping, re.M)
-    check(dict(mapped) == actions and len(mapped) == len(actions),
-          'Legacy map does not cover exact source signatures/defaults')
-    for name, alias in aliases:
-        check(f'`{alias[1]}`' in mapping and str(alias[0]) in mapping,
-              f'Versioned alias missing: {name} {alias}')
-    for line in mapping.splitlines():
-        if not re.match(r'^\| `[A-Za-z0-9_]+\(', line):
-            continue
-        targets = line.split(' | ')[1]
-        for target in re.findall(r'`([^`]+)`', targets):
-            check(target in methods, f'Unknown legacy service target: {target}')
-    findings = set(re.findall(r'^### (I\d\d) ', (ROOT / 'INTEGRATION_ISSUES.md').read_text(), re.M))
-    dispositions = set(re.findall(r'^\| (I\d\d|L\d\d) \|', mapping, re.M))
-    check(findings | {'L01', 'L02', 'L03', 'L04'} == dispositions,
-          'Integration/lifecycle dispositions differ from audit')
+    targets = schema['x-legacyTargets']
+    check(set(targets) == set(actions), 'Legacy registry differs from source actions')
+    for action, services in targets.items():
+        check(bool(services), f'No targets for legacy action: {action}')
+        check(set(services) <= set(methods), f'Unknown legacy service target: {action}')
     check(set(schema['x-limits']) == set(schema['$defs']['Description']['properties']['limits']['properties']),
           'Discovery limits differ from declared limits')
     for item in schema['x-examples']:
@@ -287,7 +275,6 @@ def main():
             check(not negative.is_valid(item['params']), 'Full validator accepted a negative fixture')
         print('Official Draft 2020-12 metaschema and example validation passed.')
     print(f'{len(methods)} methods; {len(actions)} legacy actions; {len(aliases)} aliases; '
-          f'{len(dispositions)} audit/lifecycle dispositions; '
           f'{len(schema["x-examples"])} positive and {len(schema["x-invalidExamples"])} negative examples checked.')
 
 

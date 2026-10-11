@@ -15985,7 +15985,7 @@
             "name": "Japanese"
           },
           "fields": {
-            "Front": "\u732b",
+            "Front": "猫",
             "Back": "cat"
           },
           "tags": [
@@ -16027,7 +16027,7 @@
             "name": "Basic"
           },
           "fields": {
-            "Front": "\u732b",
+            "Front": "猫",
             "Back": "cat"
           },
           "tags": [],
@@ -16202,7 +16202,7 @@
                   "name": "Japanese"
                 },
                 "fields": {
-                  "Front": "\u732b",
+                  "Front": "猫",
                   "Back": "cat"
                 }
               }
@@ -16241,7 +16241,7 @@
               },
               "fields": {
                 "Front": "one",
-                "Back": "\u4e00"
+                "Back": "一"
               }
             },
             {
@@ -16253,7 +16253,7 @@
               },
               "fields": {
                 "Front": "two",
-                "Back": "\u4e8c"
+                "Back": "二"
               }
             }
           ],
@@ -16680,5 +16680,409 @@
     "staleCursor": 1014,
     "vetoed": 1015,
     "compatibilityError": 1016
+  },
+  "x-legacyTargets": {
+    "version": [
+      "api.describe"
+    ],
+    "requestPermission": [
+      "access.requestPermission"
+    ],
+    "getProfiles": [
+      "profiles.list"
+    ],
+    "getActiveProfile": [
+      "profiles.getActive"
+    ],
+    "loadProfile": [
+      "profiles.switch"
+    ],
+    "sync": [
+      "collection.sync"
+    ],
+    "multi": [
+      "api.execute"
+    ],
+    "getNumCardsReviewedToday": [
+      "statistics.getToday"
+    ],
+    "getNumCardsReviewedByDay": [
+      "statistics.getReviewDays"
+    ],
+    "getCollectionStatsHTML": [
+      "statistics.getHtml"
+    ],
+    "deckNames": [
+      "decks.list"
+    ],
+    "deckNamesAndIds": [
+      "decks.list"
+    ],
+    "getDecks": [
+      "cards.getMany"
+    ],
+    "createDeck": [
+      "decks.create"
+    ],
+    "changeDeck": [
+      "decks.get",
+      "decks.create",
+      "cards.move"
+    ],
+    "deleteDecks": [
+      "decks.delete"
+    ],
+    "getDeckConfig": [
+      "decks.get",
+      "deckPresets.get"
+    ],
+    "saveDeckConfig": [
+      "deckPresets.update"
+    ],
+    "setDeckConfigId": [
+      "deckPresets.assign"
+    ],
+    "cloneDeckConfigId": [
+      "deckPresets.create"
+    ],
+    "removeDeckConfigId": [
+      "deckPresets.delete"
+    ],
+    "getDeckStats": [
+      "decks.getCounts"
+    ],
+    "storeMediaFile": [
+      "media.store"
+    ],
+    "retrieveMediaFile": [
+      "media.get"
+    ],
+    "getMediaFilesNames": [
+      "media.list"
+    ],
+    "deleteMediaFile": [
+      "media.delete"
+    ],
+    "getMediaDirPath": [
+      "media.getDirectory"
+    ],
+    "addNote": [
+      "notes.create",
+      "media.store"
+    ],
+    "canAddNote": [
+      "notes.validate"
+    ],
+    "canAddNoteWithErrorDetail": [
+      "notes.validate"
+    ],
+    "updateNoteFields": [
+      "notes.update",
+      "media.store"
+    ],
+    "updateNote": [
+      "notes.update",
+      "media.store"
+    ],
+    "updateNoteModel": [
+      "notes.planConversion",
+      "notes.convert",
+      "notes.update"
+    ],
+    "updateNoteTags": [
+      "notes.update"
+    ],
+    "getNoteTags": [
+      "notes.get"
+    ],
+    "addTags": [
+      "tags.add",
+      "tags.remove"
+    ],
+    "removeTags": [
+      "tags.remove"
+    ],
+    "getTags": [
+      "tags.list"
+    ],
+    "clearUnusedTags": [
+      "tags.deleteUnused"
+    ],
+    "replaceTags": [
+      "tags.replace"
+    ],
+    "replaceTagsInAllNotes": [
+      "tags.replace"
+    ],
+    "setEaseFactors": [
+      "advanced.cards.update"
+    ],
+    "setSpecificValueOfCard": [
+      "advanced.cards.update",
+      "cards.move",
+      "cards.setFlags"
+    ],
+    "getEaseFactors": [
+      "cards.getMany"
+    ],
+    "suspend": [
+      "cards.setSuspended"
+    ],
+    "unsuspend": [
+      "cards.setSuspended"
+    ],
+    "suspended": [
+      "cards.get"
+    ],
+    "areSuspended": [
+      "cards.getMany"
+    ],
+    "areDue": [
+      "scheduling.getDue"
+    ],
+    "getIntervals": [
+      "scheduling.get",
+      "reviews.list"
+    ],
+    "modelNames": [
+      "noteTypes.list"
+    ],
+    "createModel": [
+      "noteTypes.create"
+    ],
+    "modelNamesAndIds": [
+      "noteTypes.list"
+    ],
+    "findModelsById": [
+      "noteTypes.get"
+    ],
+    "findModelsByName": [
+      "noteTypes.get"
+    ],
+    "modelNameFromId": [
+      "noteTypes.get"
+    ],
+    "modelFieldNames": [
+      "noteTypes.get"
+    ],
+    "modelFieldDescriptions": [
+      "noteTypes.get"
+    ],
+    "modelFieldFonts": [
+      "noteTypes.get"
+    ],
+    "modelFieldsOnTemplates": [
+      "noteTypes.getTemplateUsage"
+    ],
+    "modelTemplates": [
+      "noteTypes.get"
+    ],
+    "modelStyling": [
+      "noteTypes.get"
+    ],
+    "updateModelTemplates": [
+      "noteTypes.editStructure"
+    ],
+    "updateModelStyling": [
+      "noteTypes.update"
+    ],
+    "findAndReplaceInModels": [
+      "noteTypes.replaceText"
+    ],
+    "modelTemplateRename": [
+      "noteTypes.editStructure"
+    ],
+    "modelTemplateReposition": [
+      "noteTypes.editStructure"
+    ],
+    "modelTemplateAdd": [
+      "noteTypes.get",
+      "noteTypes.editStructure"
+    ],
+    "modelTemplateRemove": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldRename": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldReposition": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldAdd": [
+      "noteTypes.get",
+      "noteTypes.editStructure"
+    ],
+    "modelFieldRemove": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldSetFont": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldSetFontSize": [
+      "noteTypes.editStructure"
+    ],
+    "modelFieldSetDescription": [
+      "noteTypes.editStructure"
+    ],
+    "deckNameFromId": [
+      "decks.get"
+    ],
+    "findNotes": [
+      "notes.search"
+    ],
+    "findCards": [
+      "cards.search"
+    ],
+    "cardsInfo": [
+      "cards.getMany",
+      "cards.render",
+      "notes.get",
+      "noteTypes.get",
+      "scheduling.predict"
+    ],
+    "cardsModTime": [
+      "cards.getMany"
+    ],
+    "forgetCards": [
+      "scheduling.reset"
+    ],
+    "relearnCards": [
+      "scheduling.predict",
+      "scheduling.answer"
+    ],
+    "answerCards": [
+      "scheduling.predict",
+      "scheduling.answerMany",
+      "reviewer.answer"
+    ],
+    "cardReviews": [
+      "reviews.list"
+    ],
+    "getReviewsOfCards": [
+      "reviews.list"
+    ],
+    "setDueDate": [
+      "scheduling.setDueDate"
+    ],
+    "reloadCollection": [
+      "collection.refresh"
+    ],
+    "getLatestReviewID": [
+      "reviews.getLatestId"
+    ],
+    "insertReviews": [
+      "advanced.reviews.import"
+    ],
+    "notesInfo": [
+      "notes.search",
+      "notes.getMany",
+      "noteTypes.get",
+      "collection.get"
+    ],
+    "notesModTime": [
+      "notes.getMany"
+    ],
+    "deleteNotes": [
+      "notes.delete"
+    ],
+    "removeEmptyNotes": [
+      "notes.findEmpty",
+      "noteTypes.deleteUnused"
+    ],
+    "cardsToNotes": [
+      "cards.getMany"
+    ],
+    "guiBrowse": [
+      "browser.open",
+      "cards.search"
+    ],
+    "guiEditNote": [
+      "editors.openNote"
+    ],
+    "guiSelectNote": [
+      "browser.select"
+    ],
+    "guiSelectCard": [
+      "browser.select"
+    ],
+    "guiSelectedNotes": [
+      "browser.getSelection"
+    ],
+    "guiAddNoteSetData": [
+      "editors.updateDraft",
+      "media.store"
+    ],
+    "guiAddCards": [
+      "editors.openAdd",
+      "media.store"
+    ],
+    "guiReviewActive": [
+      "reviewer.get"
+    ],
+    "guiCurrentCard": [
+      "reviewer.get",
+      "notes.get",
+      "noteTypes.get"
+    ],
+    "guiStartCardTimer": [
+      "reviewer.get",
+      "reviewer.startTimer"
+    ],
+    "guiShowQuestion": [
+      "reviewer.get",
+      "reviewer.showQuestion"
+    ],
+    "guiShowAnswer": [
+      "reviewer.get",
+      "reviewer.showAnswer"
+    ],
+    "guiAnswerCard": [
+      "reviewer.get",
+      "reviewer.answer"
+    ],
+    "guiPlayAudio": [
+      "reviewer.get",
+      "reviewer.playAudio"
+    ],
+    "guiUndo": [
+      "collection.undo"
+    ],
+    "guiDeckOverview": [
+      "application.navigate"
+    ],
+    "guiDeckBrowser": [
+      "application.navigate"
+    ],
+    "guiDeckReview": [
+      "application.navigate"
+    ],
+    "guiImportFile": [
+      "application.importFile"
+    ],
+    "guiExitAnki": [
+      "application.exit"
+    ],
+    "guiCheckDatabase": [
+      "collection.checkIntegrity"
+    ],
+    "addNotes": [
+      "notes.createMany",
+      "media.store"
+    ],
+    "canAddNotes": [
+      "notes.validateMany"
+    ],
+    "canAddNotesWithErrorDetail": [
+      "notes.validateMany"
+    ],
+    "exportPackage": [
+      "packages.export"
+    ],
+    "importPackage": [
+      "packages.import"
+    ],
+    "apiReflect": [
+      "api.describe"
+    ]
   }
 }

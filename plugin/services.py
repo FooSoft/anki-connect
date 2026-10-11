@@ -7,8 +7,7 @@ import os
 import re
 import time
 import unicodedata
-import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .protocol import ApiError, error_record, timestamp

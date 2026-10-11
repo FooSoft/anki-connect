@@ -9,7 +9,7 @@ be running; the default endpoint is `http://127.0.0.1:8765` and the API version
 is 6. The source currently enforces a minimum Anki version of 26.9.3; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure and
-[README.md](README.md) for action documentation and request examples. Where the
+[API_V1.md](API_V1.md) and [API_LEGACY.md](API_LEGACY.md) for method documentation and request examples. Where the
 README and implementation differ, inspect the implementation before making or
 documenting a change.
 
@@ -29,7 +29,7 @@ documenting a change.
 - `plugin/config.json`: shipped add-on settings; `plugin/config.md` supplies the
   configuration help text.
 - `tests_api/`: default native collection and admission regression tests.
-- `tests/`: retained legacy tests with obsolete pytest-anki dependencies.
+- `test.sh`: cached Anki version matrix for both APIs.
 - `tools/smoke_gui.py`: optional GUI scenarios with disposable profiles.
 - `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
@@ -42,7 +42,7 @@ documenting a change.
 - Add new v1 methods to the source schema and shared adapters, then regenerate
   `plugin/contract.py`. Legacy actions use `@util.api()`; preserve versioned aliases
   and the dispatcher rules when changing them.
-- Add README documentation with request/result examples and behavior tests for
+- Add API guide documentation with request/result examples and behavior tests for
   new or changed API features, following the contribution guidance in README.
 - Keep GUI access and request admission on Qt's main thread. Use Anki's
   serialized task manager for collection work and completion callbacks for native
@@ -60,7 +60,7 @@ documenting a change.
 
 ## Validation
 
-The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
+Run `./test.sh` for the cached version matrix. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.
 
@@ -68,6 +68,7 @@ environment. Do not install pytest-anki for this suite.
 python tools/build_api_contract.py
 python -m pytest -q --tb=short
 python tools/check_api_spec.py
+python tools/check_api_docs.py
 python -m compileall -q plugin tools
 git diff --check
 ```
@@ -76,8 +77,7 @@ Native tests use disposable collections; controlled admission tests do not
 certify real GUI completion. Optional GUI scenarios use a working display:
 `python tools/smoke_gui.py all`. They create temporary profiles, use no sync
 credentials, and isolate processes. Check the output for Qt/JavaScript failures;
-the exit scenario checks HTTP reply delivery before native shutdown. See the handoff for remaining
-integration limitations. Network sync needs a disposable account.
+the exit scenario checks HTTP reply delivery before native shutdown. Network sync needs a disposable account.
 
 Use temporary profiles rather than personal collections. Packaging is not a
 routine validation step and must not clean untracked or ignored files.

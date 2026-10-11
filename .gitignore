@@ -3,3 +3,6 @@ AnkiConnect.zip
 meta.json
 .idea/
 .tox/
+.test-cache/
+.pytest_cache/
+__pycache__/

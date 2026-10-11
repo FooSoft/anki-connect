@@ -31,7 +31,6 @@ if anki_version < required_anki_version:
 
 import inspect
 import json
-import anki
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 from . import util, web
 from .edit import Edit

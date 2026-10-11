@@ -103,10 +103,11 @@ unsupported subfeatures can still produce explicit errors.
 
 `tests_api/` is the default suite and uses disposable native collections, with
 controlled Qt admission for ordering tests. Real GUI checks require a working
-display and temporary profiles; sync requires a disposable test account. The old
-`tests/` suite is retained as legacy reference and depends on obsolete pytest-anki
-interfaces. [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md) records current
-validation and remaining integration work.
+display and temporary profiles; sync requires a disposable test account. Run `./test.sh` to execute the maintained unit suite for both protocols against
+the Anki versions listed in its array, using isolated cached environments.
+The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
 
-`tools/build_api_contract.py` bundles the source contract. `package.sh` invokes
+`tools/build_api_contract.py` bundles the source contract, including the
+`x-legacyTargets` registry used for legacy capability checks. Use `--check` to
+verify generated output without writing files. `package.sh` invokes
 `tools/package_addon.py`, which builds a ZIP without cleaning the checkout.

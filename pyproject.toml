@@ -10,4 +10,3 @@ test = ["anki==26.9.3", "aqt==26.9.3", "pytest>=8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests_api"]
-addopts = "-p no:anki -p no:xvfb"

@@ -1,10 +1,9 @@
 """Qt adapters. All functions in this module run on the main thread."""
-import copy
 import json
 import uuid
 import time
 
-from .protocol import ApiError, Deferred, completed, timestamp
+from .protocol import ApiError, Deferred, timestamp
 from .services import RATINGS, entity_id
 
 

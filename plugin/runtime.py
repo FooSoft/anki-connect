@@ -4,7 +4,6 @@ import hashlib
 import json
 import time
 import uuid
-from pathlib import Path
 
 from .contract import SCHEMA
 from .gui import Gui
