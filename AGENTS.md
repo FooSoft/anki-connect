@@ -29,7 +29,7 @@ documenting a change.
 - `plugin/config.json`: shipped add-on settings; `plugin/config.md` supplies the
   configuration help text.
 - `tests_api/`: default native collection and admission regression tests.
-- `test.sh`: cached Anki version matrix for both APIs.
+- `test.sh` and `test.ps1`: cached Anki version matrix for both APIs on Unix and Windows.
 - `tools/smoke_gui.py`: GUI scenarios with disposable profiles.
 - `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
@@ -61,6 +61,7 @@ documenting a change.
 ## Validation
 
 Run `./test.sh` for the cached version matrix, including UI scenarios by default.
+On Windows, run `.\test.ps1`; `-NoUI` skips UI scenarios.
 Use `./test.sh --no-ui` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.

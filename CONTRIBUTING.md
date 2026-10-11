@@ -17,12 +17,14 @@ For new or changed behavior:
    Do not edit the generated file by hand.
 3. Update the appropriate API guide with parameter and result documentation and a
    valid request example. Add behavior tests to `tests_api/`.
-4. Run `./test.sh`. Add supported published Anki versions to its version array when
+4. Run `./test.sh` or `.\test.ps1` on Windows. Add supported published Anki versions to both runners' version arrays when
    expanding the compatibility matrix.
 
 Use temporary collections and profiles for tests. `./test.sh` runs unit tests and
 GUI smoke scenarios by default; UI testing requires a display. Use `--no-ui` to
-run only unit and contract checks. Sync testing requires a disposable account.
+run only unit and contract checks (`-NoUI` with PowerShell). The Windows runner
+uses the same tests and cached environments; run UI tests in an interactive
+desktop session. Sync testing requires a disposable account.
 
 Describe the resulting behavior and validation in your pull request. Mention any
 remaining integration limits. Packaging is optional for validation; `package.sh`

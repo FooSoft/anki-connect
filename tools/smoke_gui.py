@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Real-GUI smoke checks, run by test.sh by default; always creates disposable Anki profiles.
+"""Real-GUI smoke checks, run by test.sh/test.ps1 by default; uses disposable Anki profiles.
 
 Run with the pinned environment and a working display:
     python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|exit]
 
-No sync credentials are used. Profiles/files are left under /tmp for diagnostics.
+No sync credentials are used. Profiles/files remain in the OS temp directory for diagnostics.
 Processes exit after checks to isolate native Qt/WebEngine teardown; application
 shutdown is verified separately by the exit scenario.
 """

@@ -105,7 +105,8 @@ unsupported subfeatures can still produce explicit errors.
 controlled Qt admission for ordering tests. Real GUI checks require a working
 display and temporary profiles; sync requires a disposable test account. Run `./test.sh` to execute unit tests and all GUI scenarios for both protocols against
 the Anki versions listed in its array, using isolated cached environments.
-Use `--no-ui` to skip GUI scenarios when a display is unavailable.
+On Windows, `.\test.ps1` runs the same matrix in PowerShell.
+Use `--no-ui` (PowerShell: `-NoUI`) to skip GUI scenarios when a display is unavailable.
 The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
 
 `tools/build_api_contract.py` bundles the source contract, including the

@@ -91,10 +91,30 @@ versions, or supply versions for a single run:
 ./test.sh 26.8 26.9.3
 ```
 
-Only list versions published as both `anki` and `aqt` Python packages. Append any additional released versions to the command; availability is checked
-when downloading. The script needs Bash, Python 3.10+, and network access on its first run. It downloads a pinned
-`uv` tool and dependencies into ignored `.test-cache/`, downloads a cached Python
-interpreter when needed, verifies the tool's SHA-256 digest, and creates a separate environment per Anki version. Anki Desktop
+On Windows, use [test.ps1](test.ps1) from PowerShell 5.1 or newer:
+
+```powershell
+.\test.ps1
+.\test.ps1 -Versions 26.8,26.9.3
+.\test.ps1 -NoUI
+.\test.ps1 -NoUI -Versions 26.9.3
+```
+
+Its `ANKI_VERSIONS` array defines the same default matrix. Install Python 3.10+
+and Git, then run it from an interactive desktop session in your Windows VM for
+UI testing. If script execution is blocked by your local PowerShell policy, run
+`powershell -ExecutionPolicy Bypass -File .\test.ps1` to allow this invocation.
+The runner finds Python through `py`, `python`, or `python3`; you can also set
+`ANKI_TEST_BOOTSTRAP_PYTHON` to a Python executable path. Both runners support
+`ANKI_TEST_CACHE` for a different cache directory and `ANKI_TEST_PYTHON` for a
+different test interpreter version (default `3.13`).
+
+Only list versions published as both `anki` and `aqt` Python packages. Package
+availability is checked when downloading. The Bash runner needs Bash and Python
+3.10+; both runners need Git and network access on their first run. They download a
+pinned `uv` tool and dependencies into ignored `.test-cache/`, download a cached
+Python interpreter when needed, verify the tool's SHA-256 digest, and create a
+separate environment per Anki version. Anki Desktop
 does not need to be installed or running. The entire current suite covers native
 services, v1 dispatch, legacy forwarding, authentication, HTTP responses, and
 ordered completion. Failed versions are reported together and make the script exit
