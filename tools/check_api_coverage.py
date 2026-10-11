@@ -34,7 +34,7 @@ def source_case(source, case):
     check(source == 'tools/smoke_gui.py' or (
         path.parent == Path('tests_api') and path.name.startswith('test_') and path.suffix == '.py'),
           f'Unknown test source: {source}')
-    tree = ast.parse((ROOT / source).read_text())
+    tree = ast.parse((ROOT / source).read_text(encoding='utf-8'))
     if source.startswith('tests_api/'):
         matches = [node for node in tree.body if isinstance(node, ast.FunctionDef)
                    and node.name == case and case.startswith('test_')]
@@ -66,10 +66,10 @@ def source_case(source, case):
 
 
 def load_inventory():
-    schema = json.loads((ROOT / 'api-v1.schema.json').read_text())
+    schema = json.loads((ROOT / 'api-v1.schema.json').read_text(encoding='utf-8'))
     actions, _ = source_actions()
     registry = {'v1': set(schema['x-methods']), 'legacy': set(actions)}
-    manifest = json.loads(MANIFEST.read_text())
+    manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
     check(set(manifest) == {'description', 'evidence', 'unreferenced', 'ui_deferrals'}, 'Invalid inventory keys')
     check(set(manifest['unreferenced']) == set(registry), 'Invalid unreferenced protocols')
     indexed = {protocol: {name: [] for name in names} for protocol, names in registry.items()}
@@ -106,7 +106,7 @@ def load_inventory():
         check(set(missing) == expected,
               f'{protocol} registry/test inventory differs; review new, removed, or newly tested methods')
     deferred = {}
-    gui_tree = ast.parse((ROOT / 'plugin/gui.py').read_text())
+    gui_tree = ast.parse((ROOT / 'plugin/gui.py').read_text(encoding='utf-8'))
     gui_methods = {function.name for node in gui_tree.body
                    if isinstance(node, ast.ClassDef) and node.name == 'Gui'
                    for function in node.body if isinstance(function, ast.FunctionDef)}
@@ -160,7 +160,7 @@ def adapter_links(schema):
     requirements = {}
     for source in ('plugin/services.py', 'plugin/gui.py', 'plugin/runtime.py',
                    'plugin/protocol.py', 'plugin/__init__.py'):
-        tree = ast.parse((ROOT / source).read_text())
+        tree = ast.parse((ROOT / source).read_text(encoding='utf-8'))
         for node in tree.body:
             if isinstance(node, ast.ClassDef):
                 for function in node.body:
@@ -305,7 +305,7 @@ def main():
     indexed, schema, deferred = load_inventory()
     report = render(indexed, schema, deferred)
     if args.write:
-        REPORT.write_text(report, encoding='utf-8')
+        REPORT.write_text(report, encoding='utf-8', newline='\n')
     else:
         check(REPORT.exists() and REPORT.read_text(encoding='utf-8') == report,
               'Coverage report is stale; run python tools/check_api_coverage.py --write')

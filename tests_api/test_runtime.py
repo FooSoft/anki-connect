@@ -483,7 +483,7 @@ def test_bundled_contract_and_adapters_match_source():
     from plugin.gui import Gui
     from plugin.runtime import GUI_METHODS
     root = Path(__file__).resolve().parents[1]
-    assert SCHEMA == json.loads((root / 'api-v1.schema.json').read_text())
+    assert SCHEMA == json.loads((root / 'api-v1.schema.json').read_text(encoding='utf-8'))
     assert set(LEGACY_TARGETS) == set(AnkiConnect().legacy_actions())
     for targets in LEGACY_TARGETS.values():
         assert all(target in SCHEMA['x-methods'] for target in targets)

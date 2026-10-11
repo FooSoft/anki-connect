@@ -181,7 +181,7 @@ class ExampleValidator:
 
 
 def source_actions():
-    tree = ast.parse((ROOT / 'plugin/__init__.py').read_text())
+    tree = ast.parse((ROOT / 'plugin/__init__.py').read_text(encoding='utf-8'))
     actions = {}
     aliases = []
     for cls in tree.body:
@@ -204,8 +204,8 @@ def source_actions():
 
 
 def main():
-    schema = json.loads((ROOT / 'api-v1.schema.json').read_text())
-    reference = (ROOT / 'API_V1.md').read_text()
+    schema = json.loads((ROOT / 'api-v1.schema.json').read_text(encoding='utf-8'))
+    reference = (ROOT / 'API_V1.md').read_text(encoding='utf-8')
     validator = ExampleValidator(schema)
     validator.inspect(schema)
     methods = schema['x-methods']

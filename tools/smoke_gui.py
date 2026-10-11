@@ -83,11 +83,22 @@ def result(value):
         return value.value
     return value
 def call(method, **params):
-    wait_until(lambda: aqt.mw._background_op_count == 0)
-    value = result(owner.runtime.dispatcher.invoke(method, params))
-    if isinstance(value, dict) and 'operationId' in value:
-        value = result(owner.runtime.operations.completions[value['operationId']])
-    return value
+    deadline = time.monotonic() + 30
+    while True:
+        wait_until(lambda: aqt.mw._background_op_count == 0)
+        try:
+            value = result(owner.runtime.dispatcher.invoke(method, params))
+            if isinstance(value, dict) and 'operationId' in value:
+                value = result(owner.runtime.operations.completions[value['operationId']])
+            return value
+        except Exception as error:
+            # Browser/editor callbacks can start native work between admission
+            # and the queued operation's start. This rejection precedes execution.
+            if (getattr(error, 'kind', None) != 'busy'
+                    or str(error) != 'A collection operation is active.'
+                    or time.monotonic() >= deadline):
+                raise
+            app.processEvents()
 def old(action, **params):
     wait_until(lambda: aqt.mw._background_op_count == 0)
     previous = set(owner.runtime.operations.records)
@@ -278,6 +289,9 @@ try:
             dialog = next(w for w in app.topLevelWidgets() if isinstance(w, ImportDialog) and w.isVisible())
             return handle, dialog
         handle, dialog = start_import(csv)
+        # Cancelling before WebChannel initialization tears down its bridge while
+        # the page is still loading, producing an unrelated JavaScript error.
+        wait_until(lambda: dialog.web._domDone)
         result(owner.runtime.invoke('operations.cancel', {'operationId': handle['operationId']}))
         pending = owner.runtime.operations.completions[handle['operationId']]
         wait_until(lambda: pending.done)

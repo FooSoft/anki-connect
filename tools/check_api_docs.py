@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def sections(path):
-    text = path.read_text()
+    text = path.read_text(encoding='utf-8')
     parts = re.split(r'^### `([^`]+)`\s*$', text, flags=re.M)
     names = parts[1::2]
     check(len(names) == len(set(names)), f'Duplicate entry in {path.name}')
@@ -37,7 +37,7 @@ def signature(source):
 
 
 def main():
-    schema = json.loads((ROOT / 'api-v1.schema.json').read_text())
+    schema = json.loads((ROOT / 'api-v1.schema.json').read_text(encoding='utf-8'))
     validator = ExampleValidator(schema)
     methods = schema['x-methods']
     try:
@@ -90,7 +90,7 @@ def main():
         check(targets == schema['x-legacyTargets'][name], f'Legacy targets differ: {name}')
     # Catch invalid JSON in introductions and shared types too.
     for filename in ('README.md', 'API_V1.md', 'API_LEGACY.md'):
-        text = (ROOT / filename).read_text()
+        text = (ROOT / filename).read_text(encoding='utf-8')
         blocks(text)
         for language, source in re.findall(r'```(python|bash)\s*\n(.*?)```', text, re.S):
             if language == 'python':
@@ -102,7 +102,7 @@ def main():
             linked = ROOT / (path or filename)
             check(linked.exists(), f'Broken link in {filename}: {target}')
             if fragment and linked.suffix == '.md':
-                linked_text = linked.read_text()
+                linked_text = linked.read_text(encoding='utf-8')
                 anchors = set(re.findall(r'<a id="([^"]+)"', linked_text))
                 for heading in re.findall(r'^#+ (.+)$', linked_text, re.M):
                     anchors.add(re.sub(r'[^\w\- ]', '', heading.lower()).replace(' ', '-'))
