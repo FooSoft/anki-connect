@@ -27,7 +27,9 @@ For new or changed behavior:
 Use temporary collections and profiles for tests. `./test.sh` runs unit tests and
 GUI smoke scenarios by default; UI testing requires a display. Use `--no-ui` to
 run only unit and contract checks (`-NoUI` with PowerShell). The Windows runner
-uses the same tests and cached environments; run UI tests in an interactive
+uses the same tests and cached environments. Bootstrap downloads use Windows
+certificate validation, and uv uses the system certificate store; HTTPS
+verification and wheel SHA-256 checks remain enabled. Run UI tests in an interactive
 desktop session. Sync testing requires a disposable account.
 
 The primary testing goal is compatibility with changing Anki internals. Prefer

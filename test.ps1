@@ -48,7 +48,7 @@ function Invoke-Checked {
 }
 
 $environmentNames = @(
-    'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'UV_NO_PROGRESS', 'UV_NO_CONFIG',
+    'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'UV_NO_PROGRESS', 'UV_NO_CONFIG', 'UV_SYSTEM_CERTS',
     'PYTEST_DISABLE_PLUGIN_AUTOLOAD', 'QT_QPA_PLATFORM', 'QTWEBENGINE_DISABLE_SANDBOX'
 )
 $savedEnvironment = @{}
@@ -67,6 +67,7 @@ try {
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $cache 'python'
     $env:UV_NO_PROGRESS = '1'
     $env:UV_NO_CONFIG = '1'
+    $env:UV_SYSTEM_CERTS = 'true'
     $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
     $testPython = if ($env:ANKI_TEST_PYTHON) { $env:ANKI_TEST_PYTHON } else { '3.13' }
 
