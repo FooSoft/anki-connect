@@ -31,6 +31,11 @@ Starting with [Mac OS X Mavericks](https://en.wikipedia.org/wiki/OS_X_Mavericks)
 
 ## Application Interface for Developers
 
+The proposed rewrite is specified in [API_V1.md](API_V1.md), with a
+[machine-readable schema](api-v1.schema.json) and a
+[complete legacy translation map](LEGACY_API_MAPPING.md). These are design
+documents; the running add-on still implements the actions documented below.
+
 Anki-Connect exposes internal Anki features to external applications via an easy to use API. After being installed, this plugin will start an HTTP server on port 8765 whenever Anki is launched. Other applications (including browser extensions) can then communicate with it via HTTP requests.
 
 By default, Anki-Connect will only bind the HTTP server to the `127.0.0.1` IP address, so that you will only be able to access it from the same host on which it is running. If you need to access it over a network, you can change the binding address in the configuration. Go to Tools->Add-ons->AnkiConnect->Config and change the "webBindAddress" value. For example, you can set it to `0.0.0.0` in order to bind it to all network interfaces on your host. This also requires a restart for Anki.
