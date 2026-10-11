@@ -17,6 +17,10 @@ For new or changed behavior:
    Do not edit the generated file by hand.
 3. Update the appropriate API guide with parameter and result documentation and a
    valid request example. Add behavior tests to `tests_api/`.
+   Update the evidence and gaps in `tests_api/api_coverage.json`, then regenerate
+   [the coverage inventory](API_TEST_COVERAGE.md) with
+   `python tools/check_api_coverage.py --write`. Keep native, mocked, and real GUI
+   evidence distinct; shared service coverage does not establish legacy action coverage.
 4. Run `./test.sh` or `.\test.ps1` on Windows. Add supported published Anki versions to both runners' version arrays when
    expanding the compatibility matrix.
 
@@ -25,6 +29,17 @@ GUI smoke scenarios by default; UI testing requires a display. Use `--no-ui` to
 run only unit and contract checks (`-NoUI` with PowerShell). The Windows runner
 uses the same tests and cached environments; run UI tests in an interactive
 desktop session. Sync testing requires a disposable account.
+
+The primary testing goal is compatibility with changing Anki internals. Prefer
+real native collection/service calls and observable effects over mocks of Anki.
+Use real GUI scenarios to check widget/editor/reviewer APIs, lifecycle hooks, and
+asynchronous completion. Shared native behavior needs one effective compatibility
+test; legacy translation needs separate assertions. HTTP coverage is useful but
+is not required per method.
+
+Exceedingly difficult GUI effects may be deferred in `ui_deferrals` in the inventory.
+State the reason and a practical alternative. Keep the remaining compatibility
+gap visible; neither a deferral nor a mocked result proves that Anki's GUI still works.
 
 Describe the resulting behavior and validation in your pull request. Mention any
 remaining integration limits. Packaging is optional for validation; `package.sh`

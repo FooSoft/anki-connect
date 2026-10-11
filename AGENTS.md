@@ -29,6 +29,8 @@ documenting a change.
 - `plugin/config.json`: shipped add-on settings; `plugin/config.md` supplies the
   configuration help text.
 - `tests_api/`: default native collection and admission regression tests.
+- `API_TEST_COVERAGE.md`: every public method's reviewed test evidence and gaps;
+  generated from `tests_api/api_coverage.json` by `tools/check_api_coverage.py --write`.
 - `test.sh` and `test.ps1`: cached Anki version matrix for both APIs on Unix and Windows.
 - `tools/smoke_gui.py`: GUI scenarios with disposable profiles.
 - `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
@@ -60,6 +62,12 @@ documenting a change.
 
 ## Validation
 
+The main goal of tests is detecting changes in Anki internals that break the plugin.
+Prioritize real native services and GUI boundaries, result/effect assertions, and
+completion/lifecycle checks across versions. Protocol checks are supplementary;
+do not require HTTP coverage per method. Exceedingly difficult GUI effects may be
+deferred in the coverage inventory with a reason and a practical alternative.
+
 Run `./test.sh` for the cached version matrix, including UI scenarios by default.
 On Windows, run `.\test.ps1`; `-NoUI` skips UI scenarios.
 Use `./test.sh --no-ui` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
@@ -71,6 +79,7 @@ python tools/build_api_contract.py
 python -m pytest -q --tb=short
 python tools/check_api_spec.py
 python tools/check_api_docs.py
+python tools/check_api_coverage.py
 python -m compileall -q plugin tools
 git diff --check
 ```

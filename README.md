@@ -78,6 +78,12 @@ and responsive for requests to complete.
 
 ## Development and tests
 
+The main goal is to catch Anki internal changes that break the plugin. Tests should
+exercise real collection services and GUI objects across supported Anki versions,
+with assertions on results, effects, and operation completion. Protocol checks
+provide additional regression coverage. Impractical GUI effects can be explicitly
+deferred in the coverage inventory with a reason and a practical alternative.
+
 Run all maintained unit tests and UI scenarios against isolated Anki environments:
 
 ```bash
@@ -121,7 +127,9 @@ ordered completion. Failed versions are reported together and make the script ex
 with a failure status.
 
 The runner also checks documentation examples, the source/generated contract,
-Python compilation, and whitespace. UI tests launch real Anki windows with temporary
+the [API test coverage inventory](API_TEST_COVERAGE.md), Python compilation, and
+whitespace. The inventory lists every method's test evidence and remaining gaps;
+passing the suite does not certify every API method. UI tests launch real Anki windows with temporary
 profiles, running every scenario in a separate process. They require a working
 display; on headless Linux, use `xvfb-run ./test.sh` with Xvfb installed. Missing
 display support or a failing UI scenario makes the version fail.

@@ -124,6 +124,7 @@ for name in ('anki', 'aqt'):
             Invoke-Checked $interpreter @('tools/build_api_contract.py', '--check')
             Invoke-Checked $interpreter @('tools/check_api_spec.py')
             Invoke-Checked $interpreter @('tools/check_api_docs.py')
+            Invoke-Checked $interpreter @('tools/check_api_coverage.py')
             try {
                 if (-not $env:QT_QPA_PLATFORM) { $env:QT_QPA_PLATFORM = 'offscreen' }
                 Invoke-Checked $interpreter @('-m', 'pytest', '-q', '--tb=short', 'tests_api')

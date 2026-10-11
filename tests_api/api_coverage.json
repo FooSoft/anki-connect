@@ -1,0 +1,908 @@
+{
+  "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
+  "evidence": [
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_native_collection_round_trip",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "cards.get",
+        "cards.render",
+        "cards.setFlags",
+        "decks.create",
+        "noteTypes.list",
+        "notes.create",
+        "notes.get",
+        "notes.update",
+        "notes.validate",
+        "reviews.list",
+        "scheduling.answer",
+        "scheduling.predict",
+        "statistics.getReviewDays",
+        "statistics.getSummary",
+        "statistics.getToday"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_legacy_forwards",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "canAddNote",
+        "cardsInfo",
+        "createDeck",
+        "findCards",
+        "notesInfo"
+      ],
+      "notes": "Calls Legacy.call directly with a real collection; bypasses HTTP and the public legacy dispatcher."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_bulk_atomic_validation_and_media_ownership",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "notes.createMany"
+      ],
+      "legacy": [],
+      "notes": "Atomic validation failure and unchanged collection; no successful bulk creation case."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_bulk_atomic_validation_and_media_ownership",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createDeck"
+      ],
+      "notes": "Calls Legacy.call directly with a real collection; bypasses HTTP and the public legacy dispatcher."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_structures_presets_tags_and_decks",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "deckPresets.assign",
+        "deckPresets.create",
+        "deckPresets.delete",
+        "deckPresets.get",
+        "deckPresets.update",
+        "decks.create",
+        "decks.delete",
+        "decks.getCounts",
+        "noteTypes.create",
+        "noteTypes.deleteUnused",
+        "noteTypes.editStructure",
+        "noteTypes.get",
+        "noteTypes.getTemplateUsage",
+        "noteTypes.replaceText",
+        "notes.create",
+        "notes.delete",
+        "tags.add",
+        "tags.deleteUnused",
+        "tags.remove",
+        "tags.replace"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_historical_reviews_transaction_and_sync_flags",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "advanced.reviews.import",
+        "notes.create"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_search_cursor_query_binding_and_deleted_ids",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "notes.delete",
+        "notes.search"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_conversion_preserves_cards_and_native_undo",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "collection.undo",
+        "noteTypes.create",
+        "notes.convert",
+        "notes.create",
+        "notes.get",
+        "notes.planConversion"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_answer_many_and_filtered_home_history",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "scheduling.answerMany",
+        "scheduling.getDue",
+        "scheduling.predict",
+        "scheduling.reset",
+        "scheduling.setDueDate"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_legacy_preset_changes_use_native_updates",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "getDeckConfig",
+        "saveDeckConfig"
+      ],
+      "notes": "Calls Legacy.call directly with a real collection; bypasses HTTP and the public legacy dispatcher."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_packages_native_export_import",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "packages.export",
+        "packages.import"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_text_replacement_is_one_native_undo",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "collection.undo",
+        "noteTypes.create",
+        "noteTypes.get",
+        "noteTypes.replaceText"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_cloze_native_validation_and_conversion",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.convert",
+        "notes.create",
+        "notes.get",
+        "notes.planConversion",
+        "notes.validate"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_new_per_day_minimum_round_trip",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "deckPresets.get",
+        "deckPresets.update"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_new_per_day_minimum_round_trip",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "getDeckConfig",
+        "saveDeckConfig"
+      ],
+      "notes": "Calls Legacy.call directly with a real collection; bypasses HTTP and the public legacy dispatcher."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_template_usage_respects_native_token_rules",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "noteTypes.create",
+        "noteTypes.getTemplateUsage"
+      ],
+      "legacy": [],
+      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_legacy_signatures_and_reflection",
+      "layer": "legacy-dispatch",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "apiReflect",
+        "version"
+      ],
+      "notes": "Version envelopes and API key handling through owner.handler; apiReflect is called directly and its action count is asserted."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_http_multi_observes_completed_native_writes",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createDeck",
+        "deckNames",
+        "multi"
+      ],
+      "notes": "Real collection, controlled task queue and mocked main window; checks ordered mutation results and completion."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_execute_operation_waits_and_continues_after_errors",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [
+        "api.execute",
+        "decks.create",
+        "decks.list"
+      ],
+      "legacy": [],
+      "notes": "Real collection with controlled scheduling; asserts command outcomes and completed writes."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_execute_operation_waits_and_continues_after_errors",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [
+        "notes.get"
+      ],
+      "legacy": [],
+      "notes": "Missing note yields notFound inside api.execute."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_v1_replacement_restores_original_after_native_failure",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [
+        "media.store"
+      ],
+      "legacy": [],
+      "notes": "Injected native write failure; asserts ioError and restoration. No successful media.store API call."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_nested_multi_preflights_exit_limits_and_shapes",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "guiExitAnki",
+        "multi",
+        "version"
+      ],
+      "notes": "Nested validation and controlled exit admission; asserts exit_requested, not real GUI shutdown. createDeck is only in rejected requests and is not credited."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_execute_cancel_preserves_completed_outcomes",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [
+        "api.execute",
+        "decks.create"
+      ],
+      "legacy": [],
+      "notes": "Cancellation uses Operations.cancel directly, so it does not establish operations.cancel API coverage."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_discovery_and_dispatch_agree_on_missing_native_capability",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [
+        "packages.export"
+      ],
+      "legacy": [],
+      "notes": "Removed native capability produces unsupportedCapability. Runtime.describe is a helper, not an api.describe request."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_queued_gui_operation_rechecks_collection_work",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [
+        "editors.openAdd"
+      ],
+      "legacy": [],
+      "notes": "Busy-state rejection with mocked GUI execute; GUI method is not reached."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_legacy_browser_reply_waits_for_gui_initialization",
+      "layer": "mocked-gui",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "guiBrowse"
+      ],
+      "notes": "Mocked GUI completion Deferred verifies reply timing; real browser behavior is covered separately."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_dispatcher_validation_and_notifications",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [
+        "decks.create",
+        "notes.get"
+      ],
+      "legacy": [],
+      "notes": "Invalid params and ignored notification; runtime invocation is not reached."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_http_routing_auth_cors_and_notifications",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [
+        "collection.get"
+      ],
+      "legacy": [],
+      "notes": "HTTP auth/CORS/notification checks with fake dispatch callback; collection.get implementation is not executed."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_operation_rejects_invalid_terminal_result",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [
+        "media.store"
+      ],
+      "legacy": [],
+      "notes": "Operations.submit uses a fabricated result; verifies schema enforcement, not media.store implementation."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_bulk_reads_validation_and_atomic_creation",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "cards.getMany",
+        "cards.search",
+        "notes.createMany",
+        "notes.getMany",
+        "notes.validateMany"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_scheduler_rating_matches_native_review_history",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "reviews.list",
+        "scheduling.answer",
+        "scheduling.predict"
+      ],
+      "legacy": [],
+      "notes": "All four ratings are answered through real scheduling states; asserts independently expected review-history ease numbers and API rating names. Regression for the native rating enum versus legacy button-number mismatch."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_empty_notes_and_native_tag_registry",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "notes.delete",
+        "notes.findEmpty",
+        "notes.update",
+        "tags.deleteUnused",
+        "tags.list"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_move_suspend_and_advanced_card_metadata",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "advanced.cards.update",
+        "cards.move",
+        "cards.setSuspended",
+        "decks.create",
+        "notes.create",
+        "scheduling.get"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_deck_rename_and_preset_listing",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "deckPresets.list",
+        "decks.create",
+        "decks.get",
+        "decks.update"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_note_type_metadata_and_rendering",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "cards.render",
+        "noteTypes.create",
+        "noteTypes.update",
+        "notes.create"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_integrity_stats_and_latest_review",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "collection.checkIntegrity",
+        "collection.get",
+        "notes.create",
+        "reviews.getLatestId",
+        "scheduling.answer",
+        "scheduling.predict",
+        "statistics.getHtml",
+        "statistics.getSummary",
+        "statistics.getToday"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_media_storage_completion_and_native_files",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "media.delete",
+        "media.get",
+        "media.getDirectory",
+        "media.list"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_discovery_permissions_and_operation_endpoints",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "requestPermission"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_note_validation_updates_tags_and_deletion",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNotes",
+        "addTags",
+        "canAddNoteWithErrorDetail",
+        "canAddNotes",
+        "canAddNotesWithErrorDetail",
+        "clearUnusedTags",
+        "deleteNotes",
+        "findNotes",
+        "getNoteTags",
+        "getTags",
+        "notesModTime",
+        "removeTags",
+        "replaceTags",
+        "replaceTagsInAllNotes",
+        "updateNote",
+        "updateNoteFields",
+        "updateNoteTags"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_note_validation_updates_tags_and_deletion",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "removeEmptyNotes"
+      ],
+      "notes": "The action deliberately rejects implicit empty-note deletion with compatibilityError; asserts that documented rejection."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_decks_configs_and_card_projections",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "cardsModTime",
+        "cardsToNotes",
+        "changeDeck",
+        "cloneDeckConfigId",
+        "createDeck",
+        "deckNameFromId",
+        "deckNamesAndIds",
+        "deleteDecks",
+        "getDeckConfig",
+        "getDeckStats",
+        "getDecks",
+        "removeDeckConfigId",
+        "setDeckConfigId"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_scheduling_metadata_and_reviews",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "answerCards",
+        "areDue",
+        "areSuspended",
+        "cardReviews",
+        "forgetCards",
+        "getCollectionStatsHTML",
+        "getEaseFactors",
+        "getIntervals",
+        "getLatestReviewID",
+        "getNumCardsReviewedByDay",
+        "getNumCardsReviewedToday",
+        "getReviewsOfCards",
+        "insertReviews",
+        "relearnCards",
+        "setDueDate",
+        "setEaseFactors",
+        "setSpecificValueOfCard",
+        "suspend",
+        "suspended",
+        "unsuspend"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_media_and_packages",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "deleteMediaFile",
+        "deleteNotes",
+        "exportPackage",
+        "getMediaDirPath",
+        "getMediaFilesNames",
+        "importPackage",
+        "retrieveMediaFile",
+        "storeMediaFile"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_note_type_structure_and_conversion",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "createModel",
+        "findAndReplaceInModels",
+        "findModelsById",
+        "findModelsByName",
+        "modelFieldAdd",
+        "modelFieldDescriptions",
+        "modelFieldFonts",
+        "modelFieldNames",
+        "modelFieldRemove",
+        "modelFieldRename",
+        "modelFieldReposition",
+        "modelFieldSetDescription",
+        "modelFieldSetFont",
+        "modelFieldSetFontSize",
+        "modelFieldsOnTemplates",
+        "modelNameFromId",
+        "modelNames",
+        "modelNamesAndIds",
+        "modelStyling",
+        "modelTemplateAdd",
+        "modelTemplateRemove",
+        "modelTemplateRename",
+        "modelTemplateReposition",
+        "modelTemplates",
+        "updateModelStyling",
+        "updateModelTemplates",
+        "updateNoteModel"
+      ],
+      "notes": "Real disposable collection; asserts persisted results, native effects, and relevant failure behavior. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_v1_media_storage_completion_and_native_files",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [
+        "media.store",
+        "operations.get"
+      ],
+      "legacy": [],
+      "notes": "Real collection with controlled scheduling. Executes JSON-RPC requests and asserts operation completion/cancellation, persisted files, capabilities, or allowed-origin permissions. Media covers native creation, replacement, and conflict rollback."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_discovery_permissions_and_operation_endpoints",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [
+        "api.describe",
+        "access.requestPermission",
+        "api.execute",
+        "operations.cancel",
+        "operations.get"
+      ],
+      "legacy": [],
+      "notes": "Real collection with controlled scheduling. Executes JSON-RPC requests and asserts operation completion/cancellation, persisted files, capabilities, or allowed-origin permissions. Media covers native creation, replacement, and conflict rollback."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "editors",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "editors.openAdd",
+        "editors.updateDraft"
+      ],
+      "legacy": [
+        "guiAddCards",
+        "guiAddNoteSetData"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "browser",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "browser.getSelection",
+        "browser.open",
+        "browser.select",
+        "noteTypes.editStructure",
+        "notes.create",
+        "scheduling.setDueDate"
+      ],
+      "legacy": [
+        "guiBrowse",
+        "guiSelectCard",
+        "guiSelectNote",
+        "guiSelectedNotes"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "custom",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "editors.openNote"
+      ],
+      "legacy": [
+        "guiEditNote"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "reviewer",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "application.navigate",
+        "notes.create",
+        "reviewer.answer",
+        "reviewer.get",
+        "reviewer.playAudio",
+        "reviewer.showAnswer",
+        "reviewer.showQuestion",
+        "reviewer.startTimer"
+      ],
+      "legacy": [
+        "guiAnswerCard",
+        "guiCurrentCard",
+        "guiDeckBrowser",
+        "guiDeckOverview",
+        "guiDeckReview",
+        "guiPlayAudio",
+        "guiReviewActive",
+        "guiShowAnswer",
+        "guiShowQuestion",
+        "guiStartCardTimer"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "imports",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "application.importFile",
+        "operations.cancel"
+      ],
+      "legacy": [
+        "guiImportFile"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "profiles",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "collection.refresh",
+        "notes.create",
+        "profiles.getActive",
+        "profiles.list",
+        "profiles.switch"
+      ],
+      "legacy": [
+        "getActiveProfile",
+        "getProfiles",
+        "guiCheckDatabase",
+        "guiUndo",
+        "loadProfile",
+        "reloadCollection"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "profiles",
+      "layer": "real-gui",
+      "outcome": "failure",
+      "v1": [
+        "collection.sync"
+      ],
+      "legacy": [
+        "sync"
+      ],
+      "notes": "Real ProfileManager with no credentials; asserts authenticationRequired before network sync. Authenticated sync remains untested."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "colpkg",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "application.importFile",
+        "notes.get"
+      ],
+      "legacy": [],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "exit",
+      "layer": "http-gui",
+      "outcome": "success",
+      "v1": [
+        "application.exit"
+      ],
+      "legacy": [],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "legacy-exit",
+      "layer": "http-gui",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "guiExitAnki"
+      ],
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "setup",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": [
+        "notes.create"
+      ],
+      "legacy": [],
+      "notes": "Common setup creates a native note through the real runtime before each GUI scenario."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_preset_enums_match_native_semantics",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "deckPresets.update"
+      ],
+      "legacy": [],
+      "notes": "26 parameterized cases compare persisted native protobuf enum numbers with independently named native enum descriptors, including every gather/review order. This catches semantic drift that a public get/update round trip alone would miss."
+    }
+  ],
+  "unreferenced": {
+    "v1": [],
+    "legacy": []
+  },
+  "ui_deferrals": [
+    {
+      "protocol": "v1",
+      "name": "reviewer.playAudio",
+      "reason": "Audible playback depends on the OS audio device and external player; proving sound output would require a separate audio harness.",
+      "alternative": "Retain the real reviewer call on a silent card; actual audible playback remains unvalidated."
+    },
+    {
+      "protocol": "legacy",
+      "name": "guiPlayAudio",
+      "reason": "Audible playback depends on the OS audio device and external player; proving sound output would require a separate audio harness.",
+      "alternative": "Retain the real reviewer call on a silent card; actual audible playback remains unvalidated."
+    }
+  ]
+}

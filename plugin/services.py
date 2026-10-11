@@ -556,6 +556,7 @@ class Services:
         return {'cardId': cardId, 'dueNow': due, 'available': due or card.queue == 0 or (includeLearnAhead and ahead), 'learnAhead': ahead}
 
     def scheduling_answer(self, cardId, rating, stateToken, elapsedMs=0):
+        from anki.scheduler.v3 import CardAnswer
         card = self.card(cardId)
         if card.queue < 0 or card.queue == 4:
             raise ApiError('invalidState', 'This card cannot be answered outside the reviewer.')
@@ -564,7 +565,9 @@ class Services:
         states = self.col._backend.get_scheduling_states(card.id)
         self.runtime.check_token(stateToken, 'scheduler', [card._to_backend_card().SerializeToString().hex(), states.SerializeToString().hex(), self.col.sched.today])
         card.start_timer()
-        answer = self.col.sched.build_answer(card=card, states=states, rating=RATINGS.index(rating) + 1)
+        native_rating = {'again': CardAnswer.AGAIN, 'hard': CardAnswer.HARD,
+                         'good': CardAnswer.GOOD, 'easy': CardAnswer.EASY}[rating]
+        answer = self.col.sched.build_answer(card=card, states=states, rating=native_rating)
         maximum = card.time_limit()
         answer.milliseconds_taken = min(elapsedMs, maximum)
         self.change(self.col.sched.answer_card(answer))

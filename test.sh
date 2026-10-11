@@ -77,6 +77,7 @@ PY
     "$interpreter" tools/build_api_contract.py --check
     "$interpreter" tools/check_api_spec.py
     "$interpreter" tools/check_api_docs.py
+    "$interpreter" tools/check_api_coverage.py
     # This is the complete maintained unit suite, including both API protocols.
     QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$interpreter" -m pytest -q --tb=short tests_api
     if (( RUN_UI )); then

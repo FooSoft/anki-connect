@@ -108,6 +108,10 @@ the Anki versions listed in its array, using isolated cached environments.
 On Windows, `.\test.ps1` runs the same matrix in PowerShell.
 Use `--no-ui` (PowerShell: `-NoUI`) to skip GUI scenarios when a display is unavailable.
 The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
+The [coverage inventory](API_TEST_COVERAGE.md) distinguishes direct service,
+controlled admission, and real GUI evidence for each public method. Both test
+runners validate its registry coverage and source references; known testing gaps
+are explicitly listed and remain work to do.
 
 `tools/build_api_contract.py` bundles the source contract, including the
 `x-legacyTargets` registry used for legacy capability checks. Use `--check` to

@@ -1872,6 +1872,8 @@ Answer using native states matching the supplied prediction token.
 Reject suspended/buried and filtered-preview cards. For the active GUI card use reviewer.answer. Native elapsed-time capping applies. No client-supplied historical answer timestamp.
 
 Get `stateToken` from `scheduling.predict` for this card immediately before answering.
+The named rating selects Anki's corresponding native scheduling state; review
+history records `again`, `hard`, `good`, and `easy` as ease values 1, 2, 3, and 4.
 
 **Parameters**
 
