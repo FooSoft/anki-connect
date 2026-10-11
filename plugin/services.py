@@ -18,6 +18,8 @@ QUEUES = {0: 'new', 1: 'learning', 2: 'review', 3: 'dayLearning', 4: 'preview',
           -1: 'suspended', -2: 'buriedByScheduler', -3: 'buriedByUser'}
 RATINGS = ('again', 'hard', 'good', 'easy')
 KINDS = ('learning', 'review', 'relearning', 'filtered', 'manual', 'rescheduled')
+# Preserve Anki's legacy filename filter without its deprecated stripIllegal API.
+MEDIA_ILLEGAL_CHARACTERS = re.compile(r'[][><:"/?*^\\|\0\r\n]')
 FIELD_KEYS = {'fontFamily': 'font', 'fontSize': 'size', 'description': 'description',
               'sticky': 'sticky', 'rtl': 'rtl', 'plainText': 'plainText',
               'collapsed': 'collapsed', 'excludeFromSearch': 'excludeFromSearch'}
@@ -894,7 +896,7 @@ class Services:
     def media_filename(self, filename):
         if filename in ('.', '..') or any(char in filename for char in ('/', '\\', '\0')):
             raise ApiError('invalidParams', 'Expected a media basename.')
-        return self.col.media.stripIllegal(unicodedata.normalize('NFC', filename))
+        return MEDIA_ILLEGAL_CHARACTERS.sub('', unicodedata.normalize('NFC', filename))
 
     def media_list(self, pattern='*'):
         import fnmatch

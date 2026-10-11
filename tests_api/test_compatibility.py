@@ -187,6 +187,48 @@ def test_v1_integrity_stats_and_latest_review(native):
     assert service.col.note_count() == 1
 
 
+@pytest.mark.parametrize('filename,expected', [
+    ('simple.txt', 'simple.txt'),
+    ('cafe\u0301.txt', 'caf\u00e9.txt'),
+    ('a[]<>:"?*^|\r\nb.txt', 'ab.txt'),
+    ('space and_\U0001f600.txt', 'space and_\U0001f600.txt'),
+])
+@pytest.mark.parametrize('api', ['v1', 'legacy'])
+def test_media_filename_native_round_trip(admitted, api, filename, expected):
+    owner, service, drain, work, notifications = admitted
+    data = base64.b64encode(b'filename compatibility').decode()
+    assert service.media_filename(filename) == expected
+    if api == 'v1':
+        response = owner.runtime.dispatcher.request({
+            'jsonrpc': '2.0', 'id': 1, 'method': 'media.store',
+            'params': {'filename': filename, 'source': {'data': data}}})
+        drain()
+        record = owner.runtime.operations.get(response.value['result']['operationId'])
+        assert record['state'] == 'succeeded'
+        actual = record['result']['filename']
+    else:
+        actual = old((owner, service), 'storeMediaFile', filename=filename, data=data)
+    assert actual == expected
+    path = Path(service.col.media.dir()) / actual
+    assert path.read_bytes() == b'filename compatibility'
+    if api == 'v1':
+        assert call(service, 'media.get', filename=filename)['data'] == data
+        assert call(service, 'media.delete', filename=filename) == {'changed': True}
+    else:
+        assert old((owner, service), 'retrieveMediaFile', filename=filename) == data
+        old((owner, service), 'deleteMediaFile', filename=filename)
+    assert not path.exists()
+
+
+@pytest.mark.parametrize('filename', ['.', '..', '../escape.txt', 'dir/file.txt',
+                                     'dir\\file.txt', 'escape\0.txt', '/absolute.txt'])
+def test_media_filename_rejects_paths(native, filename):
+    owner, service = native
+    with pytest.raises(ApiError) as caught:
+        service.store_bytes(filename, b'outside the media directory')
+    assert caught.value.kind == 'invalidParams'
+
+
 def test_v1_media_storage_completion_and_native_files(admitted, tmp_path):
     owner, service, drain, work, notifications = admitted
     def request(method, params):

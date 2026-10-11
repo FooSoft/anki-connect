@@ -2,6 +2,32 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_media_filename_native_round_trip",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [
+        "media.delete",
+        "media.get",
+        "media.store"
+      ],
+      "legacy": [],
+      "notes": "Dispatcher admission with controlled Qt scheduling for media.store; direct native services for reads and deletion. Asserts operation completion, sanitized/NFC filenames, persisted bytes, and deletion in a real collection."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_media_filename_native_round_trip",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "deleteMediaFile",
+        "retrieveMediaFile",
+        "storeMediaFile"
+      ],
+      "notes": "Real native storage, retrieval, and deletion using sanitized/NFC filenames; binds public legacy signatures but bypasses HTTP and the public dispatcher. Asserts returned filenames and persisted bytes."
+    },
+    {
       "source": "tests_api/test_runtime.py",
       "case": "test_native_collection_round_trip",
       "layer": "native-service",
