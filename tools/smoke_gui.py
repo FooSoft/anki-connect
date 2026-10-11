@@ -68,11 +68,15 @@ def exception_hook(kind, error, traceback):
     unhandled.append(error)
     print('UNHANDLED GUI ERROR:', ''.join(tb.format_exception(kind, error, traceback)), flush=True)
 sys.excepthook = exception_hook
-def wait_until(fn, timeout=30):
+def wait_until(fn, timeout=30, description='GUI wait'):
     deadline = time.monotonic() + timeout
     while not fn():
         if time.monotonic() > deadline:
-            raise TimeoutError('GUI wait expired')
+            windows = [(type(window).__name__, window.windowTitle())
+                       for window in app.topLevelWidgets() if window.isVisible()]
+            print('TIMEOUT:', description, 'background operations:', aqt.mw._background_op_count,
+                  'visible windows:', windows, flush=True)
+            raise TimeoutError(description + ' expired')
         app.processEvents()
         time.sleep(0.01)
 def result(value):
@@ -279,14 +283,35 @@ try:
         from aqt.import_export.import_dialog import ImportDialog
         csv = base / 'sample.csv'
         csv.write_text('imported front,imported back\n')
+        def visible_import(path):
+            return next((w for w in app.topLevelWidgets()
+                         if isinstance(w, ImportDialog) and w.isVisible()
+                         and w.args.path == str(path)), None)
+        def import_clicker(dialog):
+            clicked = False
+            probing = False
+            def checked(value):
+                nonlocal clicked, probing
+                probing = False
+                clicked = clicked or bool(value)
+            def probe():
+                nonlocal probing
+                if not clicked and not probing and dialog.web is not None:
+                    probing = True
+                    # Probe directly rather than accumulating evaluations in
+                    # Anki's DOM-ready queue. Permit only one pending probe.
+                    dialog.web.page().runJavaScript('(() => {const button = document.querySelector(".import")?.closest("button"); if (!button || button.disabled) return false; button.click(); return true;})()', checked)
+                return clicked
+            return probe
         def start_import(path, allow_error=False):
             wait_until(lambda: aqt.mw._background_op_count == 0)
             handle = result(owner.runtime.dispatcher.invoke('application.importFile', {'path': str(path)}))
             pending = owner.runtime.operations.completions[handle['operationId']]
-            wait_until(lambda: pending.done or any(isinstance(w, ImportDialog) and w.isVisible() for w in app.topLevelWidgets()))
+            wait_until(lambda: pending.done or visible_import(path), description='Open import ' + path.name)
             if pending.done and not allow_error:
                 result(pending)
-            dialog = next(w for w in app.topLevelWidgets() if isinstance(w, ImportDialog) and w.isVisible())
+            dialog = visible_import(path)
+            assert dialog is not None, ('Import completed without a dialog', pending.error)
             return handle, dialog
         handle, dialog = start_import(csv)
         # Cancelling before WebChannel initialization tears down its bridge while
@@ -298,10 +323,7 @@ try:
         assert getattr(pending.error, 'kind', None) == 'cancelled', pending.error
         print('PASS import cancellation', flush=True)
         handle, dialog = start_import(csv)
-        clicked = [False]
-        def click_import():
-            dialog.web.evalWithCallback('(() => {const button = document.querySelector(".import")?.closest("button"); if (!button) return false; button.click(); return true;})()', lambda v: clicked.__setitem__(0, clicked[0] or bool(v)))
-            return clicked[0]
+        click_import = import_clicker(dialog)
         try:
             wait_until(lambda: owner.runtime.operations.completions[handle["operationId"]].done or click_import())
         except TimeoutError:
@@ -317,12 +339,21 @@ try:
         print('PASS import success', flush=True)
         legacy_csv = base / 'legacy.csv'
         legacy_csv.write_text('legacy imported front,legacy imported back\n')
+        wait_until(lambda: aqt.mw._background_op_count == 0,
+                   description='Settle native work before legacy import')
+        print('START legacy import', flush=True)
         legacy_import = owner.handler_async({'action': 'guiImportFile', 'version': 6,
                                              'params': {'path': str(legacy_csv)}}, barrier=True)
-        wait_until(lambda: any(isinstance(w, ImportDialog) and w.isVisible() for w in app.topLevelWidgets()))
-        dialog = next(w for w in app.topLevelWidgets() if isinstance(w, ImportDialog) and w.isVisible())
-        clicked = [False]
-        wait_until(lambda: legacy_import.done or click_import())
+        wait_until(lambda: legacy_import.done or visible_import(legacy_csv),
+                   description='Open legacy import dialog')
+        if legacy_import.done:
+            raise AssertionError(('Legacy import completed before opening its dialog', result(legacy_import)))
+        dialog = visible_import(legacy_csv)
+        print('PASS legacy import dialog opened', flush=True)
+        click_import = import_clicker(dialog)
+        wait_until(lambda: legacy_import.done or click_import(), description='Click legacy Import button')
+        print('WAIT legacy import completion', flush=True)
+        wait_until(lambda: legacy_import.done, description='Complete legacy native import')
         assert result(legacy_import) == {'result': None, 'error': None}
         assert aqt.mw.col.find_notes('"legacy imported front"')
         dialog.reject()
@@ -331,10 +362,10 @@ try:
         broken.write_bytes(b'not a package')
         handle, dialog = start_import(broken, allow_error=True)
         pending = owner.runtime.operations.completions[handle['operationId']]
-        clicked = [False]
+        click_import = import_clicker(dialog)
         def failed_import_finished():
-            if not clicked[0] and not pending.done:
-                dialog.web.evalWithCallback('(() => {const button = document.querySelector(".import")?.closest("button"); if (!button) return false; button.click(); return true;})()', lambda v: clicked.__setitem__(0, clicked[0] or bool(v)))
+            if not pending.done:
+                click_import()
             return pending.done
         wait_until(failed_import_finished)
         assert getattr(pending.error, 'kind', None) == 'ioError', pending.error
