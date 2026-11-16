@@ -5,7 +5,7 @@ completion for long-running work, and structured errors. Existing applications c
 continue using the [legacy API](API_LEGACY.md) at `/`.
 
 Anki Desktop must be running with the add-on enabled. This rewrite requires Anki
-26.08 or later; the test matrix covers 26.08 and 26.09.3. Call `api.describe` to check which
+26.08 or later; the test matrix covers 26.08 and 26.09.4. Call `api.describe` to check which
 methods are available in the current runtime. Native tests cover both protocols. GUI scenarios require a working display;
 network sync requires a disposable account and separate integration testing.
 

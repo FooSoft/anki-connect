@@ -10,11 +10,11 @@ param(
 # Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
 $ANKI_VERSIONS = @(
     '26.8'
-    '26.9.3'
+    '26.9.4'
 )
 
 if ($Help) {
-    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-AllVersions | -Versions 26.8,26.9.3]'
+    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-AllVersions | -Versions 26.8,26.9.4]'
     Write-Host 'Test the latest matrix version by default; -AllVersions tests the full matrix.'
     Write-Host 'Run unit and UI tests; -NoUI skips UI scenarios.'
     exit 0

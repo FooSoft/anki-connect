@@ -15,7 +15,7 @@ legacy guide for supported actions and compatibility details.
 ## Install and run
 
 Anki-Connect requires **Anki Desktop 26.08 or later**. Compatibility is tested with
-26.08 and 26.09.3. Use `api.describe` to check method availability in your running
+26.08 and 26.09.4. Use `api.describe` to check method availability in your running
 Anki instance.
 
 Install [Anki-Connect from AnkiWeb](https://ankiweb.net/shared/info/2055492159):
@@ -121,7 +121,7 @@ including GUI scenarios. To skip GUI scenarios, use `make test-unit` or
 To test the full compatibility matrix, use `make test TEST_ARGS=--all-versions`,
 `./tools/test.sh --all-versions`, or `.\tools\test.ps1 -AllVersions`.
 
-Run `make help` for all development commands. Use `make test VERSIONS="26.9.3"`
+Run `make help` for all development commands. Use `make test VERSIONS="26.9.4"`
 to select Anki versions. The runners cache dependencies and interpreters in
 `.test-cache/` at the repository root. `make check` runs contract, API documentation,
 coverage, and syntax checks in your current Python environment; select an

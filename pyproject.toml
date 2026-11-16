@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 dependencies = ["jsonschema>=4.18"]
 
 [project.optional-dependencies]
-test = ["anki==26.9.3", "aqt==26.9.3", "pytest>=8"]
+test = ["anki==26.9.4", "aqt==26.9.4", "pytest>=8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests_api"]

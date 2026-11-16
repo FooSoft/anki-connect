@@ -2,7 +2,7 @@
 # Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
 ANKI_VERSIONS=(
     "26.8"
-    "26.9.3"
+    "26.9.4"
 )
 
 set -euo pipefail

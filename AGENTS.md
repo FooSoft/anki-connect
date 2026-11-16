@@ -73,7 +73,7 @@ Run `make test` for the latest cached Anki version, including UI scenarios by de
 Use `make test TEST_ARGS=--all-versions` for the full version matrix.
 On Windows, run `.\tools\test.ps1`; `-AllVersions` selects the full matrix and `-NoUI` skips UI scenarios.
 Use `make test-unit` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
-`anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
+`anki==26.9.4`, `aqt==26.9.4`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.
 
 ```bash

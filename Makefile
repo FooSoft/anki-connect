@@ -17,7 +17,7 @@ help:
 		'make link       Link the add-on into an existing Linux/macOS Anki folder' \
 		'' \
 		'Full matrix: make test TEST_ARGS=--all-versions (also works with test-unit)' \
-		'Overrides: VERSIONS="26.8 26.9.3" for tests; PYTHON=/path/to/python for check/contract/package'
+		'Overrides: VERSIONS="26.8 26.9.4" for tests; PYTHON=/path/to/python for check/contract/package'
 
 test:
 	./tools/test.sh $(TEST_ARGS) $(VERSIONS)
