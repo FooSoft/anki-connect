@@ -23,6 +23,9 @@ curl --request POST http://127.0.0.1:8765/ \
 Each request has an `action`, `version`, optional `params` object, and optional
 `key`. Use version 6 for current clients. Legacy entity IDs are JSON numbers,
 unlike v1's decimal strings. Paths refer to the machine running Anki.
+As in earlier releases, any request path other than `/api/v1` (including query
+strings) reaches the legacy API. HTTP parsing is stricter than before: duplicate
+headers, header lines without a colon, and chunked bodies return 400.
 
 Legacy note creation, eligibility checks, tag updates, and Add dialog drafts ignore
 empty strings in tag lists. For example, `"tags": ["", "Pharmacy"]`
@@ -88,9 +91,11 @@ main().catch(console.error);
 ## Authentication and response versions
 
 Set `apiKey` in Anki's add-on configuration to enable authentication, then include
-that value as the request body's `key`. `requestPermission` is exempt; its returned
+that value as the request body's `key`. A null or empty key disables authentication.
+`requestPermission` is exempt; its returned
 `requireApikey` indicates whether a key is required, but it never returns the key.
-Origin checks apply separately using the configured origin lists.
+Origin checks apply separately using the configured origin lists. When `apiLogPath`
+is set, each legacy request and reply is logged as before, with `key` redacted.
 
 For versions 5 and 6, successful requests return `{"result":...,"error":null}`.
 Failures return `{"result":null,"error":"message"}`. Error messages are strings;
@@ -205,10 +210,11 @@ show every accepted argument and its default. Media data is base64 encoded.
 ### Note input and inline media
 
 Creation uses `deckName`, `modelName`, `fields` (HTML strings), and optional `tags`.
-`options.allowDuplicate` defaults to false. `options.duplicateScope` accepts
-`collection` (default) or `deck`; other values fail. For deck scope,
+`options.allowDuplicate` defaults to false. `options.duplicateScope` is `deck`
+or the collection (any other value). For deck scope,
 `duplicateScopeOptions.deckName` chooses the duplicate-check deck; when omitted
-or null, the creation deck is used. `checkChildren` and `checkAllModels` default
+or null, the creation deck is used. A named deck that does not exist cannot
+contain duplicates and is not created. `checkChildren` and `checkAllModels` default
 to false.
 
 The optional `audio`, `video`, and `picture` properties accept one media object or
@@ -1064,7 +1070,7 @@ Gets statistics such as total cards and cards due for the given decks.
 
 **Completion:** completed.
 
-**Behavior:** Unknown decks are created and return zero counts.
+**Behavior:** Unknown decks are created and return zero counts. Values come from Anki's deck due tree: `name` is the deck's last name component (for example `Child` for `Parent::Child`), due counts include subdecks, and `total_in_deck` counts only the deck's own cards. Entries follow deck tree order.
 
 **v1 equivalent:** [decks.getCounts](API_V1.md#decksgetcounts).
 
@@ -3044,7 +3050,7 @@ This allows you to change the note's model, update its fields with new content, 
 
 **Completion:** completed.
 
-**Behavior:** native conversion; fields and templates map by name, and a lone source template without a namesake maps by position so its cards keep their scheduling; other ambiguous mappings return compatibilityError; post-conversion content failure may leave conversion committed and must be reported.
+**Behavior:** native conversion; tags are replaced, so omitted or null `tags` clear them; fields and templates map by name, and a lone source template without a namesake maps by position so its cards keep their scheduling; other ambiguous mappings return compatibilityError; post-conversion content failure may leave conversion committed and must be reported.
 
 **v1 equivalent:** [notes.planConversion](API_V1.md#notesplanconversion), [notes.convert](API_V1.md#notesconvert), [notes.update](API_V1.md#notesupdate).
 

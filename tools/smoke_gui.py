@@ -56,6 +56,19 @@ pm.db.close()
 import aqt
 from aqt.qt import QTimer
 app = aqt._run(['anki', '-b', str(base), '-p', 'User 1', '-l', 'en'], exec=False)
+
+
+def finish(code):
+    # os._exit skips Anki's teardown, which would orphan mpv and leave the profile.
+    import shutil
+    try:
+        aqt.sound.cleanup_audio()
+    except Exception:
+        pass
+    shutil.rmtree(base, ignore_errors=True)
+    os._exit(code)
+
+
 from plugin import AnkiConnect
 from plugin.edit import Edit
 from plugin.protocol import Deferred
@@ -787,5 +800,5 @@ try:
 except BaseException:
     import traceback
     print(traceback.format_exc(), flush=True)
-    os._exit(1)
-os._exit(0)
+    finish(1)
+finish(0)

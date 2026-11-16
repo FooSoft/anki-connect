@@ -33,7 +33,6 @@ def test_envelope_normalization_preserves_reply_versions(admitted, version, para
     request = {'action': 'deckNames', 'version': version, 'params': params}
     before = copy.deepcopy(request)
     expected = ['Default'] if version in (None, '2', '4') else {'result': ['Default'], 'error': None}
-    assert owner.handler(request) == expected
     assert exchange(owner, drain, request) == expected
     assert request == before and service.col.note_count() == 0
 
@@ -164,13 +163,20 @@ def test_normalized_ids_still_block_affected_editors(admitted, monkeypatch):
     dialog = SimpleNamespace(editor=SimpleNamespace(note=service.col.get_note(id)))
     monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Edit': (None, dialog)})
     for action, params in [('updateNoteFields', {'note': {'id': ' 00' + str(id), 'fields': {'front': 'bad'}}}),
-                           ('addTags', {'notes': str(id), 'tags': 'bad'}), ('deleteNotes', {'notes': str(id)})]:
+                           ('addTags', {'notes': str(id), 'tags': 'bad'}), ('deleteNotes', {'notes': str(id)}),
+                           ('updateNoteTags', {'note': id, 'tags': 'bad'}),
+                           ('replaceTagsInAllNotes', {'tag_to_replace': 'x', 'replace_with_tag': 'bad'})]:
         pending = owner.handler_async({'action': action, 'version': '6', 'params': params})
         drain()
         assert pending.value['error'].startswith('Close the affected editor')
         assert not work
     assert service.col.get_note(id).fields == ['question', 'answer']
     assert service.col.get_note(id).tags == []
+    # New notes and other notes do not touch the open editor.
+    other = invoke(admitted, 'addNote', note=note('other'))
+    invoke(admitted, 'addNotes', notes=[note('third')])
+    assert invoke(admitted, 'updateNoteTags', note=other, tags='ok') is None
+    assert service.col.get_note(other).tags == ['ok']
 
 
 def test_normalized_nested_batches_keep_preflight_and_credentials(admitted, monkeypatch):
@@ -188,14 +194,11 @@ def test_normalized_nested_batches_keep_preflight_and_credentials(admitted, monk
         {'action': 'multi', 'version': '6', 'key': 'secret', 'params': {'actions': [
             {'action': 'guiExitAnki', 'key': 'secret', 'params': None}]}},
         {'action': 'version', 'key': 'secret'}]
-    for dispatch in (owner.handler, owner.handler_async):
-        reply = dispatch(request)
-        if hasattr(reply, 'value'):
-            assert reply.done
-            reply = reply.value
-        assert reply['error'] == 'guiExitAnki must be the last executable multi action'
-        assert not work and not owner.runtime.exit_requested
-        assert service.col.decks.id_for_name('Must not exist') is None
+    reply = owner.handler_async(request)
+    assert reply.done
+    assert reply.value['error'] == 'guiExitAnki must be the last executable multi action'
+    assert not work and not owner.runtime.exit_requested
+    assert service.col.decks.id_for_name('Must not exist') is None
 
 
 def test_permission_context_and_origin_checks_survive_null_params(admitted, monkeypatch):
@@ -252,7 +255,6 @@ def test_false_or_invalid_deletion_flags_preserve_decks(admitted, value):
 def test_nonempty_malformed_parameter_containers_are_rejected(admitted, params):
     owner, service, drain, work, _ = admitted
     request = {'action': 'createDeck', 'version': '6', 'params': params}
-    assert owner.handler(request) == {'result': None, 'error': 'params must be an object.'}
     assert exchange(owner, drain, request) == {'result': None, 'error': 'params must be an object.'}
     assert not work and service.col.decks.all_names_and_ids()[0].name == 'Default'
 

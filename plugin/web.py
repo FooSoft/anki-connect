@@ -49,7 +49,11 @@ class WebClient:
                 if req is not None:
                     self.readBuff = b''
                     self.pending = True
-                    reply = self.handler(req)
+                    try:
+                        reply = self.handler(req)
+                    except Exception as error:
+                        # Includes serialization failures of synchronous results.
+                        reply = completed(error=error)
                     def finish(source):
                         self.pending = False
                         self.started = time.monotonic()
@@ -159,9 +163,8 @@ class WebServer:
             # Let browsers send the POST; origin admission below still protects actions.
             origin = req.headers.get(b'origin', b'').decode() or origin
             return response(None, empty=True)
-        rpc = req.path == b'/api/v1'
-        if req.path not in (b'/', b'/api/v1'):
-            return response(None, '404 Not Found', empty=True)
+        # Historical servers ignored the request target; only /api/v1 is reserved.
+        rpc = req.path.split(b'?', 1)[0].rstrip(b'/') == b'/api/v1'
         if rpc and req.method != b'POST':
             return response(None, '405 Method Not Allowed', empty=True)
         try:
@@ -187,7 +190,7 @@ class WebServer:
             origin = req.headers.get(b'origin', b'').decode()
         if rpc:
             key = util.setting('apiKey')
-            if key is not None and not permission and req.headers.get(b'authorization') != ('Bearer ' + key).encode():
+            if key and not permission and req.headers.get(b'authorization') != ('Bearer ' + key).encode():
                 return response(None, '401 Unauthorized', empty=True)
             if self.rpc_handler is None:
                 return response(None, '404 Not Found', empty=True)

@@ -57,10 +57,12 @@ class AnkiConnect:
 
     def logEvent(self, name, data):
         if self.log:
-            self.log.write('[{}]\n'.format(name))
-            json.dump(data, self.log, indent=4, sort_keys=True)
-            self.log.write('\n\n')
-            self.log.flush()
+            # Logging must never interrupt the reply callbacks that follow it.
+            try:
+                self.log.write('[{}]\n{}\n\n'.format(name, json.dumps(data, indent=4, sort_keys=True, default=str)))
+                self.log.flush()
+            except Exception as error:
+                print('AnkiConnect: failed to log {}: {}'.format(name, error))
 
     def startWebServer(self):
         try:
@@ -88,59 +90,31 @@ class AnkiConnect:
     def window(self):
         return aqt.mw
 
-    def collection(self):
-        return self.runtime.service().col
-
-    def decks(self):
-        return self.collection().decks
-
-    def scheduler(self):
-        return self.collection().sched
-
-    def database(self):
-        return self.collection().db
-
-    def media(self):
-        return self.collection().media
-
     def reviewer(self):
         return self.window().reviewer
-
-    def getNote(self, noteId):
-        return self.collection().get_note(noteId)
-
-    def getCard(self, cardId):
-        return self.collection().get_card(cardId)
-
-    def getModel(self, modelName):
-        return self.runtime.service().resolve({'name': modelName}, 'noteType')
 
     def legacy_actions(self):
         return [name for name, method in inspect.getmembers(self, inspect.ismethod) if getattr(method, 'api', False)]
 
-    def resolve_action(self, name, version, params):
-        for methodName in self.legacy_actions():
-            method = getattr(self, methodName)
-            aliases = [(v, alias) for v, alias in getattr(method, 'versions', []) if v <= version]
-            alias = max(aliases)[1] if aliases else methodName
-            if alias == name:
-                signature = inspect.signature(method)
-                # Clients often reuse parameter objects across actions. Ignore
-                # surplus keys, while preserving the binder's missing-argument errors.
-                params = {key: value for key, value in params.items() if key in signature.parameters}
-                for key, parameter in signature.parameters.items():
-                    if params.get(key) is None and parameter.default is not inspect.Parameter.empty:
-                        params.pop(key, None)
-                try:
-                    bound = signature.bind(**params)
-                except TypeError:
-                    # The real call binder retains the historical public error.
-                    # Binding failed, so the method body cannot execute.
-                    method(**params)
-                    raise
-                bound.apply_defaults()
-                return methodName, Legacy.normalize_params(methodName, dict(bound.arguments))
-        raise Exception('unsupported action')
+    def resolve_action(self, name, params):
+        method = getattr(self, name, None) if isinstance(name, str) else None
+        if not getattr(method, 'api', False):
+            raise Exception('unsupported action')
+        signature = inspect.signature(method)
+        # Clients often reuse parameter objects across actions. Ignore
+        # surplus keys, while preserving the binder's missing-argument errors.
+        params = {key: value for key, value in params.items() if key in signature.parameters}
+        for key, parameter in signature.parameters.items():
+            if params.get(key) is None and parameter.default is not inspect.Parameter.empty:
+                params.pop(key, None)
+        try:
+            bound = signature.bind(**params)
+        except TypeError:
+            # The declaration's own binder retains the historical public error.
+            method(**params)
+            raise
+        bound.apply_defaults()
+        return name, Legacy.normalize_params(name, dict(bound.arguments))
 
     def guard_legacy(self, name, params):
         gui_action = name.startswith('gui') and name != 'guiExitAnki'
@@ -150,56 +124,17 @@ class AnkiConnect:
         if self.runtime.lifecycle_active and name not in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile'):
             from .protocol import ApiError
             raise ApiError('busy', 'Collection lifecycle operation is active.')
-        converted = dict(params)
+        # Editors are guarded by the existing note IDs a write names; new note objects have none.
         note = params.get('note')
-        if isinstance(note, dict):
-            converted['id'] = str(note.get('id'))
-        elif note is not None:
-            converted['id'] = str(note)
-        converted['ids'] = [str(id) for id in (params.get('notes') or [converted.get('id')])]
-        if name == 'replaceTagsInAllNotes':
-            converted['allNotes'] = True
+        notes = params.get('notes')
+        ids = [str(id) for id in notes if not isinstance(id, dict)] if isinstance(notes, list) else []
+        note_id = note.get('id') if isinstance(note, dict) else note
+        if note_id is not None:
+            ids.append(str(note_id))
+        converted = {'ids': ids, 'allNotes': name == 'replaceTagsInAllNotes'}
         for target in LEGACY_TARGETS.get(name, []):
             if target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite'):
                 self.runtime.gui.guard(target, converted)
-
-    def legacy(self, name, params):
-        params = Legacy.normalize_params(name, params)
-        self.guard_legacy(name, params)
-        service = None
-        if name not in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile', 'loadProfile', 'sync', 'guiExitAnki'):
-            service = self.runtime.service()
-        adapter = Legacy(self, service)
-        try:
-            value = adapter.call(name, params)
-            if isinstance(value, Accepted):
-                return value.value
-            if isinstance(value, Deferred):
-                if not value.done:
-                    return value
-                if value.error:
-                    raise value.error
-                return value.value
-            return value
-        finally:
-            if service:
-                self.runtime.finish_changes(service)
-
-    def handler(self, request):
-        version = 4
-        try:
-            request = legacy_request(request)
-            version = request['version']
-            name = request.get('action', '')
-            if name != 'requestPermission' and request.get('key') != util.setting('apiKey'):
-                raise Exception('valid api key must be provided')
-            name, params = self.resolve_action(name, version, request.get('params', {}))
-            if name == 'multi':
-                self.validate_multi(params['actions'])
-            value = self.multi(params['actions']) if name == 'multi' else self.legacy(name, params)
-            return format_success_reply(version, value)
-        except Exception as error:
-            return format_exception_reply(version, error)
 
     def validate_multi(self, actions, depth=0, state=None):
         """Preflight the entire tree before admitting any executable action."""
@@ -215,7 +150,7 @@ class AnkiConnect:
                 raise Exception('multi actions must be request objects')
             try:
                 item = legacy_request(item)
-                name, params = self.resolve_action(item.get('action', ''), item.get('version', 4), item.get('params', {}))
+                name, params = self.resolve_action(item.get('action', ''), item.get('params', {}))
             except Exception:
                 # Invalid actions have their own error slot and cannot execute.
                 continue
@@ -227,6 +162,14 @@ class AnkiConnect:
                 state['exit'] = name == 'guiExitAnki'
 
     def handler_async(self, request, barrier=False, depth=0):
+        if self.log:
+            self.logEvent('request', {**request, 'key': '***'} if isinstance(request, dict) and 'key' in request else request)
+        reply = self.dispatch_legacy(request, barrier, depth)
+        if self.log:
+            reply.then(lambda source: self.logEvent('reply', source.value))
+        return reply
+
+    def dispatch_legacy(self, request, barrier, depth):
         version = 4
         try:
             request = legacy_request(request)
@@ -234,9 +177,9 @@ class AnkiConnect:
             if depth > 16:
                 raise Exception('multi nesting limit exceeded')
             name = request.get('action', '')
-            if name != 'requestPermission' and request.get('key') != util.setting('apiKey'):
+            if name != 'requestPermission' and util.setting('apiKey') and request.get('key') != util.setting('apiKey'):
                 raise Exception('valid api key must be provided')
-            name, params = self.resolve_action(name, version, request.get('params', {}))
+            name, params = self.resolve_action(name, request.get('params', {}))
             self.guard_legacy(name, params)
             if name == 'multi':
                 actions = params['actions']
@@ -282,11 +225,7 @@ class AnkiConnect:
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.No)
             msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
-            if hasattr(Qt, 'WindowStaysOnTopHint'):
-                WindowOnTopFlag = Qt.WindowStaysOnTopHint
-            elif hasattr(Qt, 'WindowType') and hasattr(Qt.WindowType, 'WindowStaysOnTopHint'):
-                WindowOnTopFlag = Qt.WindowType.WindowStaysOnTopHint
-            msg.setWindowFlag(WindowOnTopFlag, True)
+            msg.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
             pending = Deferred()
             def chosen(pressedButton):
                 try:
@@ -314,492 +253,370 @@ class AnkiConnect:
         return results
 
     @util.api()
-    def version(self):
-        return self.legacy('version', {})
+    def version(self): ...
 
     @util.api()
-    def requestPermission(self, origin, allowed):
-        return self.legacy('requestPermission', {'origin': origin, 'allowed': allowed})
+    def requestPermission(self, origin, allowed): ...
 
     @util.api()
-    def getProfiles(self):
-        return self.legacy('getProfiles', {})
+    def getProfiles(self): ...
 
     @util.api()
-    def getActiveProfile(self):
-        return self.legacy('getActiveProfile', {})
+    def getActiveProfile(self): ...
 
     @util.api()
-    def loadProfile(self, name):
-        return self.legacy('loadProfile', {'name': name})
+    def loadProfile(self, name): ...
 
     @util.api()
-    def sync(self):
-        return self.legacy('sync', {})
+    def sync(self): ...
 
     @util.api()
-    def multi(self, actions):
-        return self.legacy('multi', {'actions': actions})
+    def multi(self, actions): ...
 
     @util.api()
-    def getNumCardsReviewedToday(self):
-        return self.legacy('getNumCardsReviewedToday', {})
+    def getNumCardsReviewedToday(self): ...
 
     @util.api()
-    def getNumCardsReviewedByDay(self):
-        return self.legacy('getNumCardsReviewedByDay', {})
+    def getNumCardsReviewedByDay(self): ...
 
     @util.api()
-    def getCollectionStatsHTML(self, wholeCollection=True):
-        return self.legacy('getCollectionStatsHTML', {'wholeCollection': wholeCollection})
+    def getCollectionStatsHTML(self, wholeCollection=True): ...
 
     @util.api()
-    def deckNames(self):
-        return self.legacy('deckNames', {})
+    def deckNames(self): ...
 
     @util.api()
-    def deckNamesAndIds(self):
-        return self.legacy('deckNamesAndIds', {})
+    def deckNamesAndIds(self): ...
 
     @util.api()
-    def getDecks(self, cards):
-        return self.legacy('getDecks', {'cards': cards})
+    def getDecks(self, cards): ...
 
     @util.api()
-    def createDeck(self, deck):
-        return self.legacy('createDeck', {'deck': deck})
+    def createDeck(self, deck): ...
 
     @util.api()
-    def changeDeck(self, cards, deck):
-        return self.legacy('changeDeck', {'cards': cards, 'deck': deck})
+    def changeDeck(self, cards, deck): ...
 
     @util.api()
-    def deleteDecks(self, decks, cardsToo=False):
-        return self.legacy('deleteDecks', {'decks': decks, 'cardsToo': cardsToo})
+    def deleteDecks(self, decks, cardsToo=False): ...
 
     @util.api()
-    def getDeckConfig(self, deck):
-        return self.legacy('getDeckConfig', {'deck': deck})
+    def getDeckConfig(self, deck): ...
 
     @util.api()
-    def saveDeckConfig(self, config):
-        return self.legacy('saveDeckConfig', {'config': config})
+    def saveDeckConfig(self, config): ...
 
     @util.api()
-    def setDeckConfigId(self, decks, configId):
-        return self.legacy('setDeckConfigId', {'decks': decks, 'configId': configId})
+    def setDeckConfigId(self, decks, configId): ...
 
     @util.api()
-    def cloneDeckConfigId(self, name, cloneFrom='1'):
-        return self.legacy('cloneDeckConfigId', {'name': name, 'cloneFrom': cloneFrom})
+    def cloneDeckConfigId(self, name, cloneFrom='1'): ...
 
     @util.api()
-    def removeDeckConfigId(self, configId):
-        return self.legacy('removeDeckConfigId', {'configId': configId})
+    def removeDeckConfigId(self, configId): ...
 
     @util.api()
-    def getDeckStats(self, decks):
-        return self.legacy('getDeckStats', {'decks': decks})
+    def getDeckStats(self, decks): ...
 
     @util.api()
-    def storeMediaFile(self, filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True):
-        return self.legacy('storeMediaFile', {'filename': filename, 'data': data, 'path': path, 'url': url, 'skipHash': skipHash, 'deleteExisting': deleteExisting})
+    def storeMediaFile(self, filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True): ...
 
     @util.api()
-    def retrieveMediaFile(self, filename):
-        return self.legacy('retrieveMediaFile', {'filename': filename})
+    def retrieveMediaFile(self, filename): ...
 
     @util.api()
-    def getMediaFilesNames(self, pattern='*'):
-        return self.legacy('getMediaFilesNames', {'pattern': pattern})
+    def getMediaFilesNames(self, pattern='*'): ...
 
     @util.api()
-    def deleteMediaFile(self, filename):
-        return self.legacy('deleteMediaFile', {'filename': filename})
+    def deleteMediaFile(self, filename): ...
 
     @util.api()
-    def getMediaDirPath(self):
-        return self.legacy('getMediaDirPath', {})
+    def getMediaDirPath(self): ...
 
     @util.api()
-    def addNote(self, note):
-        return self.legacy('addNote', {'note': note})
+    def addNote(self, note): ...
 
     @util.api()
-    def canAddNote(self, note):
-        return self.legacy('canAddNote', {'note': note})
+    def canAddNote(self, note): ...
 
     @util.api()
-    def canAddNoteWithErrorDetail(self, note):
-        return self.legacy('canAddNoteWithErrorDetail', {'note': note})
+    def canAddNoteWithErrorDetail(self, note): ...
 
     @util.api()
-    def updateNoteFields(self, note):
-        return self.legacy('updateNoteFields', {'note': note})
+    def updateNoteFields(self, note): ...
 
     @util.api()
-    def updateNote(self, note):
-        return self.legacy('updateNote', {'note': note})
+    def updateNote(self, note): ...
 
     @util.api()
-    def updateNoteModel(self, note):
-        return self.legacy('updateNoteModel', {'note': note})
+    def updateNoteModel(self, note): ...
 
     @util.api()
-    def updateNoteTags(self, note, tags):
-        return self.legacy('updateNoteTags', {'note': note, 'tags': tags})
+    def updateNoteTags(self, note, tags): ...
 
     @util.api()
-    def getNoteTags(self, note):
-        return self.legacy('getNoteTags', {'note': note})
+    def getNoteTags(self, note): ...
 
     @util.api()
-    def addTags(self, notes, tags, add=True):
-        return self.legacy('addTags', {'notes': notes, 'tags': tags, 'add': add})
+    def addTags(self, notes, tags, add=True): ...
 
     @util.api()
-    def removeTags(self, notes, tags):
-        return self.legacy('removeTags', {'notes': notes, 'tags': tags})
+    def removeTags(self, notes, tags): ...
 
     @util.api()
-    def getTags(self):
-        return self.legacy('getTags', {})
+    def getTags(self): ...
 
     @util.api()
-    def clearUnusedTags(self):
-        return self.legacy('clearUnusedTags', {})
+    def clearUnusedTags(self): ...
 
     @util.api()
-    def replaceTags(self, notes, tag_to_replace, replace_with_tag):
-        return self.legacy('replaceTags', {'notes': notes, 'tag_to_replace': tag_to_replace, 'replace_with_tag': replace_with_tag})
+    def replaceTags(self, notes, tag_to_replace, replace_with_tag): ...
 
     @util.api()
-    def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag):
-        return self.legacy('replaceTagsInAllNotes', {'tag_to_replace': tag_to_replace, 'replace_with_tag': replace_with_tag})
+    def replaceTagsInAllNotes(self, tag_to_replace, replace_with_tag): ...
 
     @util.api()
-    def setEaseFactors(self, cards, easeFactors):
-        return self.legacy('setEaseFactors', {'cards': cards, 'easeFactors': easeFactors})
+    def setEaseFactors(self, cards, easeFactors): ...
 
     @util.api()
-    def setSpecificValueOfCard(self, card, keys, newValues, warning_check=False):
-        return self.legacy('setSpecificValueOfCard', {'card': card, 'keys': keys, 'newValues': newValues, 'warning_check': warning_check})
+    def setSpecificValueOfCard(self, card, keys, newValues, warning_check=False): ...
 
     @util.api()
-    def getEaseFactors(self, cards):
-        return self.legacy('getEaseFactors', {'cards': cards})
+    def getEaseFactors(self, cards): ...
 
     @util.api()
-    def suspend(self, cards, suspend=True):
-        return self.legacy('suspend', {'cards': cards, 'suspend': suspend})
+    def suspend(self, cards, suspend=True): ...
 
     @util.api()
-    def unsuspend(self, cards):
-        return self.legacy('unsuspend', {'cards': cards})
+    def unsuspend(self, cards): ...
 
     @util.api()
-    def suspended(self, card):
-        return self.legacy('suspended', {'card': card})
+    def suspended(self, card): ...
 
     @util.api()
-    def areSuspended(self, cards):
-        return self.legacy('areSuspended', {'cards': cards})
+    def areSuspended(self, cards): ...
 
     @util.api()
-    def areDue(self, cards):
-        return self.legacy('areDue', {'cards': cards})
+    def areDue(self, cards): ...
 
     @util.api()
-    def getIntervals(self, cards, complete=False):
-        return self.legacy('getIntervals', {'cards': cards, 'complete': complete})
+    def getIntervals(self, cards, complete=False): ...
 
     @util.api()
-    def modelNames(self):
-        return self.legacy('modelNames', {})
+    def modelNames(self): ...
 
     @util.api()
-    def createModel(self, modelName, inOrderFields, cardTemplates, css=None, isCloze=False):
-        return self.legacy('createModel', {'modelName': modelName, 'inOrderFields': inOrderFields, 'cardTemplates': cardTemplates, 'css': css, 'isCloze': isCloze})
+    def createModel(self, modelName, inOrderFields, cardTemplates, css=None, isCloze=False): ...
 
     @util.api()
-    def modelNamesAndIds(self):
-        return self.legacy('modelNamesAndIds', {})
+    def modelNamesAndIds(self): ...
 
     @util.api()
-    def findModelsById(self, modelIds):
-        return self.legacy('findModelsById', {'modelIds': modelIds})
+    def findModelsById(self, modelIds): ...
 
     @util.api()
-    def findModelsByName(self, modelNames):
-        return self.legacy('findModelsByName', {'modelNames': modelNames})
+    def findModelsByName(self, modelNames): ...
 
     @util.api()
-    def modelNameFromId(self, modelId):
-        return self.legacy('modelNameFromId', {'modelId': modelId})
+    def modelNameFromId(self, modelId): ...
 
     @util.api()
-    def modelFieldNames(self, modelName):
-        return self.legacy('modelFieldNames', {'modelName': modelName})
+    def modelFieldNames(self, modelName): ...
 
     @util.api()
-    def modelFieldDescriptions(self, modelName):
-        return self.legacy('modelFieldDescriptions', {'modelName': modelName})
+    def modelFieldDescriptions(self, modelName): ...
 
     @util.api()
-    def modelFieldFonts(self, modelName):
-        return self.legacy('modelFieldFonts', {'modelName': modelName})
+    def modelFieldFonts(self, modelName): ...
 
     @util.api()
-    def modelFieldsOnTemplates(self, modelName):
-        return self.legacy('modelFieldsOnTemplates', {'modelName': modelName})
+    def modelFieldsOnTemplates(self, modelName): ...
 
     @util.api()
-    def modelTemplates(self, modelName):
-        return self.legacy('modelTemplates', {'modelName': modelName})
+    def modelTemplates(self, modelName): ...
 
     @util.api()
-    def modelStyling(self, modelName):
-        return self.legacy('modelStyling', {'modelName': modelName})
+    def modelStyling(self, modelName): ...
 
     @util.api()
-    def updateModelTemplates(self, model):
-        return self.legacy('updateModelTemplates', {'model': model})
+    def updateModelTemplates(self, model): ...
 
     @util.api()
-    def updateModelStyling(self, model):
-        return self.legacy('updateModelStyling', {'model': model})
+    def updateModelStyling(self, model): ...
 
     @util.api()
-    def findAndReplaceInModels(self, modelName, findText, replaceText, front=True, back=True, css=True):
-        return self.legacy('findAndReplaceInModels', {'modelName': modelName, 'findText': findText, 'replaceText': replaceText, 'front': front, 'back': back, 'css': css})
+    def findAndReplaceInModels(self, modelName, findText, replaceText, front=True, back=True, css=True): ...
 
     @util.api()
-    def modelTemplateRename(self, modelName, oldTemplateName, newTemplateName):
-        return self.legacy('modelTemplateRename', {'modelName': modelName, 'oldTemplateName': oldTemplateName, 'newTemplateName': newTemplateName})
+    def modelTemplateRename(self, modelName, oldTemplateName, newTemplateName): ...
 
     @util.api()
-    def modelTemplateReposition(self, modelName, templateName, index):
-        return self.legacy('modelTemplateReposition', {'modelName': modelName, 'templateName': templateName, 'index': index})
+    def modelTemplateReposition(self, modelName, templateName, index): ...
 
     @util.api()
-    def modelTemplateAdd(self, modelName, template):
-        return self.legacy('modelTemplateAdd', {'modelName': modelName, 'template': template})
+    def modelTemplateAdd(self, modelName, template): ...
 
     @util.api()
-    def modelTemplateRemove(self, modelName, templateName):
-        return self.legacy('modelTemplateRemove', {'modelName': modelName, 'templateName': templateName})
+    def modelTemplateRemove(self, modelName, templateName): ...
 
     @util.api()
-    def modelFieldRename(self, modelName, oldFieldName, newFieldName):
-        return self.legacy('modelFieldRename', {'modelName': modelName, 'oldFieldName': oldFieldName, 'newFieldName': newFieldName})
+    def modelFieldRename(self, modelName, oldFieldName, newFieldName): ...
 
     @util.api()
-    def modelFieldReposition(self, modelName, fieldName, index):
-        return self.legacy('modelFieldReposition', {'modelName': modelName, 'fieldName': fieldName, 'index': index})
+    def modelFieldReposition(self, modelName, fieldName, index): ...
 
     @util.api()
-    def modelFieldAdd(self, modelName, fieldName, index=None):
-        return self.legacy('modelFieldAdd', {'modelName': modelName, 'fieldName': fieldName, 'index': index})
+    def modelFieldAdd(self, modelName, fieldName, index=None): ...
 
     @util.api()
-    def modelFieldRemove(self, modelName, fieldName):
-        return self.legacy('modelFieldRemove', {'modelName': modelName, 'fieldName': fieldName})
+    def modelFieldRemove(self, modelName, fieldName): ...
 
     @util.api()
-    def modelFieldSetFont(self, modelName, fieldName, font):
-        return self.legacy('modelFieldSetFont', {'modelName': modelName, 'fieldName': fieldName, 'font': font})
+    def modelFieldSetFont(self, modelName, fieldName, font): ...
 
     @util.api()
-    def modelFieldSetFontSize(self, modelName, fieldName, fontSize):
-        return self.legacy('modelFieldSetFontSize', {'modelName': modelName, 'fieldName': fieldName, 'fontSize': fontSize})
+    def modelFieldSetFontSize(self, modelName, fieldName, fontSize): ...
 
     @util.api()
-    def modelFieldSetDescription(self, modelName, fieldName, description):
-        return self.legacy('modelFieldSetDescription', {'modelName': modelName, 'fieldName': fieldName, 'description': description})
+    def modelFieldSetDescription(self, modelName, fieldName, description): ...
 
     @util.api()
-    def deckNameFromId(self, deckId):
-        return self.legacy('deckNameFromId', {'deckId': deckId})
+    def deckNameFromId(self, deckId): ...
 
     @util.api()
-    def findNotes(self, query=None):
-        return self.legacy('findNotes', {'query': query})
+    def findNotes(self, query=None): ...
 
     @util.api()
-    def findCards(self, query=None):
-        return self.legacy('findCards', {'query': query})
+    def findCards(self, query=None): ...
 
     @util.api()
-    def cardsInfo(self, cards, fields=None):
-        return self.legacy('cardsInfo', {'cards': cards, 'fields': fields})
+    def cardsInfo(self, cards, fields=None): ...
 
     @util.api()
-    def cardsModTime(self, cards):
-        return self.legacy('cardsModTime', {'cards': cards})
+    def cardsModTime(self, cards): ...
 
     @util.api()
-    def forgetCards(self, cards):
-        return self.legacy('forgetCards', {'cards': cards})
+    def forgetCards(self, cards): ...
 
     @util.api()
-    def relearnCards(self, cards):
-        return self.legacy('relearnCards', {'cards': cards})
+    def relearnCards(self, cards): ...
 
     @util.api()
-    def answerCards(self, answers):
-        return self.legacy('answerCards', {'answers': answers})
+    def answerCards(self, answers): ...
 
     @util.api()
-    def cardReviews(self, deck, startID):
-        return self.legacy('cardReviews', {'deck': deck, 'startID': startID})
+    def cardReviews(self, deck, startID): ...
 
     @util.api()
-    def getReviewsOfCards(self, cards):
-        return self.legacy('getReviewsOfCards', {'cards': cards})
+    def getReviewsOfCards(self, cards): ...
 
     @util.api()
-    def setDueDate(self, cards, days):
-        return self.legacy('setDueDate', {'cards': cards, 'days': days})
+    def setDueDate(self, cards, days): ...
 
     @util.api()
-    def reloadCollection(self):
-        return self.legacy('reloadCollection', {})
+    def reloadCollection(self): ...
 
     @util.api()
-    def getLatestReviewID(self, deck):
-        return self.legacy('getLatestReviewID', {'deck': deck})
+    def getLatestReviewID(self, deck): ...
 
     @util.api()
-    def insertReviews(self, reviews):
-        return self.legacy('insertReviews', {'reviews': reviews})
+    def insertReviews(self, reviews): ...
 
     @util.api()
-    def notesInfo(self, notes=None, query=None):
-        return self.legacy('notesInfo', {'notes': notes, 'query': query})
+    def notesInfo(self, notes=None, query=None): ...
 
     @util.api()
-    def notesModTime(self, notes):
-        return self.legacy('notesModTime', {'notes': notes})
+    def notesModTime(self, notes): ...
 
     @util.api()
-    def deleteNotes(self, notes):
-        return self.legacy('deleteNotes', {'notes': notes})
+    def deleteNotes(self, notes): ...
 
     @util.api()
-    def removeEmptyNotes(self):
-        return self.legacy('removeEmptyNotes', {})
+    def removeEmptyNotes(self): ...
 
     @util.api()
-    def cardsToNotes(self, cards):
-        return self.legacy('cardsToNotes', {'cards': cards})
+    def cardsToNotes(self, cards): ...
 
     @util.api()
-    def guiBrowse(self, query=None, reorderCards=None):
-        return self.legacy('guiBrowse', {'query': query, 'reorderCards': reorderCards})
+    def guiBrowse(self, query=None, reorderCards=None): ...
 
     @util.api()
-    def guiEditNote(self, note):
-        return self.legacy('guiEditNote', {'note': note})
+    def guiEditNote(self, note): ...
 
     @util.api()
-    def guiSelectNote(self, note):
-        return self.legacy('guiSelectNote', {'note': note})
+    def guiSelectNote(self, note): ...
 
     @util.api()
-    def guiSelectCard(self, card):
-        return self.legacy('guiSelectCard', {'card': card})
+    def guiSelectCard(self, card): ...
 
     @util.api()
-    def guiSelectedNotes(self):
-        return self.legacy('guiSelectedNotes', {})
+    def guiSelectedNotes(self): ...
 
     @util.api()
-    def guiAddNoteSetData(self, note, append=False):
-        return self.legacy('guiAddNoteSetData', {'note': note, 'append': append})
+    def guiAddNoteSetData(self, note, append=False): ...
 
     @util.api()
-    def guiAddCards(self, note=None):
-        return self.legacy('guiAddCards', {'note': note})
+    def guiAddCards(self, note=None): ...
 
     @util.api()
-    def guiReviewActive(self):
-        return self.legacy('guiReviewActive', {})
+    def guiReviewActive(self): ...
 
     @util.api()
-    def guiCurrentCard(self):
-        return self.legacy('guiCurrentCard', {})
+    def guiCurrentCard(self): ...
 
     @util.api()
-    def guiStartCardTimer(self):
-        return self.legacy('guiStartCardTimer', {})
+    def guiStartCardTimer(self): ...
 
     @util.api()
-    def guiShowQuestion(self):
-        return self.legacy('guiShowQuestion', {})
+    def guiShowQuestion(self): ...
 
     @util.api()
-    def guiShowAnswer(self):
-        return self.legacy('guiShowAnswer', {})
+    def guiShowAnswer(self): ...
 
     @util.api()
-    def guiAnswerCard(self, ease):
-        return self.legacy('guiAnswerCard', {'ease': ease})
+    def guiAnswerCard(self, ease): ...
 
     @util.api()
-    def guiPlayAudio(self):
-        return self.legacy('guiPlayAudio', {})
+    def guiPlayAudio(self): ...
 
     @util.api()
-    def guiUndo(self):
-        return self.legacy('guiUndo', {})
+    def guiUndo(self): ...
 
     @util.api()
-    def guiDeckOverview(self, name):
-        return self.legacy('guiDeckOverview', {'name': name})
+    def guiDeckOverview(self, name): ...
 
     @util.api()
-    def guiDeckBrowser(self):
-        return self.legacy('guiDeckBrowser', {})
+    def guiDeckBrowser(self): ...
 
     @util.api()
-    def guiDeckReview(self, name):
-        return self.legacy('guiDeckReview', {'name': name})
+    def guiDeckReview(self, name): ...
 
     @util.api()
-    def guiImportFile(self, path=None):
-        return self.legacy('guiImportFile', {'path': path})
+    def guiImportFile(self, path=None): ...
 
     @util.api()
-    def guiExitAnki(self):
-        return self.legacy('guiExitAnki', {})
+    def guiExitAnki(self): ...
 
     @util.api()
-    def guiCheckDatabase(self):
-        return self.legacy('guiCheckDatabase', {})
+    def guiCheckDatabase(self): ...
 
     @util.api()
-    def addNotes(self, notes):
-        return self.legacy('addNotes', {'notes': notes})
+    def addNotes(self, notes): ...
 
     @util.api()
-    def canAddNotes(self, notes):
-        return self.legacy('canAddNotes', {'notes': notes})
+    def canAddNotes(self, notes): ...
 
     @util.api()
-    def canAddNotesWithErrorDetail(self, notes):
-        return self.legacy('canAddNotesWithErrorDetail', {'notes': notes})
+    def canAddNotesWithErrorDetail(self, notes): ...
 
     @util.api()
-    def exportPackage(self, deck, path, includeSched=False):
-        return self.legacy('exportPackage', {'deck': deck, 'path': path, 'includeSched': includeSched})
+    def exportPackage(self, deck, path, includeSched=False): ...
 
     @util.api()
-    def importPackage(self, path):
-        return self.legacy('importPackage', {'path': path})
+    def importPackage(self, path): ...
 
     @util.api()
-    def apiReflect(self, scopes=None, actions=None):
-        return self.legacy('apiReflect', {'scopes': scopes, 'actions': actions})
+    def apiReflect(self, scopes=None, actions=None): ...
 
 if __name__ != "plugin":
     Edit.register_with_anki()

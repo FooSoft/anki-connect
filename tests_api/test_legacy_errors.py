@@ -32,10 +32,9 @@ def test_every_legacy_action_argument_errors_match_baseline(case, version, monke
         missing = next((item for item in BINDING if item['action'] == case['action'] and not item['params']), None)
         if missing is None:
             # Resolve without executing lifecycle/GUI actions in this binder test.
-            assert owner.resolve_action(case['action'], version, case['params'])[0] == case['action']
+            assert owner.resolve_action(case['action'], case['params'])[0] == case['action']
             return
         expected = missing['reply']
-    assert owner.handler(payload) == expected
     pending = owner.handler_async(payload)
     assert pending.done and pending.value == expected
 
@@ -232,7 +231,7 @@ def test_legacy_deck_stats_create_missing_decks(admitted):
 
 @pytest.mark.parametrize('action', ['addNote', 'addNotes', 'updateNoteFields'])
 def test_legacy_attachment_acquisition_errors_are_embedded_in_fields(admitted, tmp_path, action):
-    """addNote, addNotes and updateNoteFields retain legacy attachment failure results."""
+    """addNote, addNotes and updateNoteFields retain legacy attachment failure results in entry order."""
     import html
     owner, service, drain, _, _ = admitted
     # Ampersands exercise HTML escaping while remaining valid on Windows.
@@ -247,7 +246,8 @@ def test_legacy_attachment_acquisition_errors_are_embedded_in_fields(admitted, t
         initial = owner.handler_async({'action': 'addNote', 'version': 6, 'params': {'note': note}})
         drain()
         note = {'id': initial.value['result'], 'fields': {'Back': ''}}
-    note['audio'] = [{'filename': 'missing.mp3', 'path': path, 'fields': ['Back']}]
+    note['audio'] = [{'filename': 'present.mp3', 'data': 'b2s=', 'fields': ['Back']},
+                     {'filename': 'missing.mp3', 'path': path, 'fields': ['Back']}]
     pending = owner.handler_async({'action': action, 'version': 6,
         'params': {'notes': [note]} if action == 'addNotes' else {'note': note}})
     drain()
@@ -258,7 +258,7 @@ def test_legacy_attachment_acquisition_errors_are_embedded_in_fields(admitted, t
     else:
         note_id = pending.value['result'][0] if action == 'addNotes' else pending.value['result']
         assert isinstance(note_id, int)
-    assert service.col.get_note(note_id)['Back'] == expected
+    assert service.col.get_note(note_id)['Back'] == '[sound:present.mp3]' + expected
     assert service.col.note_count() == 1
     assert not (Path(service.col.media.dir()) / 'missing.mp3').exists()
 
@@ -304,3 +304,18 @@ def test_legacy_short_ease_factor_list_retains_error_and_prior_updates(admitted)
     assert pending.value == {'result': None, 'error': 'list index out of range'}
     assert service.col.get_card(ids[0]).factor == 2600
     assert service.col.get_card(ids[1]).factor != 2600
+
+
+def test_api_log_records_legacy_requests_and_replies_without_key(admitted, monkeypatch, tmp_path):
+    owner, _, drain, _, _ = admitted
+    monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', 'secret')
+    monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiLogPath', str(tmp_path / 'api.log'))
+    owner.initLogging()
+    try:
+        assert exchange(owner, drain, {'action': 'deckNames', 'version': 6, 'key': 'secret'}) == {
+            'result': ['Default'], 'error': None}
+    finally:
+        owner.log.close()
+    log = (tmp_path / 'api.log').read_text()
+    assert '[request]' in log and '"action": "deckNames"' in log and 'secret' not in log
+    assert '[reply]' in log and '"Default"' in log

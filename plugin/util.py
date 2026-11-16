@@ -13,16 +13,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import functools
 import os
 
 import aqt
 
 
-def api(*versions):
+def api():
+    """Declare a legacy action; the signature defines its historical parameter binding."""
     def decorator(func):
-        setattr(func, 'versions', versions)
-        setattr(func, 'api', True)
-        return func
+        @functools.wraps(func)
+        def declaration(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            raise NotImplementedError('Legacy actions execute through AnkiConnect.handler_async.')
+        declaration.api = True
+        return declaration
 
     return decorator
 

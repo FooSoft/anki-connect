@@ -410,7 +410,11 @@ class Services:
         if cursor:
             return self.page(None, 'notes.findEmpty', {**params, 'cursor': cursor})
         matches = []
-        for id in self.col.find_notes(query):
+        try:
+            ids = self.col.find_notes(query)
+        except Exception as error:
+            raise ApiError('invalidSearch', str(error)) from error
+        for id in ids:
             note = self.col.get_note(id)
             if ((criterion == 'noCards' and not note.card_ids()) or
                 (criterion == 'allFieldsEmpty' and all(not normalized_field(value).strip() for value in note.fields)) or

@@ -109,3 +109,41 @@ def test_preflight_does_not_bypass_origin_or_api_key(cors_settings):
     status, _, body = response_parts(server.handlerWrapper(WebRequest(b'POST', headers, request, b'/api/v1')))
     assert status == b'HTTP/1.1 204 No Content' and body == b''
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize('path', [b'/?x=1', b'/anything', b'/api', b'/api/v1x'])
+def test_legacy_accepts_any_non_rpc_path(cors_settings, path):
+    calls = []
+    server = WebServer(lambda request: calls.append(request) or 6,
+                       lambda request, context: pytest.fail('JSON-RPC handler used'))
+    request = json.dumps({'action': 'version', 'version': 6, 'key': 'secret'}).encode()
+    status, _, body = response_parts(server.handlerWrapper(WebRequest(
+        b'POST', {b'origin': b'http://localhost'}, request, path)))
+    assert status == b'HTTP/1.1 200 OK' and json.loads(body) == 6
+    assert calls[0]['action'] == 'version'
+
+
+@pytest.mark.parametrize('path', [b'/api/v1?x=1', b'/api/v1/'])
+def test_rpc_path_ignores_query_and_trailing_slash(cors_settings, path):
+    calls = []
+    server = WebServer(lambda request: pytest.fail('legacy handler used'),
+                       lambda request, context: calls.append(request) or completed(None))
+    status, _, _ = response_parts(server.handlerWrapper(WebRequest(
+        b'POST', {b'origin': b'http://localhost', b'authorization': b'Bearer secret'},
+        b'{"jsonrpc":"2.0","method":"collection.get"}', path)))
+    assert status == b'HTTP/1.1 204 No Content' and len(calls) == 1
+
+
+def test_empty_api_key_disables_authentication_for_both_apis(cors_settings):
+    from plugin import AnkiConnect
+    cors_settings['apiKey'] = ''
+    calls = []
+    server = WebServer(lambda request: pytest.fail('legacy handler used'),
+                       lambda request, context: calls.append(request) or completed(None))
+    status, _, _ = response_parts(server.handlerWrapper(WebRequest(
+        b'POST', {}, b'{"jsonrpc":"2.0","id":1,"method":"collection.get"}', b'/api/v1')))
+    assert status == b'HTTP/1.1 204 No Content' and len(calls) == 1
+    owner = AnkiConnect()
+    for request in ({'action': 'version', 'version': 6}, {'action': 'version', 'version': 6, 'key': ''}):
+        assert owner.handler_async(request).value == {'result': 6, 'error': None}
+    assert owner.permission('', True)['requireApikey'] is False

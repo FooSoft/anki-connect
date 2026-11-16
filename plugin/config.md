@@ -5,7 +5,7 @@ listener settings.
 
 - `webBindAddress`: listener address, normally `127.0.0.1` for local applications.
 - `webBindPort`: listener port, normally `8765`.
-- `apiKey`: optional authentication key; `null` disables key authentication.
+- `apiKey`: optional authentication key; `null` or an empty string disables key authentication.
   API v1 uses `Authorization: Bearer <key>`. Legacy requests use the body's `key`.
 - `webCorsOriginList`: allowed browser origins, initially `["http://localhost"]`.
   Origin permission is separate from API key authentication.

@@ -43,8 +43,8 @@ documenting a change.
 - Match the surrounding Python style, including existing public camelCase action
   names and parameter names. They are part of the external API.
 - Add new v1 methods to the source schema and shared adapters, then regenerate
-  `plugin/contract.py`. Legacy actions use `@util.api()`; preserve versioned aliases
-  and the dispatcher rules when changing them.
+  `plugin/contract.py`. Legacy actions are `@util.api()` signature declarations
+  executed by `Legacy.dispatch`; preserve their binding and the dispatcher rules.
 - Add API guide documentation with request/result examples and behavior tests for
   new or changed API features, following the contribution guidance in README.
 - Keep GUI access and request admission on Qt's main thread. Use Anki's

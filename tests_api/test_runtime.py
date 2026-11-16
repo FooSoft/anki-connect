@@ -237,12 +237,19 @@ def test_legacy_signatures_and_reflection(native, monkeypatch):
     from plugin import util
     owner, service = native
     monkeypatch.setattr(util, 'setting', lambda key: util.DEFAULT_CONFIG[key])
-    assert len(owner.apiReflect(scopes=['actions'])['actions']) == 122
-    assert owner.handler({'action': 'version'}) == 6
-    assert owner.handler({'action': 'version', 'version': 6}) == {'result': 6, 'error': None}
+    handle = lambda request: owner.handler_async(request).value
+    reflected = handle({'action': 'apiReflect', 'version': 6, 'params': {'scopes': ['actions']}})
+    assert len(reflected['result']['actions']) == 122
+    assert handle({'action': 'version'}) == 6
+    assert handle({'action': 'version', 'version': 6}) == {'result': 6, 'error': None}
     monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', 'secret')
-    assert owner.handler({'action': 'version', 'version': 4})['error'] == 'valid api key must be provided'
-    assert owner.handler({'action': 'version', 'key': 'secret'}) == 6
+    assert handle({'action': 'version', 'version': 4})['error'] == 'valid api key must be provided'
+    assert handle({'action': 'version', 'key': 'secret'}) == 6
+    # Declarations bind like the historical methods but never execute directly.
+    with pytest.raises(TypeError, match=r"AnkiConnect\.addNote\(\) missing 1 required positional argument: 'note'"):
+        owner.addNote()
+    with pytest.raises(NotImplementedError):
+        owner.version()
 
 
 def test_http_routing_auth_cors_and_notifications(monkeypatch):
@@ -390,6 +397,20 @@ def test_execute_operation_waits_and_continues_after_errors(admitted):
     assert notifications
 
 
+def test_media_rollback_removes_repeated_renamed_installs(native):
+    from plugin.media import MediaTransaction
+    _, service = native
+    directory = Path(service.col.media.dir())
+    (directory / 'shared.txt').write_bytes(b'old')
+    transaction = MediaTransaction(service)
+    first = transaction.install('shared.txt', b'new', collision='rename')
+    # A batch can attach the same renamed content more than once.
+    assert transaction.install('shared.txt', b'new', collision='rename') == first != 'shared.txt'
+    assert transaction.rollback() == []
+    assert sorted(path.name for path in directory.iterdir()) == ['shared.txt']
+    assert (directory / 'shared.txt').read_bytes() == b'old'
+
+
 def test_recoverable_media_journal_and_owned_rollback(native):
     from plugin.media import MediaTransaction
     owner, service = native
@@ -408,9 +429,31 @@ def test_recoverable_media_journal_and_owned_rollback(native):
     conflicted.install('owned.txt', b'new')
     (directory / 'owned.txt').write_bytes(b'external change')
     MediaTransaction._active.discard(conflicted.path)
-    with pytest.raises(ApiError):
-        MediaTransaction.recover(service)
+    failures = MediaTransaction.recover(service)
+    assert [failure['filename'] for failure in failures] == ['owned.txt']
     assert (directory / 'owned.txt').read_bytes() == b'external change'
+    # The journal and its backup are kept aside, but never block later work.
+    assert not conflicted.path.exists()
+    assert conflicted.path.with_suffix('.unresolved').is_dir()
+    assert MediaTransaction.recover(service) == []
+    assert service.store_bytes('owned.txt', b'later', collision='replace')['filename'] == 'owned.txt'
+    assert (directory / 'owned.txt').read_bytes() == b'later'
+
+
+def test_media_recovery_runs_once_per_session(admitted, monkeypatch):
+    from plugin.media import MediaTransaction
+    owner, service, drain, work, notifications = admitted
+    recovered = []
+    monkeypatch.setattr(MediaTransaction, 'recover', lambda *args: recovered.append(args) or [])
+    for _ in range(2):
+        future = owner.runtime.background(lambda service: 'done')
+        drain()
+        assert future.value == 'done'
+    assert len(recovered) == 1
+    owner.runtime.invalidate_session()
+    owner.runtime.background(lambda service: None)
+    drain()
+    assert len(recovered) == 2
 
 
 def test_text_replacement_is_one_native_undo(native):

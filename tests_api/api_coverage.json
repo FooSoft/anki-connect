@@ -156,7 +156,7 @@
         "createDeck",
         "guiExitAnki"
       ],
-      "notes": "Normalized nested version/parameter forms retain independent child credentials and versions. Both synchronous and asynchronous preflight reject an exit followed by work before deck creation or shutdown can begin."
+      "notes": "Normalized nested version/parameter forms retain independent child credentials and versions. Preflight rejects an exit followed by work before deck creation or shutdown can begin."
     },
     {
       "source": "tests_api/test_legacy_normalization.py",
@@ -1711,7 +1711,7 @@
         "addNote",
         "multi"
       ],
-      "notes": "The frozen pre-rewrite binding snapshots cover all 122 retained actions at versions 2, 4 and 6. Missing-argument errors retain their wording in synchronous and asynchronous dispatch. Surplus keys are ignored; optional-only actions are resolved without executing their bodies."
+      "notes": "The frozen pre-rewrite binding snapshots cover all 122 retained actions at versions 2, 4 and 6. Missing-argument errors retain their wording. Surplus keys are ignored; optional-only actions are resolved without executing their declarations."
     },
     {
       "source": "tests_api/test_legacy_errors.py",

@@ -1,7 +1,7 @@
 # Anki-Connect architecture
 
 Anki-Connect runs inside Anki Desktop 26.08 or later. It serves JSON-RPC 2.0 at
-`POST /api/v1` and the legacy action protocol at `/`, on `127.0.0.1:8765` by
+`POST /api/v1` and the legacy action protocol at every other path, on `127.0.0.1:8765` by
 default. The canonical contract is [API_V1.md](API_V1.md) and
 [api-v1.schema.json](api-v1.schema.json). The legacy API still reports version 6.
 
@@ -21,7 +21,7 @@ default. The canonical contract is [API_V1.md](API_V1.md) and
 ## Execution and completion
 
 Add-on startup registers the custom editor and unload hooks, opens optional
-metadata logging, and starts a retained Qt timer. Importing as `plugin` in tests
+API logging, and starts a retained Qt timer. Importing as `plugin` in tests
 skips automatic startup. The timer advances socket reads/writes without blocking
 on API completion. Each connection closes after its reply drains.
 
@@ -97,7 +97,11 @@ Anki's token grammar because the parsed tree is not exposed to Python.
 Media acquisition finishes before replacement. Replacement writes use a journal
 outside the media directory, backing up originals before native trash/write.
 Failure restores request-owned files; ownership conflicts preserve unrelated
-changes and retain the journal for recovery. Legacy note attachments use the same
+changes and retain the journal for recovery. Recovery runs before a session's
+first collection work and before each media transaction. A journal that cannot be
+restored is renamed with an `.unresolved` suffix: its backups are kept for manual
+inspection, it is never reapplied, and it does not block later requests.
+Legacy note attachments use the same
 journal around collection changes. Database and filesystem writes do not share
 an atomic transaction. Recovery conservatively keeps media referenced by notes
 when interruption makes collection commit status uncertain.
@@ -107,8 +111,9 @@ when interruption makes collection commit status uncertain.
 Existing settings and default fallbacks remain in `plugin/config.json` and
 `plugin/util.py`. Legacy requests use body `key`; v1 uses Bearer authentication.
 Permission methods alone bypass key checks and receive origin context from the
-transport. Origin filtering and authentication are independent. Routine logs
-contain method/ID/timing/error metadata, excluding credentials and note/media bodies.
+transport. Origin filtering and authentication are independent. v1 logs contain
+method/ID/timing/error metadata, excluding credentials and note/media bodies. Legacy
+logs keep the historical full request/reply entries with `key` redacted.
 
 `api.describe` reports adapter presence and checked native dependencies. Availability
 is a capability probe, not proof of integration testing; method-specific state and

@@ -119,7 +119,7 @@ request IDs may be strings, integers, or null. `/api/v1` is the API version and 
 is the JSON-RPC protocol version.
 
 If `apiKey` is configured, include `Authorization: Bearer <key>`. Authentication
-is disabled when the key is null. Origin permission is checked separately using
+is disabled when the key is null or empty. Origin permission is checked separately using
 `webCorsOriginList` and `ignoreOriginList`. `access.requestPermission` uses the
 actual HTTP origin, is exempt from the API key check, and never returns the key.
 

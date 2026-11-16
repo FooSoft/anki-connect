@@ -14,9 +14,7 @@ from tests_api.test_runtime import admitted, call, native
 
 def old(native, action, **params):
     owner, service = native
-    arguments = inspect.signature(getattr(owner, action)).bind(**params)
-    arguments.apply_defaults()
-    return Legacy(owner, service).call(action, dict(arguments.arguments))
+    return Legacy(owner, service).call(*owner.resolve_action(action, params))
 
 
 def note_input(front, **extra):
@@ -29,7 +27,7 @@ def legacy_note(front):
 
 
 @pytest.mark.parametrize('scope_options', [{}, {'deckName': None}, {'deckName': 'Default'},
-                                          {'deckName': 'Other'}])
+                                          {'deckName': 'Other'}, {'deckName': 'Missing'}])
 def test_legacy_yomitan_deck_scope_defaults_and_mining(native, scope_options):
     import copy
     owner, service = native
@@ -43,7 +41,8 @@ def test_legacy_yomitan_deck_scope_defaults_and_mining(native, scope_options):
     probe = copy.deepcopy(source)
     probe['fields'].pop('Back')
     original_probe = copy.deepcopy(probe)
-    expected = ({'canAdd': True} if scope_options.get('deckName') == 'Other' else
+    # A missing scope deck cannot contain duplicates and is not created.
+    expected = ({'canAdd': True} if scope_options.get('deckName') in ('Other', 'Missing') else
                 {'canAdd': False, 'error': 'cannot create note because it is a duplicate'})
     assert old(native, 'canAddNoteWithErrorDetail', note=probe) == expected
     assert old(native, 'canAddNotesWithErrorDetail', notes=[probe]) == [expected]
@@ -62,6 +61,7 @@ def test_legacy_yomitan_deck_scope_defaults_and_mining(native, scope_options):
         assert note['Front'] == 'existing' and note['Back'] == 'answer'
         assert service.col.decks.name(note.cards()[0].did) == 'Default'
     assert service.col.note_count() == 3
+    assert service.col.decks.id_for_name('Missing') is None
     # Null names remain invalid in v1; only the legacy shorthand is normalized.
     with pytest.raises(ApiError) as caught:
         call(service, 'notes.validate', note=note_input('v1', duplicates={
@@ -229,6 +229,9 @@ def test_v1_empty_notes_and_native_tag_registry(native):
     for criterion in ('allFieldsEmpty', 'allQuestionsEmpty'):
         assert call(service, 'notes.findEmpty', criterion=criterion)['ids'] == [created['noteId']]
     assert call(service, 'notes.findEmpty', criterion='noCards')['ids'] == []
+    with pytest.raises(ApiError) as failure:
+        call(service, 'notes.findEmpty', criterion='noCards', query='prop:invalid')
+    assert failure.value.kind == 'invalidSearch'
     assert 'keep' in call(service, 'tags.list')
     call(service, 'notes.delete', ids=[created['noteId']])
     call(service, 'tags.deleteUnused')
@@ -481,6 +484,14 @@ def test_legacy_decks_configs_and_card_projections(native):
     old(native, 'changeDeck', cards=[card], deck='Destination')
     assert old(native, 'getDecks', cards=[card]) == {'Destination': [card]}
     assert old(native, 'getDeckStats', decks=['Destination'])[str(did)]['total_in_deck'] == 1
+    child = old(native, 'createDeck', deck='Destination::Child')
+    old(native, 'addNote', note={**legacy_note('child'), 'deckName': 'Destination::Child'})
+    stats = old(native, 'getDeckStats', decks=['destination', 'Destination::Child'])
+    # Upstream reported native tree nodes: leaf names and each deck's own cards.
+    assert list(stats) == [str(did), str(child)]
+    assert stats[str(did)]['name'] == 'Destination' and stats[str(did)]['total_in_deck'] == 1
+    assert stats[str(did)]['new_count'] == 2
+    assert stats[str(child)]['name'] == 'Child' and stats[str(child)]['total_in_deck'] == 1
     assert old(native, 'cardsToNotes', cards=[card, card, 999]) == [id]
     assert old(native, 'cardsModTime', cards=[card])[0]['mod'] == service.col.get_card(card).mod
     config = old(native, 'cloneDeckConfigId', name='Clone')
@@ -586,10 +597,12 @@ def test_legacy_note_type_structure_and_conversion(native):
     assert old(native, 'modelFieldsOnTemplates', modelName='Legacy Type') == {'One': [['Front'], ['Back']]}
     assert old(native, 'findAndReplaceInModels', modelName='Legacy Type', findText='changed', replaceText='replaced') == 1
     assert 'replaced' in old(native, 'modelTemplates', modelName='Legacy Type')['One']['Front']
-    id = old(native, 'addNote', note=legacy_note('conversion'))
+    id = old(native, 'addNote', note={**legacy_note('conversion'), 'tags': ['old']})
     old(native, 'updateNoteModel', note={'id': id, 'modelName': 'Legacy Type', 'fields': {'Front': 'converted', 'Back': 'answer'}})
     converted = service.col.get_note(id)
     assert converted.mid == model['id'] and converted['Front'] == 'converted'
+    # Historical conversion replaced tags, so omitting them clears tags.
+    assert converted.tags == []
 
 
 def test_sync_native_interfaces_without_credentials(native):

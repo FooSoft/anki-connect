@@ -163,6 +163,27 @@ def test_http_stalled_response_times_out(monkeypatch):
         peer.close()
 
 
+@pytest.mark.parametrize('failure', [TypeError('not serializable'), ValueError('Out of range float values are not JSON compliant')])
+def test_http_unexpected_handler_failure_returns_500(monkeypatch, failure):
+    from plugin import web
+
+    server_socket, peer = socket.socketpair()
+    server_socket.setblocking(False)
+    def handler(request):
+        raise failure
+    client = web.WebClient(server_socket, handler)
+    try:
+        peer.sendall(b'POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n')
+        assert client.advance()
+        assert not client.pending
+        while client.advance():
+            pass
+        assert peer.recv(4096).startswith(b'HTTP/1.1 500 Internal Server Error')
+    finally:
+        client.close()
+        peer.close()
+
+
 @pytest.mark.parametrize('action', ['guiAddCards', 'guiAddNoteSetData'])
 @pytest.mark.parametrize('reject', [False, True])
 def test_legacy_gui_media_preparation_and_cleanup_are_queued(admitted, monkeypatch, action, reject):

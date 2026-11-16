@@ -67,7 +67,7 @@ def source_case(source, case):
 
 def load_inventory():
     schema = json.loads((ROOT / 'api-v1.schema.json').read_text(encoding='utf-8'))
-    actions, _ = source_actions()
+    actions = source_actions()
     registry = {'v1': set(schema['x-methods']), 'legacy': set(actions)}
     manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
     check(set(manifest) == {'description', 'evidence', 'unreferenced', 'ui_deferrals'}, 'Invalid inventory keys')

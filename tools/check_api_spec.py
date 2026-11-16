@@ -183,7 +183,6 @@ class ExampleValidator:
 def source_actions():
     tree = ast.parse((ROOT / 'plugin/__init__.py').read_text(encoding='utf-8'))
     actions = {}
-    aliases = []
     for cls in tree.body:
         if not isinstance(cls, ast.ClassDef) or cls.name != 'AnkiConnect':
             continue
@@ -198,9 +197,7 @@ def source_actions():
                                  kwonlyargs=node.args.kwonlyargs, kw_defaults=node.args.kw_defaults,
                                  kwarg=node.args.kwarg, defaults=node.args.defaults)
             actions[node.name] = ast.unparse(args)
-            for decorator in decorators:
-                aliases.extend((node.name, ast.literal_eval(arg)) for arg in decorator.args)
-    return actions, aliases
+    return actions
 
 
 def main():
@@ -228,7 +225,7 @@ def main():
         for value in params['properties'].values():
             if 'default' in value:
                 validator.validate(value, value['default'])
-    actions, aliases = source_actions()
+    actions = source_actions()
     targets = schema['x-legacyTargets']
     check(set(targets) == set(actions), 'Legacy registry differs from source actions')
     for action, services in targets.items():
@@ -274,7 +271,7 @@ def main():
             negative = Draft202012Validator({**schema, 'oneOf': [methods[item['method']]['params']]})
             check(not negative.is_valid(item['params']), 'Full validator accepted a negative fixture')
         print('Official Draft 2020-12 metaschema and example validation passed.')
-    print(f'{len(methods)} methods; {len(actions)} legacy actions; {len(aliases)} aliases; '
+    print(f'{len(methods)} methods; {len(actions)} legacy actions; '
           f'{len(schema["x-examples"])} positive and {len(schema["x-invalidExamples"])} negative examples checked.')
 
 

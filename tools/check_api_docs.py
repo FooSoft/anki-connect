@@ -68,7 +68,7 @@ def main():
         for value in blocks(body):
             if isinstance(value, dict) and 'jsonrpc' in value and 'result' in value:
                 validator.validate(methods[name]['response'], value)
-    actions, _ = source_actions()
+    actions = source_actions()
     legacy = sections(ROOT / 'API_LEGACY.md')
     check(set(legacy) == set(actions), 'Legacy documentation coverage differs from decorators')
     for name, body in legacy.items():

@@ -61,6 +61,7 @@ class Runtime:
         self.full_reset_required = False
         self.active_reviewer_card = None
         self.lifecycle_active = False
+        self.media_recovered_session = None
 
     @property
     def mw(self):
@@ -227,7 +228,10 @@ class Runtime:
             from .media import MediaTransaction
             if self._collection is not col or self._session != session:
                 raise ApiError('staleSession', 'Collection changed before execution.')
-            MediaTransaction.recover(service)
+            # Restore interrupted journals before a session's first collection work.
+            if self.media_recovered_session != session:
+                self.media_recovered_session = session
+                MediaTransaction.recover(service)
             return work(service)
         def finished(future):
             self.mw._decrease_background_ops()
@@ -365,4 +369,4 @@ class Runtime:
         from . import util
         value = self.owner.permission(context.get('origin', ''), context.get('allowed', False))
         pending = value if isinstance(value, Deferred) else completed(value)
-        return pending.map(lambda value: {'permission': value['permission'], 'requireApiKey': util.setting('apiKey') is not None})
+        return pending.map(lambda value: {'permission': value['permission'], 'requireApiKey': bool(util.setting('apiKey'))})

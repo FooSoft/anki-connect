@@ -20,6 +20,7 @@ class MediaTransaction:
         self.path.mkdir()
         self._active.add(self.path)
         self.entries = {}
+        self.existing = None
         self.committed = False
         try:
             self.persist()
@@ -47,15 +48,20 @@ class MediaTransaction:
             self.entries[filename]['sha256'] = hashlib.sha256(data).hexdigest()
         # Journal the original before the native manager moves it to trash.
         self.persist()
-        existing_names = {path.name for path in self.media.iterdir()}
+        if self.existing is None:
+            # Names that predate the transaction; later installs are journaled in entries.
+            self.existing = {path.name for path in self.media.iterdir()}
         actual = self.service._store_bytes(filename, data, collision)['filename']
         if actual != filename:
             entry = self.entries.pop(filename)
-            backup = None
-            if actual in existing_names:
-                backup = uuid.uuid4().hex
-                (self.path / backup).write_bytes((self.media / actual).read_bytes())
-            self.entries[actual] = {'backup': backup, 'sha256': entry['sha256']}
+            if actual in self.entries:
+                self.entries[actual]['sha256'] = entry['sha256']
+            else:
+                backup = None
+                if actual in self.existing:
+                    backup = uuid.uuid4().hex
+                    (self.path / backup).write_bytes((self.media / actual).read_bytes())
+                self.entries[actual] = {'backup': backup, 'sha256': entry['sha256']}
             if entry['backup']:
                 self.entries[filename] = entry
             self.persist()
@@ -109,12 +115,14 @@ class MediaTransaction:
 
     @classmethod
     def recover(cls, service, root=None):
+        """Restore interrupted journals. Unresolvable journals are quarantined
+        with their backups, never reapplied, and never block later requests."""
         root = root or Path(service.col.media.dir()).parent / '.anki-connect-media-journal'
         if not root.exists():
-            return
+            return []
         failures = []
         for directory in root.iterdir():
-            if not directory.is_dir() or directory in cls._active:
+            if not directory.is_dir() or directory in cls._active or directory.suffix == '.unresolved':
                 continue
             manifest = directory / 'manifest.json'
             if not manifest.exists():
@@ -124,10 +132,15 @@ class MediaTransaction:
             try:
                 record = json.loads(manifest.read_text())
                 unresolved = [] if record['committed'] else cls.restore(service, directory, record['entries'], interrupted=True)
-                failures.extend(unresolved)
-                if not unresolved:
-                    shutil.rmtree(directory)
             except Exception as error:
-                failures.append({'journal': directory.name, 'error': str(error)})
-        if failures:
-            raise ApiError('ioError', 'Interrupted media replacements need recovery.', {'failures': failures})
+                unresolved = [{'journal': directory.name, 'error': str(error)}]
+            try:
+                if unresolved:
+                    directory.rename(directory.with_suffix('.unresolved'))
+                    print('AnkiConnect: kept unresolved media journal {}: {}'.format(directory, unresolved))
+                else:
+                    shutil.rmtree(directory)
+            except OSError as error:
+                unresolved.append({'journal': directory.name, 'error': str(error)})
+            failures.extend(unresolved)
+        return failures

@@ -301,6 +301,14 @@ class Legacy:
         if scope == 'deck':
             deck_name = scoped.get('deckName')
             duplicates['deck'] = self.ref(source['deckName'] if deck_name is None else deck_name)
+            if deck_name is not None:
+                try:
+                    self.service.resolve(duplicates['deck'], 'deck')
+                except ApiError as error:
+                    if error.kind != 'notFound':
+                        raise
+                    # Historically, a missing scope deck cannot contain duplicates.
+                    duplicates = {'allow': True}
         data = {'noteType': self.ref(source['modelName']), 'deck': self.ref(source['deckName']),
                 'fields': fields, 'tags': self.normalize_tags(source.get('tags')), 'duplicates': duplicates,
                 # Legacy creation lets Anki generate its fallback card. Rendering
@@ -334,15 +342,17 @@ class Legacy:
             raise ApiError('invalidParams', 'Media exceeds the size limit.')
         return data
 
-    def install(self, entry, data):
+    def install(self, entry, data, transaction=None):
         from .media import MediaTransaction
-        if self.service is None:
-            self.service = self.runtime.service()
-        if self.media_transaction is None:
-            self.media_transaction = MediaTransaction(self.service)
+        if transaction is None:
+            if self.service is None:
+                self.service = self.runtime.service()
+            if self.media_transaction is None:
+                self.media_transaction = MediaTransaction(self.service)
+            transaction = self.media_transaction
         skip = {'algorithm': 'md5', 'digest': entry['skipHash']} if entry.get('skipHash') else None
-        return self.media_transaction.install(self.media_name(entry['filename']), data, skip,
-                    'replace' if entry.get('deleteExisting', True) else 'rename')
+        return transaction.install(self.media_name(entry['filename']), data, skip,
+                                   'replace' if entry.get('deleteExisting', True) else 'rename')
 
     def media_name(self, filename):
         # Anki's old writeData wrapper took the host-platform basename, then
@@ -350,36 +360,38 @@ class Legacy:
         # Sanitize before journaling; every destination is still a basename.
         return self.service.media_filename(MEDIA_ILLEGAL_CHARACTERS.sub('', os.path.basename(filename)))
 
-    def attachments(self, fields, source, pure=False):
+    def stage_media(self, source, pure=False):
+        """Acquire every attachment before any install; failures become field text."""
         staged = []
         for kind in ('audio', 'video', 'picture'):
-            entries = source.get(kind) or []
-            entries = entries if isinstance(entries, list) else [entries]
-            for entry in entries:
-                if entry:
-                    try:
-                        acquired = None if pure else self.acquire(entry)
-                    except Exception as error:
-                        if isinstance(error, ApiError) and str(error) == 'Media exceeds the size limit.':
-                            raise
-                        self.append_media_error(fields, entry, error)
-                        continue
-                    staged.append((kind, entry, acquired))
-        for kind, entry, data in staged:
-            filename = entry['filename'] if pure else self.install(entry, data)
-            if filename is None:
-                continue
-            escaped = html.escape(filename, quote=True)
-            content = '<img src="' + escaped + '">' if kind == 'picture' else '[sound:' + escaped + ']'
+            for entry in self.array(source.get(kind)):
+                if not entry:
+                    continue
+                try:
+                    staged.append((kind, entry, None if pure else self.acquire(entry), None))
+                except Exception as error:
+                    if isinstance(error, ApiError) and str(error) == 'Media exceeds the size limit.':
+                        raise
+                    staged.append((kind, entry, None, error))
+        return staged
+
+    def apply_media(self, fields, staged, filename):
+        # Historical attachments append references and errors in entry order.
+        for kind, entry, data, error in staged:
+            if error is None:
+                name = filename(entry, data)
+                if name is None:
+                    continue
+                escaped = html.escape(name, quote=True)
+                content = '<img src="' + escaped + '">' if kind == 'picture' else '[sound:' + escaped + ']'
+            else:
+                content = html.escape(str(error), quote=False)
             for field in self.media_targets(entry, fields):
                 fields[field] += content
 
-    @classmethod
-    def append_media_error(cls, fields, entry, error):
-        # Historical note attachments report acquisition errors inside fields.
-        message = html.escape(str(error), quote=False)
-        for field in cls.media_targets(entry, fields):
-            fields[field] += message
+    def attachments(self, fields, source, pure=False):
+        self.apply_media(fields, self.stage_media(source, pure),
+                         lambda entry, data: entry['filename'] if pure else self.install(entry, data))
 
     def store_media(self, params):
         return self.install(params, self.acquire(params))
@@ -407,48 +419,15 @@ class Legacy:
             raise ApiError('validationFailed', self.validation_error({'items': validation}), {'items': validation})
         # Acquire every attachment before installing any file. Back up only
         # destinations this request owns; never scan or restore unrelated media.
-        staged, acquisition_errors = [], {}
-        for source in sources:
-            for kind in ('audio', 'video', 'picture'):
-                entries = source.get(kind) or []
-                entries = entries if isinstance(entries, list) else [entries]
-                for entry in entries:
-                    if not entry:
-                        continue
-                    filename = self.media_name(entry['filename'])
-                    try:
-                        data = self.acquire(entry)
-                    except Exception as error:
-                        if isinstance(error, ApiError) and str(error) == 'Media exceeds the size limit.':
-                            raise
-                        acquisition_errors[id(entry)] = error
-                        continue
-                    staged.append((entry, filename, data))
+        staged = [self.stage_media(source) for source in sources]
         from .media import MediaTransaction
         transaction = MediaTransaction(self.service)
-        filenames = {}
         try:
-            for entry, filename, data in staged:
-                skip = {'algorithm': 'md5', 'digest': entry['skipHash']} if entry.get('skipHash') else None
-                filenames[id(entry)] = transaction.install(filename, data, skip,
-                    'replace' if entry.get('deleteExisting', True) else 'rename')
-            for source, data in zip(sources, prepared):
+            filenames = {id(entry): self.install(entry, data, transaction)
+                         for items in staged for _, entry, data, error in items if error is None}
+            for source, data, items in zip(sources, prepared, staged):
                 data['fields'] = self.created_note(source)['fields']
-                for kind in ('audio', 'video', 'picture'):
-                    entries = source.get(kind) or []
-                    entries = entries if isinstance(entries, list) else [entries]
-                    for entry in entries:
-                        if not entry:
-                            continue
-                        if id(entry) in acquisition_errors:
-                            self.append_media_error(data['fields'], entry, acquisition_errors[id(entry)])
-                            continue
-                        if filenames[id(entry)] is None:
-                            continue
-                        filename = html.escape(filenames[id(entry)], quote=True)
-                        content = '<img src="' + filename + '">' if kind == 'picture' else '[sound:' + filename + ']'
-                        for field in self.media_targets(entry, data['fields']):
-                            data['fields'][field] += content
+                self.apply_media(data['fields'], items, lambda entry, _: filenames[id(entry)])
             values = self.unwrap(self.s('notes.createMany', notes=prepared, atomic=atomic))
             transaction.commit()
             return [int(value['noteId']) for value in values]
@@ -673,7 +652,7 @@ class Legacy:
         raise ApiError('methodNotFound', 'Unknown GUI action.')
 
     def call(self, name, p):
-        p = self.normalize_params(name, p)
+        """Run one action with parameters already bound by AnkiConnect.resolve_action."""
         def success(value):
             if self.media_transaction:
                 self.media_transaction.commit()
@@ -722,8 +701,6 @@ class Legacy:
 
     def dispatch(self, name, p):
         from . import util
-        if name == 'multi':
-            return [self.owner.handler(action) for action in p['actions']]
         if name == 'version':
             return util.setting('apiVersion')
         if name == 'requestPermission':
@@ -764,12 +741,17 @@ class Legacy:
             self.unwrap(self.s('decks.delete', decks=[self.ref(name) for name in p['decks'] if name in existing], deleteCards=True))
             return None
         if name == 'getDeckStats':
+            # Native due-tree nodes: leaf names and each deck's own card total.
+            wanted = {int(self.s('decks.create', name=deck)['id']) for deck in p['decks']}
             result = {}
-            for deck in p['decks']:
-                self.s('decks.create', name=deck)
-                value = self.s('decks.getCounts', deck=self.ref(deck))
-                result[value['deckId']] = {'deck_id': int(value['deckId']), 'name': deck, 'new_count': value['new'],
-                                           'learn_count': value['learning'], 'review_count': value['review'], 'total_in_deck': value['total']}
+            def collect(node):
+                if node.deck_id in wanted:
+                    result[str(node.deck_id)] = {'deck_id': node.deck_id, 'name': node.name, 'new_count': node.new_count,
+                                                 'learn_count': node.learn_count, 'review_count': node.review_count,
+                                                 'total_in_deck': node.total_in_deck}
+                for child in node.children:
+                    collect(child)
+            collect(self.service.col.sched.deck_due_tree())
             return result
         if name == 'getDeckConfig':
             try:
@@ -785,7 +767,8 @@ class Legacy:
                     refs = [self.ref(deck) for deck in p['decks']]
                     for ref in refs:
                         self.s('decks.get', deck=ref)
-                    return all(value['changed'] or True for value in self.unwrap(self.s('deckPresets.assign', decks=refs, preset={'id': str(p['configId'])})))
+                    self.unwrap(self.s('deckPresets.assign', decks=refs, preset={'id': str(p['configId'])}))
+                    return True
                 if name == 'cloneDeckConfigId':
                     return int(self.s('deckPresets.create', name=p['name'], cloneFrom={'id': str(p['cloneFrom'])})['id'])
                 if name == 'removeDeckConfigId':
@@ -887,9 +870,8 @@ class Legacy:
             plan = self.s('notes.planConversion', source={'id': original['noteType']['id']}, target={'id': target['id']})
             fields = {item['name']: '' for item in target['fields']}
             fields.update(self.fields(source['fields'], fields))
-            patch = {'fields': fields}
-            if 'tags' in source:
-                patch['tags'] = self.normalize_tags(source['tags'])
+            # Historical conversion replaced tags; omitted or null tags clear them.
+            patch = {'fields': fields, 'tags': self.normalize_tags(source.get('tags'))}
             # Validate content before conversion can change cards or review history.
             self.runtime.dispatcher.params('notes.update', {'id': str(source['id']), 'patch': patch})
             old = self.model(id=original['noteType']['id'])
