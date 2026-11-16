@@ -105,7 +105,8 @@ class WebClient:
         for line in lines[1:]:
             key, value = line.split(b':', 1)
             key = key.strip().lower()
-            if key in headers:
+            # Older servers kept the last value; ambiguous framing or identity still fails.
+            if key in headers and key in (b'content-length', b'transfer-encoding', b'origin', b'authorization', b'host'):
                 raise ValueError('Duplicate header')
             headers[key] = value.strip()
         if b'transfer-encoding' in headers:

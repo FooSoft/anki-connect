@@ -8,7 +8,6 @@ Missing-argument wording is preserved; surplus parameters are now ignored.
 """
 import json
 from pathlib import Path
-from urllib.error import HTTPError
 
 import pytest
 
@@ -172,23 +171,62 @@ def test_legacy_collection_unavailable_keeps_wording_without_changing_v1(admitte
     assert pending.value['error']['message'] == 'Collection is not available.'
 
 
-def test_legacy_media_source_priority_whitespace_and_download_error(admitted, monkeypatch, tmp_path):
+@pytest.fixture
+def media_server():
+    import http.server
+    import threading
+    seen = []
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append((self.path, self.headers.get('User-Agent')))
+            if self.path.startswith('/missing'):
+                self.send_response(404)
+                self.end_headers()
+                return
+            if self.path == '/empty':
+                self.send_response(204)
+                self.end_headers()
+                return
+            body = b'downloaded'
+            self.send_response(200)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        def log_message(self, *args):
+            pass
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield 'http://127.0.0.1:{}'.format(server.server_address[1]), seen
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_legacy_media_source_priority_whitespace_and_download_error(admitted, media_server, tmp_path):
+    """URL media uses Anki's HTTP client: IRIs, its user agent, and status 200 only, like de6e6e1."""
     owner, service, drain, _, _ = admitted
-    payload = {'action': 'storeMediaFile', 'version': 6, 'params': {
-        'filename': 'legacy.txt', 'data': ' bG VnYWN5\n', 'path': str(tmp_path / 'missing')}}
-    pending = owner.handler_async(payload)
-    drain()
-    assert pending.value == {'result': 'legacy.txt', 'error': None}
-    assert (Path(service.col.media.dir()) / 'legacy.txt').read_bytes() == b'legacy'
-    url = 'https://media.example/missing.mp3'
-    def missing(*args, **kwargs):
-        raise HTTPError(url, 404, 'Not Found', {}, None)
-    monkeypatch.setattr('urllib.request.urlopen', missing)
-    pending = owner.handler_async({'action': 'storeMediaFile', 'version': 6,
-        'params': {'filename': 'missing.mp3', 'url': url}})
-    drain()
-    assert pending.value == {'result': None, 'error': url + ' download failed with return code 404'}
-    assert not (Path(service.col.media.dir()) / 'missing.mp3').exists()
+    base, seen = media_server
+    directory = Path(service.col.media.dir())
+    def store(**params):
+        pending = owner.handler_async({'action': 'storeMediaFile', 'version': 6, 'params': params})
+        drain()
+        return pending.value
+    assert store(filename='legacy.txt', data=' bG VnYWN5\n', path=str(tmp_path / 'missing')) == {'result': 'legacy.txt', 'error': None}
+    assert (directory / 'legacy.txt').read_bytes() == b'legacy'
+    for path, status in (('/missing.mp3', 404), ('/empty', 204)):
+        url = base + path
+        assert store(filename='failed.mp3', url=url) == {
+            'result': None, 'error': url + ' download failed with return code ' + str(status)}
+    assert not (directory / 'failed.mp3').exists()
+    assert store(filename='term.mp3', url=base + '/\u8a9e\u5f59.mp3?q=\u97f3') == {'result': 'term.mp3', 'error': None}
+    assert (directory / 'term.mp3').read_bytes() == b'downloaded'
+    assert seen[-1][0] == '/%E8%AA%9E%E5%BD%99.mp3?q=%E9%9F%B3'
+    assert seen[-1][1].startswith('Anki ')
+    (tmp_path / 'secret.txt').write_bytes(b'secret')
+    assert store(filename='local.txt', url=(tmp_path / 'secret.txt').as_uri())['error']
+    assert not (directory / 'local.txt').exists()
 
 
 def test_legacy_missing_package_retains_os_error(admitted, tmp_path):

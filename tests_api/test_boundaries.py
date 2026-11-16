@@ -191,7 +191,8 @@ def test_legacy_gui_media_preparation_and_cleanup_are_queued(admitted, monkeypat
     service.store_bytes('draft.txt', b'original')
     directory = Path(service.col.media.dir())
     source = {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': 'GUI media', 'Back': 'answer'},
-              'audio': [{'filename': 'draft.txt', 'data': base64.b64encode(b'replacement').decode(), 'fields': ['Back']}]}
+              'audio': [{'filename': 'draft.txt', 'data': base64.b64encode(b'replacement').decode(), 'fields': ['Back'],
+                            'deleteExisting': True}]}
     dialog = SimpleNamespace(editor=SimpleNamespace())
     monkeypatch.setattr(owner.runtime.gui, 'add_dialog', lambda: dialog)
     def execute(method, params, operation_id=None):

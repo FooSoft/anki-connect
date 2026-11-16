@@ -347,11 +347,9 @@ class Runtime:
             if 'path' in source:
                 with open(source['path'], 'rb') as file:
                     return file.read(limit + 1)
-            # The Anki client applies the configured timeout. Limit acquisition,
+            # Anki's HTTP client applies the configured timeout. Limit acquisition,
             # including HTTP redirects, before any native media mutation.
-            import urllib.request
-            with urllib.request.urlopen(source['url'], timeout=util.setting('webTimeout') / 1000) as response:
-                return response.read(limit + 1)
+            return util.download(source['url'], limit)
         def done(future):
             try:
                 data = future.result()

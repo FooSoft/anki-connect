@@ -220,7 +220,10 @@ to false.
 The optional `audio`, `video`, and `picture` properties accept one media object or
 an array. Each object needs `filename` and a nonempty `data`, `path`, or `url`. When multiple sources are supplied, the first nonempty source wins in that order.
 Its `fields` array names fields to append the reference to. `skipHash` is an
-optional MD5 digest of incoming bytes to skip. Acquisitions happen before owned
+optional MD5 digest of incoming bytes to skip. `deleteExisting` defaults to false
+for attachments: a filename collision with different content stores the file
+under Anki's renamed filename, which the reference uses. Pass `true` to replace
+the existing file, which other notes may also reference. Acquisitions happen before owned
 media writes; media rollback is separate from the collection transaction.
 Attachment acquisition errors are HTML-escaped and appended to the selected fields, preserving historical note behavior. Standalone `storeMediaFile` returns an error for the same failure. Size limits, invalid storage names, and media transaction failures still raise errors.
 Eligibility checks do not download or write files.
@@ -949,7 +952,7 @@ Gets the configuration group object for the given deck.
 
 ### `saveDeckConfig`
 
-Patch a legacy preset dictionary identified by `config.id`. Supply changed settings; omitted settings are preserved. Unsupported changes fail. Client `mod` and `usn` metadata are not writable. Returns a boolean.
+Patch a legacy preset dictionary identified by `config.id`. Supply changed settings; omitted settings are preserved. Unsupported changes fail. Obsolete keys that Anki ignores (`new.separate`, `rev.fuzz`, `rev.minSpace`, and the third `new.ints` entry) are accepted and ignored, so configs copied from older examples still save. Client `mod` and `usn` metadata are not writable. Returns a boolean.
 
 **Parameters:** `saveDeckConfig(config)`
 
@@ -1658,7 +1661,7 @@ Return whether the GUI reviewer is active.
 
 ### `storeMediaFile`
 
-Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. Legacy filenames use the host platform's basename and have Anki's illegal characters removed before storage inside the media directory; v1 requires a basename. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
+Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. URLs are fetched with Anki's HTTP client, so non-ASCII URLs are encoded, Anki's user agent is sent, and any status other than 200 fails with `URL download failed with return code STATUS`. Legacy filenames use the host platform's basename and have Anki's illegal characters removed before storage inside the media directory; v1 requires a basename. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
 
 **Parameters:** `storeMediaFile(filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True)`
 
@@ -2275,7 +2278,7 @@ name. The question side is given first in each array.
 ### `createModel`
 
 Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
-used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `false`. If `isCloze` is `true` then model will be created as Cloze.
+used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `false`. If `isCloze` is `true` then model will be created as Cloze. The LaTeX header and footer use Anki's defaults for new note types.
 
 Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
 card names will be `Card 1`, `Card 2`, and so on.
@@ -2480,7 +2483,7 @@ Renames a template in an existing model.
 
 Repositions a template in an existing model.
 
-The value of `index` starts at 0. For example, an index of `0` puts the template in the first position, and an index of `2` puts the template in the third position.
+The value of `index` starts at 0. For example, an index of `0` puts the template in the first position, and an index of `2` puts the template in the third position. An index past the end puts the template last.
 
 **Parameters:** `modelTemplateReposition(modelName, templateName, index)`
 
@@ -2590,7 +2593,7 @@ Rename the field name of a given model.
 
 Reposition the field within the field list of a given model.
 
-The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position.
+The value of `index` starts at 0. For example, an index of `0` puts the field in the first position, and an index of `2` puts the field in the third position. An index past the end puts the field last.
 
 **Parameters:** `modelFieldReposition(modelName, fieldName, index)`
 

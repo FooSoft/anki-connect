@@ -574,6 +574,8 @@ def test_legacy_note_type_structure_and_conversion(native):
     assert old(native, 'modelNameFromId', modelId=model['id']) == 'Legacy Type'
     assert old(native, 'findModelsById', modelIds=[model['id']])[0]['name'] == 'Legacy Type'
     assert old(native, 'findModelsByName', modelNames=['Legacy Type'])[0]['id'] == model['id']
+    defaults = service.col.models.new('defaults')
+    assert (model['latexPre'], model['latexPost']) == (defaults['latexPre'], defaults['latexPost']) != ('', '')
     assert old(native, 'modelFieldNames', modelName='Legacy Type') == ['Front', 'Back']
     old(native, 'modelFieldAdd', modelName='Legacy Type', fieldName='Extra', index=1)
     old(native, 'modelFieldSetFont', modelName='Legacy Type', fieldName='Extra', font='Arial')
@@ -582,13 +584,19 @@ def test_legacy_note_type_structure_and_conversion(native):
     assert old(native, 'modelFieldFonts', modelName='Legacy Type')['Extra'] == {'font': 'Arial', 'size': 24}
     assert old(native, 'modelFieldDescriptions', modelName='Legacy Type')[1] == 'description'
     old(native, 'modelFieldRename', modelName='Legacy Type', oldFieldName='Extra', newFieldName='Renamed')
-    old(native, 'modelFieldReposition', modelName='Legacy Type', fieldName='Renamed', index=2)
+    old(native, 'modelFieldReposition', modelName='Legacy Type', fieldName='Renamed', index=0)
+    old(native, 'modelFieldReposition', modelName='Legacy Type', fieldName='Renamed', index=9)
     assert old(native, 'modelFieldNames', modelName='Legacy Type') == ['Front', 'Back', 'Renamed']
+    old(native, 'modelFieldAdd', modelName='Legacy Type', fieldName='Late', index=99)
+    assert old(native, 'modelFieldNames', modelName='Legacy Type')[-1] == 'Late'
+    old(native, 'modelFieldRemove', modelName='Legacy Type', fieldName='Late')
     old(native, 'modelFieldRemove', modelName='Legacy Type', fieldName='Renamed')
     old(native, 'modelTemplateAdd', modelName='Legacy Type', template={'Name': 'Two', 'Front': '{{Back}}', 'Back': '{{Front}}'})
     old(native, 'modelTemplateRename', modelName='Legacy Type', oldTemplateName='Two', newTemplateName='Renamed')
     old(native, 'modelTemplateReposition', modelName='Legacy Type', templateName='Renamed', index=0)
     assert list(old(native, 'modelTemplates', modelName='Legacy Type')) == ['Renamed', 'One']
+    old(native, 'modelTemplateReposition', modelName='Legacy Type', templateName='Renamed', index=5)
+    assert list(old(native, 'modelTemplates', modelName='Legacy Type')) == ['One', 'Renamed']
     old(native, 'modelTemplateRemove', modelName='Legacy Type', templateName='Renamed')
     old(native, 'updateModelTemplates', model={'name': 'Legacy Type', 'templates': {'One': {'Front': '{{Front}} changed'}}})
     assert 'changed' in old(native, 'modelTemplates', modelName='Legacy Type')['One']['Front']

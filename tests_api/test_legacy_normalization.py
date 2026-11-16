@@ -133,6 +133,22 @@ def test_media_targets_and_string_false_preserve_existing_files(admitted, kind):
     assert (directory / 'created.txt').read_bytes() == b'new'
 
 
+@pytest.mark.parametrize('flag', ['omitted', None, True])
+def test_attachment_collisions_rename_unless_replacement_is_requested(admitted, flag):
+    """de6e6e1 passed a missing attachment flag through as falsy; only storeMediaFile defaulted to replace."""
+    _, service, _, _, _ = admitted
+    service.store_bytes('shared.mp3', b'original', 'replace')
+    entry = {'filename': 'shared.mp3', 'data': 'bmV3', 'fields': ['Back']}
+    if flag != 'omitted':
+        entry['deleteExisting'] = flag
+    id = invoke(admitted, 'addNote', note=note(audio=[entry]))
+    directory = Path(service.col.media.dir())
+    stored = service.col.get_note(id)['Back'][len('answer[sound:'):-1]
+    assert (directory / stored).read_bytes() == b'new'
+    assert (directory / 'shared.mp3').read_bytes() == (b'new' if flag is True else b'original')
+    assert (stored == 'shared.mp3') is (flag is True)
+
+
 def test_exact_field_names_win_and_ambiguous_updates_leave_notes_unchanged(admitted):
     owner, service, drain, _, _ = admitted
     id = invoke(admitted, 'addNote', note=note(fields={'front': 'ignored', 'Front': 'exact', 'Back': None}))

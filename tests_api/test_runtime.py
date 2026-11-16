@@ -278,6 +278,11 @@ def test_http_routing_auth_cors_and_notifications(monkeypatch):
     assert client.parseRequest(partial) == (None, 0)
     parsed, _ = client.parseRequest(partial + b'   ')
     assert parsed.path == b'/api/v1'
+    repeated = b'POST / HTTP/1.1\r\nAccept: */*\r\nAccept: application/json\r\nContent-Length: 2\r\n\r\n{}'
+    assert client.parseRequest(repeated)[0].headers[b'accept'] == b'application/json'
+    for header in (b'Content-Length: 2', b'Origin: https://unknown.example'):
+        with pytest.raises(ValueError):
+            client.parseRequest(b'POST / HTTP/1.1\r\n' + header + b'\r\n' + header + b'\r\n\r\n{}')
 
 
 def test_conversion_preserves_cards_and_native_undo(native):
@@ -320,6 +325,11 @@ def test_legacy_preset_changes_use_native_updates(native):
     assert updated['new']['bury'] is True
     assert updated['new']['order'] == 0
     assert updated['rev']['perDay'] == 99
+    # The historical README example carries keys Anki no longer stores.
+    updated['new'].update(separate=True, ints=[3, 5, 7])
+    updated['rev'].update(fuzz=0.05, minSpace=1)
+    assert legacy.call('saveDeckConfig', {'config': updated})
+    assert service.col.decks.get_config(1)['new']['ints'][:2] == [3, 5]
     updated['unsupported'] = 'new value'
     assert legacy.call('saveDeckConfig', {'config': updated}) is False
 

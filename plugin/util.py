@@ -51,3 +51,24 @@ def setting(key):
         raise Exception('setting {} not found'.format(key))
     config = aqt.mw.addonManager.getConfig(__name__) or {}
     return config.get(key, DEFAULT_CONFIG[key])
+
+
+def download(url, limit):
+    """Fetch media with Anki's HTTP client, returning at most limit + 1 bytes."""
+    from anki.httpclient import HttpClient
+    from .protocol import ApiError
+    with HttpClient() as client:
+        client.timeout = setting('webTimeout') / 1000
+        try:
+            response = client.get(url)
+        except Exception as error:
+            raise ApiError('ioError', str(error)) from error
+        with response:
+            if response.status_code != 200:
+                raise ApiError('ioError', '{} download failed with return code {}'.format(url, response.status_code))
+            data = bytearray()
+            for chunk in response.iter_content(65536):
+                data += chunk
+                if len(data) > limit:
+                    break
+            return bytes(data)

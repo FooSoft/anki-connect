@@ -140,8 +140,8 @@ class Legacy:
                 for entry in cls.array(note[kind]):
                     if isinstance(entry, dict):
                         entry = dict(entry)
-                        if 'deleteExisting' in entry:
-                            entry['deleteExisting'] = cls.boolean(entry['deleteExisting'], True, 'deleteExisting')
+                        # Historical attachments passed a missing flag through as falsy and renamed on collision.
+                        entry['deleteExisting'] = cls.boolean(entry.get('deleteExisting'), False, 'deleteExisting')
                     entries.append(entry)
                 note[kind] = entries
         return note
@@ -320,7 +320,6 @@ class Legacy:
 
     def acquire(self, params):
         import base64
-        import urllib.request
         from . import util
         sources = [key for key in ('data', 'path', 'url') if params.get(key)]
         if not sources:
@@ -332,12 +331,7 @@ class Legacy:
             with open(params[key], 'rb') as file:
                 data = file.read(67108865)
         else:
-            import urllib.error
-            try:
-                with urllib.request.urlopen(params[key], timeout=util.setting('webTimeout') / 1000) as response:
-                    data = response.read(67108865)
-            except urllib.error.HTTPError as error:
-                raise ApiError('ioError', '{} download failed with return code {}'.format(params[key], error.code)) from error
+            data = util.download(params[key], 67108864)
         if len(data) > 67108864:
             raise ApiError('invalidParams', 'Media exceeds the size limit.')
         return data
@@ -1136,10 +1130,13 @@ class Legacy:
             handled.add(old)
             if old in data and data[old] != baseline.get(old):
                 settings[public] = PRESET_ENUMS[public][1][data[old]]
-        groups['new'].update(('ints', 'order'))
+        # Anki ignores these obsolete keys and the unused third graduating interval;
+        # historical README configs still send them.
+        groups['new'].update(('ints', 'order', 'separate'))
+        groups['rev'].update(('fuzz', 'minSpace'))
         groups['lapse'].add('leechAction')
-        if 'ints' in data.get('new', {}) and data['new']['ints'] != baseline['new']['ints']:
-            if len(data['new']['ints']) != 3 or data['new']['ints'][2] != baseline['new']['ints'][2]:
+        if 'ints' in data.get('new', {}) and data['new']['ints'][:2] != baseline['new']['ints'][:2]:
+            if len(data['new']['ints']) not in (2, 3):
                 raise ApiError('compatibilityError', 'Unsupported graduating interval metadata.')
             settings['graduatingGoodDays'], settings['graduatingEasyDays'] = data['new']['ints'][:2]
         if 'order' in data.get('new', {}) and data['new']['order'] != baseline['new']['order']:
@@ -1182,9 +1179,12 @@ class Legacy:
                 raise ApiError('conflict', 'Model name already exists')
             templates = [{'name': template.get('Name', 'Card ' + str(index + 1)), 'questionHtml': template['Front'], 'answerHtml': template['Back']}
                          for index, template in enumerate(p['cardTemplates'])]
-            css = p['css'] if p['css'] is not None else self.service.col.models.new(p['modelName'])['css']
+            # Historical createModel kept Anki's new-model CSS and LaTeX defaults.
+            defaults = self.service.col.models.new(p['modelName'])
+            css = p['css'] if p['css'] is not None else defaults['css']
             value = self.s('noteTypes.create', name=p['modelName'], fields=[{'name': value} for value in p['inOrderFields']],
-                           templates=templates, kind='cloze' if p['isCloze'] else 'normal', css=css)
+                           templates=templates, kind='cloze' if p['isCloze'] else 'normal', css=css,
+                           latexHeader=defaults['latexPre'], latexFooter=defaults['latexPost'])
             return self.model(id=value['id'])
         if name in ('modelFieldNames', 'modelFieldDescriptions', 'modelFieldFonts', 'modelTemplates', 'modelStyling', 'modelFieldsOnTemplates'):
             model = self.s('noteTypes.get', noteType=ref)
@@ -1258,6 +1258,9 @@ class Legacy:
                     continue
                 if edit['name'] not in names[kind]:
                     raise ApiError('notFound', kind + ' was not found in ' + model['name'] + ': ' + edit['name'])
+                if edit['op'].startswith('move'):
+                    # Anki's historical list insertion placed large indexes last.
+                    edit['index'] = min(edit['index'], len(names[kind]) - 1)
             if name in ('modelFieldSetFont', 'modelFieldSetFontSize', 'modelFieldSetDescription'):
                 key, expected, label = {'modelFieldSetFont': ('font', str, 'a string'),
                                         'modelFieldSetFontSize': ('fontSize', int, 'an integer'),
