@@ -9,9 +9,20 @@ from types import SimpleNamespace
 
 import pytest
 
+from plugin import parse_anki_version
 from plugin.protocol import ApiError, Deferred, Dispatcher, completed
 from tests_api.test_runtime import admitted, call, native
 from tools.package_addon import build
+
+
+@pytest.mark.parametrize('version, expected', [
+    ('26.09.4', (26, 9, 4)),
+    ('26.09.4+fsrs7', (26, 9, 4)),
+    ('26.10b2+rc1', (26, 10, 2)),
+    ('26.10rc1', (26, 10, 1)),
+])
+def test_anki_version_parsing_ignores_local_labels(version, expected):
+    assert parse_anki_version(version) == expected
 
 
 def test_addon_archive_matches_native_install_requirements(tmp_path, monkeypatch):

@@ -18,10 +18,16 @@ import aqt
 required_anki_version = (26, 8, 0)
 VERSION_SUFFIXES = ["b", "rc"]
 
-version_string = aqt.appVersion
-for suffix in VERSION_SUFFIXES:
-    version_string = version_string.replace(suffix, ".")
-anki_version = tuple(int(segment) for segment in version_string.split(".") if segment)
+
+def parse_anki_version(version):
+    # Ignore local version labels used by forks, such as "26.09.4+fsrs7".
+    version_string = version.split("+")[0]
+    for suffix in VERSION_SUFFIXES:
+        version_string = version_string.replace(suffix, ".")
+    return tuple(int(segment) for segment in version_string.split(".") if segment)
+
+
+anki_version = parse_anki_version(aqt.appVersion)
 
 # Append to tuple when versions have different number of segments (ie. 25.07 vs 25.07.0)
 anki_version += (0,) * (len(required_anki_version) - len(anki_version))
