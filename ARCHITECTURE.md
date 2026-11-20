@@ -1,6 +1,6 @@
 # Anki-Connect architecture
 
-Anki-Connect runs inside Anki Desktop 26.08 or later. It serves JSON-RPC 2.0 at
+Anki-Connect runs inside Anki Desktop 2.1.15 or later. It serves JSON-RPC 2.0 at
 `POST /api/v1` and the legacy action protocol at every other path, on `127.0.0.1:8765` by
 default. The canonical contract is [API_V1.md](API_V1.md) and
 [api-v1.schema.json](api-v1.schema.json). The legacy API still reports version 6.
@@ -17,6 +17,24 @@ default. The canonical contract is [API_V1.md](API_V1.md) and
 | `plugin/media.py` | Request-owned media backups, rollback and interrupted-request recovery. |
 | `plugin/contract.py` | Generated bundled schema and legacy target map. |
 | `plugin/edit.py` | Custom note editor and session-local history. |
+| `plugin/compat.py` | Versioning layer: differences between Anki releases behind stable helpers. |
+
+## Supporting Anki releases
+
+Services and adapters call `plugin/compat.py` instead of branching on Anki versions.
+It prefers feature detection (attributes, signatures, hooks) and uses release
+numbers only for behavior that cannot be probed without side effects, such as
+reviewer callback signatures or native races fixed in a later release. Missing
+features are reported as capabilities: `runtime.py` maps methods to native paths
+and `compat.FEATURES`, so `api.describe` lists the reason and calls fail with
+`unsupportedCapability` rather than emulating absent Anki behavior. Hooks that a
+release lacks are skipped without fake substitutes.
+
+`tools/anki_matrix.json` lists every Anki GitHub release from 2.1.15 with pinned
+dependencies; `tools/update_anki_matrix.py` regenerates it. `tools/anki_env.py`
+prepares each environment from PyPI wheels, or for releases before 2.1.24 from the
+official Linux bundle. Python 3.6 (2.1.15) and Python 3.7 (2.1.24) on Linux come from
+pinned conda-forge locks in `tools/`.
 
 ## Execution and completion
 

@@ -110,6 +110,12 @@ def test_obsidian_vault_add_edit_move_tags_delete_and_media(obsidian, tmp_path):
     updateNoteFields/deleteNotes/storeMediaFile/changeDeck/removeTags/addTags.
     """
     _, service, _, _, notifications = obsidian
+    # Stock Cloze had Text and Extra in 2.1.15, then only Text from 2.1.20 until 2.1.28.
+    cloze_fields = [f['name'] for f in service.col.models.by_name('Cloze')['flds']]
+    if 'Back Extra' not in cloze_fields:
+        edit = ({'op': 'updateField', 'name': 'Extra', 'patch': {'name': 'Back Extra'}} if 'Extra' in cloze_fields
+                else {'op': 'addField', 'field': {'name': 'Back Extra'}})
+        call(service, 'noteTypes.editStructure', noteType={'name': 'Cloze'}, edits=[edit])
     models = parse(exchange(obsidian, request('modelNames')))
     fields = {name: parse(exchange(obsidian, request('modelFieldNames', modelName=name))) for name in models}
     assert fields['Basic'] == ['Front', 'Back'] and fields['Cloze'] == ['Text', 'Back Extra']

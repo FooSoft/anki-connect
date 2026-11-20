@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from plugin import parse_anki_version
+from plugin import compat, parse_anki_version
 from plugin.protocol import ApiError, Deferred, Dispatcher, completed
 from tests_api.test_runtime import admitted, call, native
 from tools.package_addon import build
@@ -26,7 +26,10 @@ def test_anki_version_parsing_ignores_local_labels(version, expected):
 
 
 def test_addon_archive_matches_native_install_requirements(tmp_path, monkeypatch):
-    from aqt.addons import AddonManager, InstallOk, package_name_valid
+    import aqt.addons
+    from aqt.addons import AddonManager
+    # Anki validates package names from 2.1.47.
+    package_name_valid = getattr(aqt.addons, 'package_name_valid', lambda name: True)
 
     source = tmp_path / 'plugin'
     source.mkdir()
@@ -65,9 +68,11 @@ def test_addon_archive_matches_native_install_requirements(tmp_path, monkeypatch
     monkeypatch.setattr(manager, 'addonsFolder', lambda name=None: str(addons / name) if name else str(addons))
     monkeypatch.setattr(manager, '_disableConflicting', lambda *args: set())
     # Delete only the disposable old installation instead of using OS trash.
-    monkeypatch.setattr(manager, 'deleteAddon', lambda name: shutil.rmtree(addons / name))
+    monkeypatch.setattr(manager, 'deleteAddon', lambda name: shutil.rmtree(addons / name) or True)
     result = manager.install(str(tmp_path / 'addon.zip'))
-    assert isinstance(result, InstallOk), result
+    # Before 2.1.38 install returned (True, name, conflicts) rather than InstallOk.
+    InstallOk = getattr(aqt.addons, 'InstallOk', None)
+    assert isinstance(result, InstallOk) if InstallOk else result[0] is True, result
     assert manager.allAddons() == ['2055492159']
     assert manager.getConfig('2055492159')['webBindPort'] == 9876
     assert (installed / '__init__.py').read_text() == '# entry point\n'
@@ -97,37 +102,95 @@ def test_nested_rpc_batch_is_rejected_without_executing_nested_commands():
 def test_sync_respects_profile_media_setting(admitted, monkeypatch, requested, enabled):
     """Controlled collection.sync orchestration; no authenticated network sync."""
     import aqt
-    from anki.sync import SyncAuth, SyncOutput
-
     owner, service, drain, work, notifications = admitted
+    reason = owner.runtime.capability_reason('collection.sync', service.col)
+    if reason:
+        pytest.skip(reason)
+    from anki.sync import SyncAuth, SyncOutput
     calls = []
-    monkeypatch.setattr(service.col, 'sync_collection',
-                        lambda auth, media: calls.append(('sync', media)) or SyncOutput())
+    native_media = compat.collection_syncs_media(service.col)
+    def sync_collection(auth, *media):
+        calls.append(('sync', media[0] if native_media else None))
+        return SyncOutput()
+    monkeypatch.setattr(service.col, 'sync_collection', sync_collection)
     aqt.mw.pm.sync_auth = lambda: SyncAuth()
     aqt.mw.pm.media_syncing_enabled = lambda: enabled
     aqt.mw.pm.set_host_number = lambda value: None
     aqt.mw._refresh_after_sync = lambda: calls.append(('refresh',))
-    aqt.mw.media_syncer = SimpleNamespace(start_monitoring=lambda: calls.append(('media',)))
+    # Before 23.10 the media syncer runs the media sync instead of monitoring it.
+    media = lambda: calls.append(('media',))
+    aqt.mw.media_syncer = SimpleNamespace(start_monitoring=media, start=media, is_syncing=lambda: False,
+                                          _on_finished=lambda future: None)
     aqt.mw.taskman.with_progress = aqt.mw.taskman.run_in_background
     pending = owner.runtime.gui.collection_sync(includeMedia=requested)
     drain()
     assert pending.done and pending.error is None
-    assert calls[0] == ('sync', requested and enabled)
+    assert calls[0] == ('sync', requested and enabled if native_media else None)
     assert (('media',) in calls) == (requested and enabled)
     assert pending.value == {'collectionComplete': True, 'mediaComplete': requested and enabled}
     assert not owner.runtime.lifecycle_active
+
+
+@pytest.mark.parametrize('failure,kind', [(None, None), ('Interrupted', 'cancelled'), ('NetworkError', 'ioError')])
+def test_sync_reports_media_syncer_failures_before_23_10(admitted, monkeypatch, failure, kind):
+    import aqt
+    import aqt.qt
+    from anki import errors
+    owner, service, drain, work, notifications = admitted
+    reason = owner.runtime.capability_reason('collection.sync', service.col)
+    if reason or compat.collection_syncs_media(service.col):
+        pytest.skip(reason or 'The collection reports media sync status from 23.10.')
+    from anki.sync import SyncAuth, SyncOutput
+    timers = owner.runtime.operations.schedule.__self__
+    monkeypatch.setattr(aqt.qt, 'QTimer', SimpleNamespace(singleShot=lambda delay, callback: timers.append(callback)))
+    monkeypatch.setattr(service.col, 'sync_collection', lambda auth: SyncOutput())
+    aqt.mw.pm.sync_auth = lambda: SyncAuth()
+    aqt.mw.pm.media_syncing_enabled = lambda: True
+    aqt.mw.pm.set_host_number = lambda value: None
+    aqt.mw._refresh_after_sync = lambda: None
+    aqt.mw.taskman.with_progress = aqt.mw.taskman.run_in_background
+    logged = []
+    class MediaSyncer:
+        # The 2.1.28-23.09 syncer logs failures and cancellation in _on_finished.
+        _syncing = False
+        def start(self):
+            self._syncing = True
+            def run():
+                if failure:
+                    error = getattr(errors, failure)
+                    try:
+                        raise error('media stopped', None, None, None)
+                    except TypeError:
+                        raise error('media stopped')
+            aqt.mw.taskman.run_in_background(run, self._on_finished)
+        def _on_finished(self, future):
+            self._syncing = False
+            logged.append(future.exception())
+        def is_syncing(self):
+            return self._syncing
+    aqt.mw.media_syncer = MediaSyncer()
+    pending = owner.runtime.gui.collection_sync(includeMedia=True)
+    drain()
+    assert len(logged) == 1 and pending.done and not owner.runtime.lifecycle_active
+    assert '_on_finished' not in vars(aqt.mw.media_syncer)
+    if kind:
+        assert pending.error.kind == kind
+    else:
+        assert pending.value == {'collectionComplete': True, 'mediaComplete': True}
 
 
 @pytest.mark.parametrize('failure', [None, 'network down'])
 def test_legacy_sync_replies_after_sync_and_queues_other_requests(admitted, monkeypatch, failure):
     # ankimcp reports success from the reply; JL shows sync errors; yanki keeps going.
     import aqt
-    from anki.sync import SyncAuth, SyncOutput
-
     owner, service, drain, work, notifications = admitted
+    reason = owner.runtime.capability_reason('collection.sync', service.col)
+    if reason:
+        pytest.skip(reason)
+    from anki.sync import SyncAuth, SyncOutput
     timers = owner.runtime.operations.schedule.__self__
     syncs = []
-    def sync_collection(auth, media):
+    def sync_collection(auth, *media):
         syncs.append(owner.runtime.lifecycle_active)
         if failure:
             raise Exception(failure)

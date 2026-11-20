@@ -229,6 +229,18 @@ class Edit(aqt.editcurrent.EditCurrent):
             return
         self.editor.call_after_note_saved(self.cleanup)
 
+    # Before 23.10, EditCurrent's versions close the reviewer's dialog registration
+    # and call QDialog.reject on this QMainWindow.
+    def _saveAndClose(self):
+        self.cleanup()
+        self.close()
+
+    def closeWithCallback(self, onsuccess):
+        def callback():
+            self._saveAndClose()
+            onsuccess()
+        self.editor.call_after_note_saved(callback)
+
     # This method (mostly) solves (at least on my Windows 10 machine) three issues
     # with window activation. Without this not even too hacky a fix,
     #   * When dialog is opened from Yomichan *for the first time* since app start,
@@ -321,7 +333,8 @@ class Edit(aqt.editcurrent.EditCurrent):
             gui_hooks.browser_did_change_row.remove(search_input_select_all)
 
     def show_preview(self, *_):
-        if cards := self.note.cards():
+        cards = self.note.cards()
+        if cards:
             previewer = DecentPreviewer(ReadyCardsAdapter(cards))
             previewer.open()
             return previewer

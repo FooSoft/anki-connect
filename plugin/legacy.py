@@ -3,10 +3,10 @@ import copy
 import html
 import os
 import re
-from datetime import datetime
 
-from .protocol import ApiError, Deferred
-from .services import RATINGS, KINDS, PRESET_ENUMS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, entity_id
+from . import compat
+from .protocol import ApiError, Deferred, epoch_seconds
+from .services import RATINGS, KINDS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, entity_id, preset_enum_value, PRESET_ENUMS, native_preset_enum
 
 
 def integer(value):
@@ -175,8 +175,79 @@ class Legacy:
 
     @classmethod
     def media_targets(cls, entry, fields):
-        return list(dict.fromkeys(actual for field in cls.array(entry.get('fields'))
-                                  if (actual := cls.field_name(field, fields)) is not None))
+        actual = (cls.field_name(field, fields) for field in cls.array(entry.get('fields')))
+        return list(dict.fromkeys(name for name in actual if name is not None))
+
+    def era_scheduler(self):
+        """The v1/v2 scheduler, when this release or collection has no v3 scheduler.
+
+        Legacy actions predate v3, so they answer and describe cards the way
+        Anki-Connect did on those schedulers.
+        """
+        if self.service is None:
+            self.service = self.runtime.service()
+        col = self.service.col
+        if self.runtime.capability_reason('scheduling.answer', col) is None:
+            return None
+        return col.sched if callable(getattr(col.sched, 'answerCard', None)) else None
+
+    def next_reviews(self, card_id):
+        sched = self.era_scheduler()
+        if sched is None:
+            prediction = self.s('scheduling.predict', cardId=str(card_id))
+            return [item['label'] for item in prediction['answers']]
+        card = self.service.card(str(card_id))
+        return [sched.nextIvlStr(card, ease, True) for ease in range(1, sched.answerButtons(card) + 1)]
+
+    def answer_card(self, card_id, ease):
+        sched = self.era_scheduler()
+        if sched is None:
+            prediction = self.s('scheduling.predict', cardId=str(card_id))
+            self.s('scheduling.answer', cardId=str(card_id), rating=RATINGS[ease - 1], stateToken=prediction['stateToken'])
+            return
+        card = self.service.card(str(card_id))
+        if card.queue < 0 or card.queue == 4 or ease > sched.answerButtons(card):
+            raise ApiError('invalidState', 'This card cannot be answered outside the reviewer.')
+        if self.runtime.active_reviewer_card == card.id:
+            raise ApiError('invalidState', 'Use reviewer.answer for the active GUI card.')
+        # These schedulers answer from queues that reset() builds.
+        sched.reset()
+        card.start_timer()
+        sched.answerCard(card, ease)
+        # These schedulers report no changes; refresh every screen afterwards.
+        self.runtime.full_reset_required = True
+        self.runtime.invalidate_predictions()
+
+    def era_preset_action(self, name, p):
+        """Releases before 2.1.45 edit presets through their JSON dictionaries."""
+        decks = self.service.col.decks
+        # Missing ids return the Default preset from get_config.
+        known = {config['id']: config for config in decks.all_config()}
+        try:
+            if name == 'setDeckConfigId':
+                config = known.get(int(p['configId']))
+                targets = [decks.get(int(self.s('decks.get', deck=self.ref(deck))['id'])) for deck in p['decks']]
+                if config is None or any(deck.get('dyn') for deck in targets):
+                    return False
+                for deck in targets:
+                    decks.setConf(deck, config['id'])
+            elif name == 'cloneDeckConfigId':
+                source = known.get(int(p['cloneFrom']))
+                return False if source is None else int(decks.confId(p['name'], source))
+            elif name == 'removeDeckConfigId':
+                if int(p['configId']) == 1 or int(p['configId']) not in known:
+                    return False
+                decks.remConf(int(p['configId']))
+            else:
+                config = p['config']
+                if not isinstance(config, dict) or int(config['id']) not in known:
+                    return False
+                self.preset_patch(config, raw=True)
+                decks.updateConf(copy.deepcopy(config))
+        except Exception:
+            return False
+        self.service.change(None)
+        return True
 
     def s(self, method, **params):
         if self.service is None:
@@ -466,7 +537,7 @@ class Legacy:
         model = self.model(id=value['noteType']['id'])
         return {'noteId': int(id), 'profile': self.runtime.profile_name, 'tags': value['tags'],
                 'fields': {field['name']: {'value': value['fields'][field['name']], 'order': index} for index, field in enumerate(model['flds'])},
-                'modelName': model['name'], 'mod': int(datetime.fromisoformat(value['modifiedAt'].replace('Z', '+00:00')).timestamp()),
+                'modelName': model['name'], 'mod': int(epoch_seconds(value['modifiedAt'])),
                 'cards': [int(id) for id in value['cardIds']]}
 
     def card_info(self, id, fields=None):
@@ -493,8 +564,7 @@ class Legacy:
             rendered = self.s('cards.render', id=str(id))
             result.update(question=rendered['questionHtml'], answer=rendered['answerHtml'])
         if requested is None or 'nextReviews' in requested:
-            prediction = self.s('scheduling.predict', cardId=str(id))
-            result['nextReviews'] = [item['label'] for item in prediction['answers']]
+            result['nextReviews'] = self.next_reviews(id)
         return result if requested is None else {key: value for key, value in result.items() if key in requested}
 
     def gui_call(self, name, p, draft_fields=None):
@@ -516,6 +586,7 @@ class Legacy:
                 return False
             return accepted('profiles.switch', True, lambda value: True, name=p['name'])
         if name == 'sync':
+            runtime.require_capability('collection.sync')
             if not self.owner.window().pm.sync_auth():
                 raise ApiError('authenticationRequired', 'sync: auth not configured')
             return accepted('collection.sync', None, lambda value: None)
@@ -533,7 +604,7 @@ class Legacy:
                     raise ApiError('invalidParams', 'invalid card order: ' + str(sort['order']))
                 if self.service is None:
                     self.service = runtime.service()
-                if self.service.col.get_browser_column(sort['columnId']) is None:
+                if not compat.browser_column_exists(self.service.col, sort['columnId']):
                     raise ApiError('invalidParams', 'invalid columnId: ' + str(sort['columnId']))
                 sort = {'column': sort['columnId'], 'direction': sort['order']}
             value = call('browser.open', query=p['query'], sort=sort)
@@ -630,7 +701,7 @@ class Legacy:
                 def finished(source):
                     error = source.error
                     if isinstance(error, ApiError) and str(error).startswith('Unknown field: '):
-                        error = ApiError(error.kind, 'Field "' + str(error).removeprefix('Unknown field: ') + '" not found in current note')
+                        error = ApiError(error.kind, 'Field "' + str(error)[len('Unknown field: '):] + '" not found in current note')
                     pending.resolve(True if error is None else None, error)
                 value.then(finished)
                 return pending
@@ -646,7 +717,7 @@ class Legacy:
                 raise ApiError('invalidState', 'Gui review is not currently active.')
             record = self.record('cards', value['card']['id'])
             keep = ('cardId', 'fields', 'fieldOrder', 'question', 'answer', 'modelName', 'deckName', 'css')
-            return {**{key: record[key] for key in keep}, 'buttons': [RATINGS.index(item['rating']) + 1 for item in value['answers']],
+            return {**{key: record[key] for key in keep}, 'buttons': [ease for ease, _ in enumerate(value['answers'], 1)],
                     'nextReviews': [item['label'] for item in value['answers']], 'template': gui.reviewer().card.template()['name']}
         if name in ('guiStartCardTimer', 'guiShowQuestion', 'guiShowAnswer', 'guiPlayAudio', 'guiAnswerCard'):
             value = call('reviewer.get')
@@ -656,9 +727,11 @@ class Legacy:
                       'guiShowAnswer': 'reviewer.showAnswer', 'guiPlayAudio': 'reviewer.playAudio', 'guiAnswerCard': 'reviewer.answer'}[name]
             if name == 'guiAnswerCard':
                 ease = p['ease']
-                if value['side'] != 'answer' or type(ease) is not int or ease not in [RATINGS.index(item['rating']) + 1 for item in value['answers']]:
+                # Eases number the offered buttons, which v1 learning cards limit to three.
+                if value['side'] != 'answer' or type(ease) is not int or not 1 <= ease <= len(value['answers']):
                     return False
-                return accepted(method, True, lambda value: True, stateToken=value['stateToken'], rating=RATINGS[ease - 1])
+                return accepted(method, True, lambda value: True, stateToken=value['stateToken'],
+                                rating=value['answers'][ease - 1]['rating'])
             call(method, stateToken=value['stateToken'])
             return True
         if name in ('guiUndo', 'guiCheckDatabase'):
@@ -777,7 +850,7 @@ class Legacy:
                 if node.deck_id in wanted:
                     result[str(node.deck_id)] = {'deck_id': node.deck_id, 'name': node.name, 'new_count': node.new_count,
                                                  'learn_count': node.learn_count, 'review_count': node.review_count,
-                                                 'total_in_deck': node.total_in_deck}
+                                                 'total_in_deck': compat.deck_total(self.service.col, node)}
                 for child in node.children:
                     collect(child)
             collect(self.service.col.sched.deck_due_tree())
@@ -791,6 +864,8 @@ class Legacy:
                     return False
                 raise
         if name in ('saveDeckConfig', 'setDeckConfigId', 'cloneDeckConfigId', 'removeDeckConfigId'):
+            if self.runtime.capability_reason('deckPresets.update', self.service.col):
+                return self.era_preset_action(name, p)
             try:
                 if name == 'setDeckConfigId':
                     refs = [self.ref(deck) for deck in p['decks']]
@@ -1047,8 +1122,7 @@ class Legacy:
             result = []
             for answer in answers:
                 try:
-                    prediction = self.s('scheduling.predict', cardId=str(answer['cardId']))
-                    self.s('scheduling.answer', cardId=str(answer['cardId']), rating=RATINGS[answer['ease'] - 1], stateToken=prediction['stateToken'])
+                    self.answer_card(answer['cardId'], answer['ease'])
                     result.append(True)
                 except Exception as error:
                     from anki.errors import NotFoundError
@@ -1146,7 +1220,17 @@ class Legacy:
         except Exception as error:
             return [[False, str(error)]]
 
-    def preset_patch(self, data):
+    @staticmethod
+    def preset_enum(public, number, raw=False):
+        # Releases before 2.1.45 store the raw JSON, so any number they define is valid.
+        if raw and number in (native_preset_enum(PRESET_ENUMS[public][0]) or {}):
+            return number
+        value = preset_enum_value(public, number)
+        if value is None:
+            raise ApiError('compatibilityError', 'Unsupported ' + public + ' value ' + str(number) + '.')
+        return value
+
+    def preset_patch(self, data, raw=False):
         baseline = self.service.col.decks.get_config(int(data['id']))
         settings = {}
         paths = {'newPerDay': ('new', 'perDay'), 'reviewsPerDay': ('rev', 'perDay'), 'learnStepsMinutes': ('new', 'delays'),
@@ -1168,7 +1252,7 @@ class Legacy:
         for old, public in enums.items():
             handled.add(old)
             if old in data and data[old] != baseline.get(old):
-                settings[public] = PRESET_ENUMS[public][1][data[old]]
+                settings[public] = self.preset_enum(public, data[old], raw)
         # Anki ignores these obsolete keys and the unused third graduating interval;
         # historical README configs still send them.
         groups['new'].update(('ints', 'order', 'separate'))
@@ -1181,7 +1265,7 @@ class Legacy:
         if 'order' in data.get('new', {}) and data['new']['order'] != baseline['new']['order']:
             settings['newInsertOrder'] = {0: 'random', 1: 'due'}[data['new']['order']]
         if 'leechAction' in data.get('lapse', {}) and data['lapse']['leechAction'] != baseline['lapse']['leechAction']:
-            settings['leechAction'] = PRESET_ENUMS['leechAction'][1][data['lapse']['leechAction']]
+            settings['leechAction'] = self.preset_enum('leechAction', data['lapse']['leechAction'], raw)
         mapping = {'newPerDayMinimum': 'newPerDayMinimum',
                    'maxTaken': 'answerTimeLimitSeconds', 'timer': 'showTimer', 'autoplay': 'disableAutoplay',
                    'desiredRetention': 'desiredRetention', 'ignoreRevlogsBeforeDate': 'ignoreReviewsBefore',

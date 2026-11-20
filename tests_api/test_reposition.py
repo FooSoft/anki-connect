@@ -117,14 +117,16 @@ def test_reposition_shift_overflow_does_not_change_cards(native, state, step, du
         card.did = service.col.decks.id('Other')
     service.col.update_card(card)
     before = service.col.db.all('select id, due, odue from cards order by id')
-    undo = service.col.undo_status()
+    # Before 2.1.45 there is no undo status to compare.
+    undo_status = getattr(service.col, 'undo_status', lambda: None)
+    undo = undo_status()
     generation = service.runtime.generation
     with pytest.raises(ApiError) as caught:
         call(service, 'scheduling.repositionNewCards', cardIds=[ids[-1]],
              startingFrom=0, stepSize=step, shiftExisting=True)
     assert caught.value.kind == 'invalidParams'
     assert service.col.db.all('select id, due, odue from cards order by id') == before
-    assert service.col.undo_status() == undo
+    assert undo_status() == undo
     assert service.runtime.generation == generation
 
 

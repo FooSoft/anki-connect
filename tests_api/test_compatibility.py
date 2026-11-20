@@ -1,5 +1,6 @@
 """Compatibility workflows against real Anki collections, not mocked services."""
 import base64
+import datetime
 import hashlib
 import inspect
 from pathlib import Path
@@ -7,6 +8,7 @@ import time
 
 import pytest
 
+from plugin import compat
 from plugin.legacy import Legacy
 from plugin.protocol import ApiError, timestamp
 from tests_api.test_runtime import admitted, call, native
@@ -155,12 +157,16 @@ def test_legacy_searches_keep_native_result_order(native):
     second = old(native, 'addNote', note=legacy_note('b'))
     query = 'deck:Default or deck:Z'
     cards = list(service.col.find_cards(query))
-    assert cards == sorted(cards, reverse=True)
+    # Before 2.1.24 the Python finder returned ascending ids.
+    rust_search = compat.release() >= (2, 1, 24)
+    assert cards == sorted(cards, reverse=rust_search)
     assert old(native, 'findCards', query=query) == cards
-    assert old(native, 'findNotes', query=query) == list(service.col.find_notes(query)) == [second, first]
-    assert [note['noteId'] for note in old(native, 'notesInfo', query=query)] == [second, first]
+    notes = [second, first] if rust_search else [first, second]
+    assert old(native, 'findNotes', query=query) == list(service.col.find_notes(query)) == notes
+    assert [note['noteId'] for note in old(native, 'notesInfo', query=query)] == notes
     with pytest.raises(ApiError) as caught:
-        old(native, 'findNotes', query='deck:(')
+        # Before 2.1.36 an unbalanced "(" was accepted; an unterminated quote fails everywhere.
+        old(native, 'findNotes', query='deck:"')
     assert caught.value.kind == 'invalidSearch'
 
 
@@ -313,13 +319,21 @@ def test_v1_move_suspend_and_advanced_card_metadata(native):
     assert not call(service, 'cards.setSuspended', ids=[card], suspended=True)['items'][0]['result']['changed']
     call(service, 'cards.setSuspended', ids=[card], suspended=False)
     assert call(service, 'scheduling.get', cardId=card)['queue'] == 'new'
-    patch = {'sm2EasePermille': 2300, 'repetitions': 9, 'lapses': 2, 'customData': '{"x":1}'}
+    patch = {'sm2EasePermille': 2300, 'repetitions': 9, 'lapses': 2}
+    if not hasattr(service.col.get_card(int(card)), 'custom_data'):
+        with pytest.raises(ApiError, match='custom data') as unsupported:
+            call(service, 'advanced.cards.update', cardId=card, patch={**patch, 'customData': '{"x":1}'})
+        assert unsupported.value.kind == 'unsupportedCapability'
+        assert service.col.get_card(int(card)).reps == 0
+    else:
+        patch['customData'] = '{"x":1}'
     updated = call(service, 'advanced.cards.update', cardId=card, patch=patch)
     assert updated['scheduling']['sm2EasePermille'] == 2300
     stored = service.col.get_card(int(card))
-    assert (stored.reps, stored.lapses, stored.custom_data) == (9, 2, '{"x":1}')
-    with pytest.raises(ApiError, match='JSON object'):
-        call(service, 'advanced.cards.update', cardId=card, patch={'customData': '[]'})
+    assert (stored.reps, stored.lapses, getattr(stored, 'custom_data', '{"x":1}')) == (9, 2, '{"x":1}')
+    if hasattr(stored, 'custom_data'):
+        with pytest.raises(ApiError, match='JSON object'):
+            call(service, 'advanced.cards.update', cardId=card, patch={'customData': '[]'})
     with pytest.raises(ApiError, match='Coupled scheduler'):
         call(service, 'advanced.cards.update', cardId=card, patch={'remainingSteps': 1})
 
@@ -367,6 +381,16 @@ def test_v1_deck_rename_and_preset_listing(native):
 ])
 def test_preset_enums_match_native_semantics(native, public, value, native_field, native_name):
     owner, service = native
+    reason = service.runtime.capability_reason('deckPresets.update', service.col)
+    if reason:
+        pytest.skip(reason)
+    fields = service.col._backend.get_deck_config(1).config.DESCRIPTOR.fields_by_name
+    if native_field not in fields or native_name not in fields[native_field].enum_type.values_by_name:
+        # Older releases lack the option; it is rejected rather than stored as an unknown number.
+        with pytest.raises(ApiError) as caught:
+            call(service, 'deckPresets.update', preset={'id': '1'}, settings={public: value})
+        assert caught.value.kind == 'unsupportedCapability'
+        return
     updated = call(service, 'deckPresets.update', preset={'id': '1'}, settings={public: value})
     assert updated['settings'][public] == value
     config = service.col._backend.get_deck_config(1).config
@@ -410,6 +434,27 @@ def test_v1_integrity_stats_and_latest_review(native):
     assert call(service, 'collection.checkIntegrity')['problems'] == []
     assert service.col.note_count() == 1
 
+
+
+def test_statistics_summaries_follow_native_review_kinds(native):
+    """Native summaries from 2.1.56 and the raw-row port before it agree on the same history."""
+    owner, service = native
+    cards = [call(service, 'notes.create', **note_input(front))['cardIds'][0] for front in ('a', 'b', 'c')]
+    prediction = call(service, 'scheduling.predict', cardId=cards[0])
+    call(service, 'scheduling.answer', cardId=cards[0], rating='good', stateToken=prediction['stateToken'])
+    service.col.sched.suspend_cards([int(cards[1])])
+    cutoff = compat.day_cutoff(service.col)
+    # A mature review yesterday and a manual entry today, which summaries ignore.
+    for stamp, kind in (((cutoff - 86400 - 10) * 1000, 1), ((cutoff - 60) * 1000, 4)):
+        service.col.db.execute('insert into revlog values (?, ?, -1, 3, 40, 30, 2500, 5000, ?)',
+                               stamp, int(cards[2]), kind)
+    assert call(service, 'statistics.getToday')['count'] == 1
+    days = {entry['day']: entry['count'] for entry in call(service, 'statistics.getReviewDays')}
+    today = call(service, 'statistics.getToday')['day']
+    yesterday = (datetime.datetime.strptime(today, '%Y-%m-%d').date() - datetime.timedelta(days=1)).isoformat()
+    assert days == {today: 1, yesterday: 1}
+    summary = call(service, 'statistics.getSummary')
+    assert (summary['reviewCount'], summary['newCount'], summary['learningCount'], summary['suspendedCount']) == (2, 1, 1, 1)
 
 @pytest.mark.parametrize('filename,expected', [
     ('simple.txt', 'simple.txt'),
@@ -487,7 +532,11 @@ def test_discovery_permissions_and_operation_endpoints(admitted, monkeypatch):
     owner, service, drain, work, notifications = admitted
     monkeypatch.setattr(util, 'setting', lambda key: util.DEFAULT_CONFIG[key])
     description = owner.runtime.dispatcher.request({'jsonrpc': '2.0', 'id': 1, 'method': 'api.describe'}).value['result']
-    assert description['ankiVersion'] and all(method['available'] for method in description['methods'])
+    unavailable = {method['name']: method['reason'] for method in description['methods'] if not method['available']}
+    assert description['ankiVersion'] and all(unavailable.values())
+    if compat.at_least(23, 10):
+        # Every native interface exists from 23.10; gating there would be a regression.
+        assert not unavailable
     permission = owner.runtime.dispatcher.request({'jsonrpc': '2.0', 'id': 1, 'method': 'access.requestPermission'},
                                                   {'origin': 'http://localhost', 'allowed': True}).value['result']
     assert permission == {'permission': 'granted', 'requireApiKey': False}
@@ -569,6 +618,12 @@ def test_legacy_decks_configs_and_card_projections(native):
 def test_filtered_build_order_is_not_reported_as_timestamp(native):
     owner, service = native
     col = service.col
+    if hasattr(col, 'schedVer') and col.schedVer() == 1:
+        # The v1 scheduler leaves learning cards out of filtered decks.
+        if hasattr(col, 'upgrade_to_v2_scheduler'):
+            col.upgrade_to_v2_scheduler()
+        else:
+            col.changeSchedulerVer(2)
     learning, review = (col.get_note(old(native, 'addNote', note=legacy_note(front))).card_ids()[0]
                         for front in ('learning', 'review'))
     old(native, 'answerCards', answers=[{'cardId': learning, 'ease': 1}, {'cardId': review, 'ease': 4}])
@@ -736,31 +791,55 @@ def test_legacy_note_type_structure_and_conversion(native):
 
 def test_sync_native_interfaces_without_credentials(native):
     """Offline dependency checks for collection.sync and legacy sync, not a completed sync."""
-    from anki.sync import SyncAuth, SyncOutput
-
     owner, service = native
     col = service.col
+    if not compat.has(col, '_backend.sync_collection'):
+        # Before 2.1.28 Python synced over HTTP itself.
+        assert service.runtime.capability_reason('collection.sync', col) == 'Requires the native sync of Anki 2.1.28 or later.'
+        return
+    from anki.sync import SyncAuth, SyncOutput
     # Bind the exact call shapes used by Gui.collection_sync without making
     # network requests or closing the collection for a full upload/download.
     auth = SyncAuth()
-    for include_media in (False, True):
-        inspect.signature(col.sync_collection).bind(auth, include_media)
-    for upload in (False, True):
-        for server_usn in (None, 0):
-            inspect.signature(col.full_upload_or_download).bind(
-                auth=auth, server_usn=server_usn, upload=upload)
+    output = SyncOutput()
+    fields = ['host_number', 'required']
+    if compat.collection_syncs_media(col):
+        for include_media in (False, True):
+            inspect.signature(col.sync_collection).bind(auth, include_media)
+        for upload in (False, True):
+            for server_usn in (None, 0):
+                inspect.signature(col.full_upload_or_download).bind(
+                    auth=auth, server_usn=server_usn, upload=upload)
+        fields += ['new_endpoint', 'server_media_usn']
+    else:
+        # Before 23.10 media syncs separately and Python holds a write transaction.
+        inspect.signature(col.sync_collection).bind(auth)
+        inspect.signature(col.full_upload).bind(auth)
+        inspect.signature(col.full_download).bind(auth)
+        inspect.signature(col.save).bind(trx=False)
+        import aqt.mediasync
+        assert callable(aqt.mediasync.MediaSyncer.start) and callable(aqt.mediasync.MediaSyncer.is_syncing)
+        begin = compat.release_sync_lock(col)
+        begin()
+        assert col.db.scalar('select count() from col') == 1
     inspect.signature(col.close_for_full_sync).bind()
     inspect.signature(col._load_scheduler).bind()
-    output = SyncOutput()
-    for field in ('host_number', 'new_endpoint', 'server_media_usn', 'required'):
+    for field in fields:
         assert field in output.DESCRIPTOR.fields_by_name
     for state in ('NO_CHANGES', 'NORMAL_SYNC', 'FULL_UPLOAD', 'FULL_DOWNLOAD'):
         assert isinstance(getattr(output, state), int)
+    import aqt.main
+    if hasattr(aqt.main.AnkiQt, '_close_for_full_download'):
+        inspect.signature(aqt.main.AnkiQt._close_for_full_download).bind(None)
+    elif hasattr(aqt.main.AnkiQt, 'create_backup_now'):
+        inspect.signature(aqt.main.AnkiQt.create_backup_now).bind(None)
+    reopen = inspect.signature(aqt.main.AnkiQt.reopen).parameters
+    assert 'after_full_sync' in reopen or 'after_full_sync' in inspect.signature(col.reopen).parameters
     # These calls enter the real Rust backend and are harmless while idle.
-    assert not col.media_sync_status().active
+    if compat.collection_syncs_media(col):
+        assert not col.media_sync_status().active
     assert col.abort_sync() is None
     assert col.abort_media_sync() is None
-    assert not col.media_sync_status().active
     col._load_scheduler()
     assert col.sched is not None
 
@@ -777,6 +856,11 @@ def test_search_uses_native_browser_sort_columns(native, method, direction):
     if direction == 'descending':
         expected.reverse()
     sort = {'column': 'noteFld', 'direction': direction}
+    if not hasattr(service.col, 'get_browser_column'):
+        with pytest.raises(ApiError) as caught:
+            call(service, method, query='note:Basic', sort=sort, limit=2)
+        assert caught.value.kind == 'unsupportedCapability'
+        return
     page = call(service, method, query='note:Basic', sort=sort, limit=2)
     assert page['ids'] == expected[:2]
     assert call(service, method, query='note:Basic', sort=sort, limit=2,
@@ -835,3 +919,91 @@ def test_legacy_empty_tags_creation_and_tag_edits(native):
         old(native, 'updateNoteTags', note=id, tags=['', 123])
     assert caught.value.kind == 'invalidParams'
     assert set(service.col.get_note(id).tags) == expected
+
+
+def test_v2_scheduler_reports_unsupported_scheduling(native):
+    """Collections without v3 (optional before 2.1.66, an upgrade prompt later) report it instead of failing."""
+    owner, service = native
+    col = service.col
+    if not hasattr(col, 'set_v3_scheduler'):
+        pytest.skip('This Anki release has no v3 scheduler toggle.')
+    col.set_v3_scheduler(False)
+    if col.v3_scheduler():
+        pytest.skip('This Anki release always uses the v3 scheduler.')
+    card = call(service, 'notes.create', **note_input('v2'))['cardIds'][0]
+    for method, params in (('scheduling.predict', {'cardId': card}), ('scheduling.getQueue', {})):
+        with pytest.raises(ApiError) as caught:
+            service.execute(method, params)
+        assert caught.value.kind == 'unsupportedCapability' and 'v3 scheduler' in str(caught.value)
+    assert call(service, 'cards.get', id=card)['scheduling']['queue'] == 'new'
+
+
+def test_collection_tasks_run_one_at_a_time_on_threaded_task_managers(monkeypatch):
+    import concurrent.futures
+    import queue
+    import threading
+    from types import SimpleNamespace
+    main, lock, active, order = queue.Queue(), threading.Lock(), [0, 0], []
+    def run_in_background(task, on_done):
+        # Task managers before 23.10 run every task on a multi-worker pool.
+        def work():
+            future = concurrent.futures.Future()
+            future.set_result(task())
+            main.put(lambda: on_done(future))
+        threading.Thread(target=work).start()
+    monkeypatch.setattr(compat, 'collection_thread_bound', lambda: False)
+    mw = SimpleNamespace(taskman=SimpleNamespace(run_in_background=run_in_background))
+    def task(index):
+        with lock:
+            active[0] += 1
+            active[1] = max(active)
+        time.sleep(0.02)
+        with lock:
+            active[0] -= 1
+        return index
+    for index in range(4):
+        compat.run_in_background(mw, lambda index=index: task(index), lambda future: order.append(future.result()))
+    while len(order) < 4:
+        main.get(timeout=5)()
+    assert order == [0, 1, 2, 3] and active[1] == 1
+
+
+def test_atomic_creation_fallback_is_one_undo_step(native, monkeypatch):
+    # Before 23.10 there is no native bulk add; force that path on later releases too.
+    owner, service = native
+    has = compat.has
+    monkeypatch.setattr(compat, 'has', lambda root, path: path != 'add_notes' and has(root, path))
+    call(service, 'notes.create', **note_input('kept'))
+    call(service, 'notes.createMany', atomic=True, notes=[note_input('first'), note_input('second')])
+    assert service.col.note_count() == 3
+    call(service, 'collection.undo')
+    assert service.col.note_count() == 1
+    add_note = service.col.add_note
+    def fail_second(note, deck_id):
+        if service.col.note_count() > 1:
+            raise RuntimeError('add failed')
+        return add_note(note, deck_id)
+    monkeypatch.setattr(service.col, 'add_note', fail_second)
+    with pytest.raises(RuntimeError):
+        call(service, 'notes.createMany', atomic=True, notes=[note_input('third'), note_input('fourth')])
+    assert service.col.note_count() == 1
+    # Undoing the failed batch must not restore its rolled-back note.
+    call(service, 'collection.undo')
+    assert service.col.note_count() == 1
+
+
+def test_moving_filtered_cards_returns_them_home_first(native):
+    owner, service = native
+    col = service.col
+    card = int(call(service, 'notes.create', **note_input('filtered move'))['cardIds'][0])
+    home_due = col.get_card(card).due
+    did = col.decks.new_filtered('Filtered')
+    deck = col.decks.get(did)
+    deck['terms'] = [['cid:{}'.format(card), 100, 0]]
+    col.decks.save(deck)
+    col.sched.rebuild_filtered_deck(did)
+    assert col.get_card(card).odid
+    target = call(service, 'decks.create', name='Destination')
+    assert call(service, 'cards.move', ids=[str(card)], deck={'id': target['id']})['items'][0]['result']['changed']
+    moved = col.get_card(card)
+    assert (moved.did, moved.odid, moved.odue, moved.due) == (int(target['id']), 0, 0, home_due)

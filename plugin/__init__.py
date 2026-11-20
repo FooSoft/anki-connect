@@ -15,7 +15,7 @@
 
 import aqt
 
-required_anki_version = (26, 8, 0)
+required_anki_version = (2, 1, 15)
 VERSION_SUFFIXES = ["b", "rc"]
 
 
@@ -38,15 +38,19 @@ if anki_version < required_anki_version:
 import inspect
 import json
 import time
-from aqt._macos_helper import macos_helper
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
-from . import util, web
-from .edit import Edit
+from . import compat, util, web
+compat.install_backports()
 from .legacy import Legacy, Accepted, legacy_request
 from .runtime import Runtime
 from .contract import SCHEMA, LEGACY_TARGETS
 from .protocol import Deferred, completed
 from .web import format_success_reply, format_exception_reply
+
+macos_helper = compat.macos_helper()
+Edit = None
+if compat.editor_dialog_available():
+    from .edit import Edit
 
 
 # Legacy clients update note types on every sync, often while their own Browser
@@ -137,7 +141,10 @@ class AnkiConnect:
             bound = signature.bind(**params)
         except TypeError:
             # The declaration's own binder retains the historical public error.
-            method(**params)
+            try:
+                method(**params)
+            except TypeError as error:
+                raise compat.binding_error(error, method) from None
             raise
         bound.apply_defaults()
         return name, Legacy.normalize_params(name, dict(bound.arguments))
@@ -152,7 +159,7 @@ class AnkiConnect:
     def legacy_busy(self, name):
         if self.lifecycle_busy(name):
             return True
-        return self.waits_for_collection_work(name) and bool(getattr(self.window(), '_background_op_count', 0))
+        return self.waits_for_collection_work(name) and bool(compat.background_op_count(self.window()))
 
     @staticmethod
     def legacy_writes(name):
@@ -163,32 +170,37 @@ class AnkiConnect:
         """Commit pending editor input before a write's change notification
         makes open editors reload their notes from the collection."""
         editors = [dialog.editor for _, dialog in aqt.dialogs._dialogs.values()
-                   if dialog is not None and callable(getattr(getattr(dialog, 'editor', None), 'call_after_note_saved', None))]
+                   if dialog is not None and compat.saves_editor(getattr(dialog, 'editor', None))]
         if not editors:
             return None
         pending = Deferred()
         remaining = [len(editors)]
         deadline = time.monotonic() + LEGACY_WAIT_SECONDS
+        def settled():
+            # From 2.1.45 editors write typed fields through a background update_note op.
+            return remaining[0] == 0 and not compat.background_op_count(self.window())
         def saved():
             remaining[0] -= 1
-            if remaining[0] == 0:
+            if settled():
                 pending.resolve(None)
         def check():
             if pending.done:
                 return
-            if time.monotonic() < deadline:
+            if settled():
+                pending.resolve(None)
+            elif time.monotonic() < deadline:
                 self.runtime.schedule_later(check)
             else:
                 from .protocol import ApiError
                 pending.resolve(error=ApiError('busy', 'An open editor did not save its note.'))
         for editor in editors:
-            editor.call_after_note_saved(saved, keepFocus=True)
+            compat.editor_save(editor, saved, keepFocus=True)
         if not pending.done:
             self.runtime.schedule_later(check)
         return pending
 
     def guard_legacy(self, name, params):
-        if self.waits_for_collection_work(name) and getattr(self.window(), '_background_op_count', 0):
+        if self.waits_for_collection_work(name) and compat.background_op_count(self.window()):
             from .protocol import ApiError
             raise ApiError('busy', 'A collection operation is active.')
         if self.lifecycle_busy(name):
@@ -728,7 +740,8 @@ class AnkiConnect:
     def apiReflect(self, scopes=None, actions=None): ...
 
 if __name__ != "plugin":
-    Edit.register_with_anki()
+    if Edit is not None:
+        Edit.register_with_anki()
     ac = AnkiConnect()
     ac.runtime.register_hooks()
     ac.initLogging()

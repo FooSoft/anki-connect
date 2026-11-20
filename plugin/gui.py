@@ -3,6 +3,7 @@ import json
 import uuid
 import time
 
+from . import compat
 from .protocol import ApiError, Deferred, timestamp
 from .services import RATINGS, entity_id
 
@@ -56,23 +57,43 @@ class Gui:
         already_open = self.browser() is not None
         # Start a new browser with the target query, before its editor loads.
         # Existing browsers must save their current note before changing search.
-        initial_search = {'search': (query,)} if not already_open and query is not None else {}
-        browser = aqt.dialogs.open('Browser', self.mw, **initial_search)
+        initial = not already_open and query is not None and compat.browser_opens_with_search()
+        browser = aqt.dialogs.open('Browser', self.mw, **({'search': (query,)} if initial else {}))
         browser.activateWindow()
-        def opened(_):
-            if already_open and query is not None:
-                browser.form.searchEdit.lineEdit().setText(query)
+        # Before 2.1.45 searching and sorting save the editor and then change rows
+        # asynchronously; these browsers save once and change rows synchronously.
+        table = getattr(browser, 'table', None) is not None
+        def search():
+            browser.form.searchEdit.lineEdit().setText(query)
+            if table:
                 browser.onSearchActivated()
-            if sort:
-                from aqt.qt import Qt
-                index = browser.table._model.active_column_index(sort['column'])
-                if index is None:
-                    raise ApiError('invalidParams', 'Browser sort column is not active.')
-                direction = Qt.SortOrder.AscendingOrder if sort['direction'] == 'ascending' else Qt.SortOrder.DescendingOrder
-                # Set column first, then explicitly apply direction to defeat first-click defaults.
-                browser.table._on_sort_column_changed(index, direction)
-                browser.table._on_sort_column_changed(index, direction)
+            else:
+                browser._onSearchActivated()
+        if not already_open and query is not None and not initial:
+            # Before 2.1.41 a new browser searches its default first; the
+            # editor's save of any shown note completes before this search.
+            if table:
+                search()
+            else:
+                browser.form.searchEdit.lineEdit().setText(query)
+                compat.editor_save(browser.editor, browser._onSearchActivated)
+        def apply():
+            if already_open and query is not None:
+                search()
+            if sort and not compat.browser_sort(browser, sort['column'], sort['direction'] == 'descending'):
+                raise ApiError('invalidParams', 'Browser sort column is not active.')
             return self.browser_getSelection()
+        def opened(_):
+            if table:
+                return apply()
+            pending = Deferred()
+            def saved():
+                try:
+                    pending.resolve(apply())
+                except Exception as error:
+                    pending.resolve(error=error)
+            compat.editor_save(browser.editor, saved)
+            return pending
         # Native search/selection saves the editor first. Do not ask it to call
         # saveNow before the webview has installed that function.
         return self.javascript(browser.editor, 'return true;', ready='typeof saveNow === "function"').map(opened)
@@ -85,15 +106,9 @@ class Gui:
             cardIds = [str(card) for id in noteIds for card in self.service().note(id).card_ids()]
         for id in cardIds:
             self.service().card(id)
-        browser.table.clear_selection()
-        # Current table supports selecting by card IDs in both browser modes.
-        from aqt.qt import QItemSelection, QItemSelectionModel
-        selection = QItemSelection()
-        for id in cardIds:
-            row = browser.table._model.get_card_row(entity_id(id))
-            if row is not None:
-                selection.select(browser.table._model.index(row, 0), browser.table._model.index(row, browser.table._model.columnCount() - 1))
-        browser.table._selection_model().select(selection, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
+        # Card rows are found in both browser modes.
+        rows = [compat.browser_card_row(browser, entity_id(id)) for id in cardIds]
+        compat.browser_select_rows(browser, [row for row in rows if row is not None])
         return self.browser_getSelection()
 
     def add_dialog(self):
@@ -117,7 +132,9 @@ class Gui:
         started = time.monotonic()
         launched = [False]
         ready = ready or 'typeof getNoteInfo === "function" && typeof loadNote === "function"'
-        script = '(async () => { ' + code + ' })().then(value => { globalThis[' + json.dumps(key) + '] = {value}; }, error => { globalThis[' + json.dumps(key) + '] = {error: String(error)}; });'
+        # Chromium 69 of Anki 2.1.15 lacks globalThis and the ?? operator.
+        slot = 'window[' + json.dumps(key) + ']'
+        script = '(async () => { ' + code + ' })().then(value => { ' + slot + ' = {value}; }, error => { ' + slot + ' = {error: String(error)}; });'
         def poll():
             if result.done:
                 return
@@ -138,10 +155,10 @@ class Gui:
                 elif 'error' in value:
                     result.resolve(error=ApiError('ioError', value['error']))
                 else:
-                    editor.web.eval('delete globalThis[' + json.dumps(key) + '];')
+                    editor.web.eval('delete ' + slot + ';')
                     result.resolve(value.get('value'))
             try:
-                probe = ready if not launched[0] else 'globalThis[' + json.dumps(key) + '] ?? null'
+                probe = ready if not launched[0] else '(' + slot + ' === undefined ? null : ' + slot + ')'
                 editor.web.evalWithCallback(probe, checked)
             except RuntimeError as error:
                 result.resolve(error=ApiError('notFound', 'Editor closed.'))
@@ -168,11 +185,13 @@ class Gui:
         if not hasattr(editor, 'note'):
             return self.svelte_record(dialog, kind)
         note = editor.note
-        deck_id = dialog.deck_chooser.selected_deck_id if kind == 'add' else None
+        deck_id = compat.add_dialog_deck_id(dialog) if kind == 'add' else None
+        # Before 2.1.28 new notes receive their ID at construction, not when added.
+        draft = kind == 'add' or not note.id
         return {'id': key, 'kind': kind, 'variant': 'legacy' if kind == 'add' else 'custom',
-                'noteId': str(note.id) if note.id else None, 'noteType': service.summary(note.note_type()),
+                'noteId': None if draft else str(note.id), 'noteType': service.summary(note.note_type()),
                 'deck': service.summary(service.resolve({'id': str(deck_id)}, 'deck')) if deck_id else None,
-                'fields': dict(note.items()), 'tags': list(note.tags), 'dirty': bool(any(note.fields)) if not note.id else False,
+                'fields': dict(note.items()), 'tags': list(note.tags), 'dirty': bool(any(note.fields)) if draft else False,
                 'session': self.runtime.session}
 
     def editors_openNote(self, noteId):
@@ -186,8 +205,7 @@ class Gui:
         def open_dialog(record=None):
             if record and record['dirty'] and note:
                 raise ApiError('editorConflict', 'Existing Add draft has unsaved content.')
-            from anki.collection import ExperimentFlag
-            variant = 'NewAddCards' if self.mw.col.experiment_enabled(ExperimentFlag.SVELTE_EDITOR) else 'AddCards'
+            variant = 'NewAddCards' if compat.svelte_editor_enabled(self.mw.col) else 'AddCards'
             dialog = existing or aqt.dialogs.open(variant, self.mw)
             dialog.activateWindow()
             if not note:
@@ -196,7 +214,7 @@ class Gui:
                 return self.editor_record(dialog, 'add')
             native, deck = self.service().prepare_note(note)
             if hasattr(dialog.editor, 'note'):
-                dialog.set_note(native, deck['id'])
+                compat.add_dialog_set_note(dialog, native, deck['id'])
                 return self.editor_record(dialog, 'add')
             return self.populate_svelte(dialog, native, deck['id'])
         if existing:
@@ -254,8 +272,8 @@ class Gui:
             updated[name] = updated[name] + value if mode == 'append' else value
         tags = patch.get('tags', current.tags)
         updated.tags = list(dict.fromkeys(list(current.tags) + list(tags))) if mode == 'append' else list(tags)
-        deck = self.service().resolve(patch['deck'], 'deck')['id'] if 'deck' in patch else dialog.deck_chooser.selected_deck_id
-        dialog.set_note(updated, deck)
+        deck = self.service().resolve(patch['deck'], 'deck')['id'] if 'deck' in patch else compat.add_dialog_deck_id(dialog)
+        compat.add_dialog_set_note(dialog, updated, deck)
         return self.editor_record(dialog, 'add')
 
     def reviewer(self):
@@ -265,7 +283,17 @@ class Gui:
         return reviewer
 
     def reviewer_token(self, reviewer):
-        return [reviewer.card.id, reviewer._v3.states.SerializeToString().hex(), self.runtime.generation]
+        card = reviewer.card
+        # Without the v3 scheduler, a card's reviews and modification identify its state.
+        states = (compat.reviewer_states(reviewer._v3).SerializeToString().hex() if getattr(reviewer, '_v3', None)
+                  else '%d:%d:%d' % (card.reps, card.mod, card.queue))
+        return [card.id, states, self.runtime.generation]
+
+    def reviewer_ratings(self, reviewer):
+        """Ratings by offered ease; v1 learning cards offer Again, Good and sometimes Easy."""
+        eases = sorted(button[0] for button in reviewer._answerButtonList())
+        names = {4: RATINGS, 3: ['again', 'good', 'easy'], 2: ['again', 'good']}[len(eases)]
+        return dict(zip(eases, names))
 
     def reviewer_get(self):
         try:
@@ -273,14 +301,17 @@ class Gui:
         except ApiError:
             return {'active': False, 'card': None, 'rendered': None, 'side': 'none', 'stateToken': None,
                     'answers': [], 'source': 'reviewer'}
-        labels = self.mw.col._backend.describe_next_states(reviewer._v3.states)
-        buttons = {button[0] for button in reviewer._answerButtonList()}
+        ratings = self.reviewer_ratings(reviewer)
+        if getattr(reviewer, '_v3', None):
+            labels = dict(enumerate(self.mw.col.sched.describe_next_states(compat.reviewer_states(reviewer._v3)), 1))
+        else:
+            labels = {ease: self.mw.col.sched.nextIvlStr(reviewer.card, ease, True) for ease in ratings}
         return {'active': True, 'card': self.service().card_record(reviewer.card),
                 'rendered': self.service().cards_render(str(reviewer.card.id)),
                 'side': reviewer.state if reviewer.state in ('question', 'answer') else 'none',
                 'stateToken': self.runtime.token('reviewer', self.reviewer_token(reviewer)),
-                'answers': [{'rating': RATINGS[index], 'label': label, 'interval': None}
-                            for index, label in enumerate(labels) if index + 1 in buttons], 'source': 'reviewer'}
+                'answers': [{'rating': rating, 'label': labels[ease], 'interval': None}
+                            for ease, rating in ratings.items()], 'source': 'reviewer'}
 
     def checked_reviewer(self, stateToken):
         reviewer = self.reviewer()
@@ -304,17 +335,19 @@ class Gui:
         return {'changed': True}
 
     def reviewer_answer(self, stateToken, rating):
-        from aqt import gui_hooks
         reviewer = self.checked_reviewer(stateToken)
         if reviewer.state != 'answer':
             raise ApiError('invalidState', 'The answer must be visible.')
-        ease = RATINGS.index(rating) + 1
-        if ease not in {button[0] for button in reviewer._answerButtonList()}:
+        ease = next((ease for ease, name in self.reviewer_ratings(reviewer).items() if name == rating), None)
+        if ease is None:
             raise ApiError('invalidState', 'Rating is not offered.')
+        if not getattr(reviewer, '_v3', None):
+            return self.answer_without_v3(reviewer, ease)
+        from aqt import gui_hooks
         proceed, ease = gui_hooks.reviewer_will_answer_card((True, ease), reviewer, reviewer.card)
         if not proceed:
             raise ApiError('vetoed', 'Reviewer hook vetoed the answer.')
-        answer = self.mw.col.sched.build_answer(card=reviewer.card, states=reviewer._v3.states,
+        answer = self.mw.col.sched.build_answer(card=reviewer.card, states=compat.reviewer_states(reviewer._v3),
                                                 rating=reviewer._v3.rating_from_ease(ease))
         card_id = str(reviewer.card.id)
         reviewer.state = 'transition'
@@ -328,11 +361,22 @@ class Gui:
             suspended = reviewer.card.queue < 0
             reviewer._after_answering(ease)
             if self.mw.col.sched.state_is_leech(answer.new_state):
-                reviewer.onLeech(suspended)
+                compat.reviewer_leech(reviewer, suspended)
             return value
         future = self.runtime.background(work, after=after, initiator=reviewer)
         future.then(lambda source: setattr(reviewer, 'state', 'answer') if source.error else None)
         return future
+
+    def answer_without_v3(self, reviewer, ease):
+        """Answer through the reviewer, which runs hooks and the v1/v2 scheduler on the main thread."""
+        card_id = reviewer.card.id
+        latest = 'select max(id) from revlog where cid=?'
+        before = self.mw.col.db.scalar(latest, card_id)
+        reviewer._answerCard(ease)
+        review = self.mw.col.db.scalar(latest, card_id)
+        if review == before:
+            raise ApiError('vetoed', 'Reviewer hook vetoed the answer.')
+        return {'cardId': str(card_id), 'reviewId': str(review), 'scheduling': self.service().scheduling_get(str(card_id))}
 
     def application_navigate(self, view, deck=None):
         if deck:
@@ -371,7 +415,7 @@ class Gui:
         if args is None:
             raise ApiError('unsupportedCapability', 'Import file format is not supported by this adapter.')
         result = Deferred()
-        dialog = ImportDialog(self.mw, args)
+        dialog = compat.import_dialog(self.mw, args)
         self.runtime.lifecycle_active = True
         state('waitingForUser')
         def finish(value=None, error=None):
@@ -379,7 +423,10 @@ class Gui:
                 return
             self.runtime.lifecycle_active = False
             result.resolve(value, error)
+        dialog_closed = []
         def closed(code):
+            # The dialog deletes itself on close; scheduled polls must not touch it.
+            dialog_closed.append(code)
             if result.done:
                 return
             # Wait behind any in-progress native import before reporting cancellation.
@@ -388,9 +435,9 @@ class Gui:
         dialog.finished.connect(closed)
         self.cancellable(dialog.reject)
         def poll():
-            if result.done:
+            if result.done or dialog_closed:
                 return
-            state('running' if self.mw._background_op_count else 'waitingForUser')
+            state('running' if compat.background_op_count(self.mw) else 'waitingForUser')
             if self.runtime.session != session:
                 finish(error=ApiError('staleSession', 'Collection changed during import.'))
                 return
@@ -400,7 +447,7 @@ class Gui:
                 QTimer.singleShot(0, lambda: finish({'completed': True}))
                 return
             def error_checked(message):
-                if result.done:
+                if result.done or dialog_closed:
                     return
                 if message:
                     finish(error=ApiError('ioError', message))
@@ -494,7 +541,7 @@ class Gui:
 
     def guard_lifecycle(self):
         import aqt
-        if self.mw._background_op_count:
+        if compat.background_op_count(self.mw):
             raise ApiError('busy', 'Anki has an active collection operation.')
         for _, dialog in aqt.dialogs._dialogs.values():
             if dialog is not None and hasattr(dialog, 'editor'):
@@ -502,13 +549,12 @@ class Gui:
 
     def collection_refresh(self, target='windows'):
         if target == 'cachesAndWindows':
-            self.mw.col.models._cache.clear()
+            compat.clear_notetype_cache(self.mw.col)
         self.mw.reset()
         return {'changed': True}
 
     def collection_sync(self, includeMedia=True):
         from aqt.qt import QTimer
-        from aqt import gui_hooks
         auth = self.mw.pm.sync_auth()
         if not auth:
             raise ApiError('authenticationRequired', 'Sync authentication is not configured.')
@@ -526,14 +572,25 @@ class Gui:
         def done():
             self.runtime.lifecycle_active = False
             self.runtime.invalidate_predictions()
-            self.mw._refresh_after_sync()
+            compat.refresh_after_sync(self.mw)
             pending.resolve({'collectionComplete': True, 'mediaComplete': includeMedia})
         def media():
             if not includeMedia:
                 done()
                 return
-            self.mw.media_syncer.start_monitoring()
+            watched = None if compat.collection_syncs_media(col) else compat.watch_media_sync(self.mw.media_syncer)
+            compat.start_media_sync(self.mw, col)
             def poll():
+                if watched:
+                    if self.mw.media_syncer.is_syncing():
+                        QTimer.singleShot(250, poll)
+                        return
+                    error = watched()
+                    if error is not None:
+                        fail(error)
+                    else:
+                        done()
+                    return
                 def checked(future):
                     try:
                         status = future.result()
@@ -543,19 +600,17 @@ class Gui:
                             done()
                     except Exception as error:
                         fail(error)
-                self.mw.taskman.run_in_background(col.media_sync_status, checked, uses_collection=False)
+                compat.run_in_background(self.mw, col.media_sync_status, checked, uses_collection=False)
             poll()
         def full(out, upload):
             state('running')
-            gui_hooks.collection_will_temporarily_close(col)
+            compat.collection_will_temporarily_close(col)
+            server_usn = compat.field(out, 'server_media_usn') if includeMedia else None
             def work():
-                if not upload:
-                    self.mw.create_backup_now()
-                col.close_for_full_sync()
-                col.full_upload_or_download(auth=auth, server_usn=out.server_media_usn if includeMedia else None, upload=upload)
+                compat.full_sync(self.mw, col, auth, upload, server_usn)
             def finished(future):
                 try:
-                    self.mw.reopen(after_full_sync=True)
+                    compat.reopen_after_full_sync(self.mw)
                     self.runtime.invalidate_session()
                     future.result()
                     self.mw.reset()
@@ -565,27 +620,28 @@ class Gui:
             self.mw.taskman.with_progress(work, finished)
         def synced(future):
             try:
+                begin()
                 out = future.result()
                 col._load_scheduler()
                 self.mw.pm.set_host_number(out.host_number)
-                if out.new_endpoint:
+                if compat.field(out, 'new_endpoint'):
                     self.mw.pm.set_current_sync_url(out.new_endpoint)
                 if out.required in (out.NO_CHANGES, out.NORMAL_SYNC):
                     media()
                 else:
                     state('waitingForUser')
-                    from aqt.utils import ask_user_dialog
                     directions = [False] if out.required == out.FULL_DOWNLOAD else [True] if out.required == out.FULL_UPLOAD else [True, False]
                     def choice(index):
                         if index < len(directions):
                             full(out, directions[index])
                         else:
                             fail(ApiError('cancelled', 'Full sync cancelled.'))
-                    ask_user_dialog('Anki requires a full sync. Choose the authoritative collection.',
-                                    callback=choice, buttons=[('Upload' if upload else 'Download') for upload in directions] + ['Cancel'], default_button=len(directions), parent=self.mw)
+                    compat.ask_user('Anki requires a full sync. Choose the authoritative collection.',
+                                    choice, [('Upload' if upload else 'Download') for upload in directions] + ['Cancel'], len(directions), self.mw)
             except Exception as error:
                 fail(error)
-        self.mw.taskman.with_progress(lambda: col.sync_collection(auth, includeMedia), synced)
+        begin = compat.release_sync_lock(col)
+        self.mw.taskman.with_progress(lambda: compat.sync_collection(col, auth, includeMedia), synced)
         return pending
 
     def guard(self, method, params):

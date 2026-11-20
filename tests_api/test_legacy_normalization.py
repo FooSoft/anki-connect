@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from plugin import util
+from plugin import compat, util
 from plugin.web import WebRequest
 from tests_api.test_runtime import admitted, native
 from tests_api.test_yomitan import exchange
@@ -232,14 +232,16 @@ def test_legacy_note_type_writes_only_block_editors_of_changed_fields(admitted, 
     assert pending.value['error'].startswith('Close the affected editor')
 
 
-def test_legacy_writes_wait_for_open_editors_to_save(admitted, monkeypatch):
+# Editors before 2.1.45 name the save method saveNow.
+@pytest.mark.parametrize('save', ['call_after_note_saved', 'saveNow'])
+def test_legacy_writes_wait_for_open_editors_to_save(admitted, monkeypatch, save):
     # Change notifications reload open editors from the collection, so typing
     # not yet sent to Python would be lost to a template sync or a Yomitan add.
     import aqt
     import plugin
     owner, service, drain, work, _ = admitted
     saves = []
-    editor = SimpleNamespace(note=None, call_after_note_saved=lambda callback, keepFocus=False: saves.append((callback, keepFocus)))
+    editor = SimpleNamespace(note=None, **{save: lambda callback, keepFocus=False: saves.append((callback, keepFocus))})
     monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Browser': (None, SimpleNamespace(editor=editor)), 'AddCards': (None, None)})
     for action, params in [('updateModelStyling', {'model': {'name': 'Basic', 'css': '.saved{}'}}),
                            ('addNote', {'note': note()})]:
@@ -282,7 +284,8 @@ def test_legacy_gui_actions_wait_for_collection_work(admitted, monkeypatch):
     browse = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': query}})
     drain()
     cards = list(service.col.find_cards(query))
-    assert cards != sorted(cards) and browse.value == {'result': cards, 'error': None}
+    # Before 2.1.24 the Python finder returned ascending ids.
+    assert (cards != sorted(cards) or compat.release() < (2, 1, 24)) and browse.value == {'result': cards, 'error': None}
     # Work that outlasts the wait still fails instead of queueing indefinitely.
     monkeypatch.setattr(plugin, 'LEGACY_WAIT_SECONDS', 0)
     owner.window()._background_op_count = 1

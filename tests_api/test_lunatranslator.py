@@ -13,7 +13,7 @@ from pathlib import Path
 
 from plugin import util
 from plugin.web import WebClient
-from tests_api.test_runtime import admitted, native
+from tests_api.test_runtime import admitted, native, native_media_name
 
 
 FIELDS = ['word', 'rubytextHtml', 'example_sentence', 'audio_for_word',
@@ -87,7 +87,7 @@ def socket_invoke(owner, drain, action, **params):
                 break
         assert client.sock is None
         response = b''
-        while chunk := peer.recv(65536):
+        for chunk in iter(lambda: peer.recv(65536), b''):
             response += chunk
         head, body = response.split(b'\r\n\r\n', 1)
         assert head.startswith(b'HTTP/1.1 200 OK')
@@ -122,7 +122,7 @@ def test_luna_desktop_get_mining_model_refresh_media_and_overwrite(admitted, tmp
         for kind, entries in ((kind, source[kind]) for kind in ('audio', 'picture', 'video')):
             for entry in entries:
                 field = entry['fields'][0]
-                name = entry['filename'].lower()
+                name = os.path.normcase(native_media_name(entry['filename']))
                 # Native writes may retain requested case when reusing a file on Windows.
                 assert name in os.path.normcase(note[field])
                 assert (Path(service.col.media.dir()) / name).read_bytes() == field.encode()

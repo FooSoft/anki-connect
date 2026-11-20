@@ -36,9 +36,23 @@ if scenario not in scenarios:
 # Anki's IPC key is normally per user, not per profile. Set it before importing
 # aqt so tests never reuse a personal Anki instance or another test process.
 os.environ['ANKI_SINGLE_INSTANCE_KEY'] = 'anki-api-test-' + uuid.uuid4().hex
-from anki.lang import set_lang
-set_lang('en')
+import inspect
+import anki.lang
+import aqt
+if hasattr(anki.lang, 'set_lang'):
+    if len(inspect.signature(anki.lang.set_lang).parameters) == 1:
+        anki.lang.set_lang('en')
+    else:
+        # 2.1.22 to 2.1.44 take the catalog folder.
+        anki.lang.set_lang('en', aqt.locale_dir())
+elif 'locale_dir' in inspect.signature(anki.lang.setLang).parameters:
+    anki.lang.setLang('en', aqt.locale_dir())
+else:
+    anki.lang.setLang('en')
 from aqt.profiles import ProfileManager
+if hasattr(ProfileManager, '_setDefaultLang'):
+    # 2.1.15 opens a first-run language dialog before any QApplication exists.
+    ProfileManager._setDefaultLang = lambda self: self.setLang('en')
 base = Path(tempfile.mkdtemp(prefix='anki-api-gui-'))
 pm = ProfileManager(base)
 pm.setupMeta()
@@ -47,14 +61,23 @@ pm.load(pm.profiles()[0])
 pm.meta['firstRun'] = False
 pm.meta['defaultLang'] = 'en'
 # Keep unattended tests offline and free of startup update dialogs.
-pm.set_update_check(False)
-pm.set_check_for_addon_updates(False)
+if hasattr(pm, 'set_update_check'):
+    pm.set_update_check(False)
+else:
+    pm.meta['updates'] = False
+if hasattr(pm, 'set_check_for_addon_updates'):
+    pm.set_check_for_addon_updates(False)
 pm.profile['autoSync'] = False
 pm.profile['numBackups'] = 0
 pm.save()
 pm.db.close()
 import aqt
-from aqt.qt import QTimer
+import aqt.main
+from aqt.qt import QEventLoop, QTimer
+if not hasattr(ProfileManager, 'set_check_for_addon_updates'):
+    # Earlier releases check add-on updates daily, without a setting. From 2.1.66
+    # the application update check follows as on_done, unconditionally in 23.10-24.6.
+    aqt.main.AnkiQt.maybe_check_for_addon_updates = lambda *args, **kwargs: None
 app = aqt._run(['anki', '-b', str(base), '-p', 'User 1', '-l', 'en'], exec=False)
 
 
@@ -69,29 +92,46 @@ def finish(code):
     os._exit(code)
 
 
-from plugin import AnkiConnect
-from plugin.edit import Edit
+from plugin import AnkiConnect, Edit
 from plugin.protocol import Deferred
 owner = AnkiConnect()
-Edit.register_with_anki()
+if Edit is not None:
+    Edit.register_with_anki()
 owner.runtime.register_hooks()
 unhandled = []
+def upstream_race(error, traceback):
+    """Anki 23.10+ measures the bottom bar while leaving review, racing its re-render."""
+    import traceback as tb
+    frames = tb.extract_tb(traceback)
+    return (isinstance(error, TypeError) and frames and frames[-1].name == 'animate_height'
+            and frames[-1].filename.replace('\\', '/').endswith('aqt/toolbar.py'))
 def exception_hook(kind, error, traceback):
     import traceback as tb
+    if upstream_race(error, traceback):
+        print('KNOWN UPSTREAM RACE:', error, flush=True)
+        return
     unhandled.append(error)
     print('UNHANDLED GUI ERROR:', ''.join(tb.format_exception(kind, error, traceback)), flush=True)
 sys.excepthook = exception_hook
+def idle():
+    # Before 2.1.45, collection work ran on the main thread without a counter.
+    return getattr(aqt.mw, '_background_op_count', 0) == 0
+def pump():
+    # Qt WebEngine 5.15-6.5 defers browser-side tasks while bare processEvents
+    # calls run outside an event loop, stalling pages for seconds or indefinitely.
+    loop = QEventLoop()
+    QTimer.singleShot(10, loop.quit)
+    loop.exec()
 def wait_until(fn, timeout=30, description='GUI wait'):
     deadline = time.monotonic() + timeout
     while not fn():
         if time.monotonic() > deadline:
             windows = [(type(window).__name__, window.windowTitle())
                        for window in app.topLevelWidgets() if window.isVisible()]
-            print('TIMEOUT:', description, 'background operations:', aqt.mw._background_op_count,
+            print('TIMEOUT:', description, 'background operations:', getattr(aqt.mw, '_background_op_count', None),
                   'visible windows:', windows, flush=True)
             raise TimeoutError(description + ' expired')
-        app.processEvents()
-        time.sleep(0.01)
+        pump()
 def result(value):
     if isinstance(value, Deferred):
         wait_until(lambda: value.done)
@@ -102,7 +142,7 @@ def result(value):
 def call(method, **params):
     deadline = time.monotonic() + 30
     while True:
-        wait_until(lambda: aqt.mw._background_op_count == 0)
+        wait_until(idle)
         try:
             value = result(owner.runtime.dispatcher.invoke(method, params))
             if isinstance(value, dict) and 'operationId' in value:
@@ -115,11 +155,11 @@ def call(method, **params):
                     or str(error) != 'A collection operation is active.'
                     or time.monotonic() >= deadline):
                 raise
-            app.processEvents()
+            pump()
 def old(action, *, http_v2=False, **params):
     deadline = time.monotonic() + 30
     while True:
-        wait_until(lambda: aqt.mw._background_op_count == 0)
+        wait_until(idle)
         previous = set(owner.runtime.operations.records)
         request = {'action': action, 'version': 2 if http_v2 else 6, 'params': params}
         if http_v2:
@@ -133,7 +173,7 @@ def old(action, *, http_v2=False, **params):
             reply = result(owner.handler_async(request))
         if (reply['error'] == 'A collection operation is active.'
                 and time.monotonic() < deadline):
-            app.processEvents()
+            pump()
             continue
         assert reply['error'] is None, (action, reply)
         try:
@@ -148,7 +188,71 @@ def old(action, *, http_v2=False, **params):
                     or time.monotonic() >= deadline):
                 raise
             # Like call(), retry only this rejection before GUI execution.
-            app.processEvents()
+            pump()
+def supports(step, *methods):
+    """Whether this release offers every method; otherwise report why step is skipped."""
+    for method in methods:
+        reason = owner.runtime.capability_reason(method)
+        if reason:
+            print('SKIP', step + ':', method, 'is unavailable:', reason, flush=True)
+            return False
+    return True
+def editor_variants():
+    """Legacy editor, then the experimental Svelte editor where this release has one."""
+    try:
+        from anki.collection import ExperimentFlag
+    except ImportError:
+        return [False]
+    return [False, True]
+def use_editor(svelte):
+    if editor_variants() != [False]:
+        from anki.collection import ExperimentFlag
+        aqt.mw.col._experiments[str(ExperimentFlag.SVELTE_EDITOR)] = svelte
+# Editors of every release define saveNow; getNoteInfo appears with the 26.08 editors.
+SAVE_READY = 'typeof saveNow === "function"'
+def save_editor(editor):
+    result(owner.runtime.gui.javascript(editor, 'await saveNow(); return true;', ready=SAVE_READY))
+def page_ready(web, expression):
+    """A wait_until probe with at most one recent evaluation; floods crash Qt 6.2-6.5.
+
+    A navigation can drop a pending callback, so a probe is reissued after two seconds.
+    """
+    state = {'ready': False, 'sent': None}
+    def answered(value):
+        state['ready'], state['sent'] = state['ready'] or bool(value), None
+    def probe():
+        if not state['ready'] and (state['sent'] is None or time.monotonic() - state['sent'] > 2):
+            state['sent'] = time.monotonic()
+            web.evalWithCallback(expression, answered)
+        return state['ready']
+    return probe
+def staged_fields(note_id, values):
+    """JavaScript changing the shown fields as typing does, leaving the save to the editor."""
+    import json
+    names = list(aqt.mw.col.get_note(int(note_id)).keys())
+    # Before 26.08 editors set fields from [name, html] pairs and report typing
+    # through key:ord:nid:html bridge commands; a later save flushes the shown fields.
+    code = ('if (setFields.length > 1) { setFields(' + json.dumps(names) + ', ' + json.dumps(values) + '); } else { '
+            + 'setFields(' + json.dumps([list(pair) for pair in zip(names, values)]) + '); '
+            + ' '.join('pycmd(' + json.dumps('key:%d:%s:%s' % (ord, note_id, value)) + ');'
+                       for ord, value in enumerate(values)) + ' } return true;')
+    return code
+def browser_rows(browser):
+    table = getattr(browser, 'table', None)
+    if table is None:
+        # Before 2.1.45 the browser listed card IDs only.
+        return list(browser.model.cards)
+    model = table._model
+    return list(model.get_items([model.index(row, 0) for row in range(model.rowCount())]))
+def browser_sorting(browser):
+    table = getattr(browser, 'table', None)
+    if table is None:
+        return aqt.mw.col.get_config('sortType'), bool(aqt.mw.col.get_config('sortBackwards', False))
+    return table._state.sort_column, table._state.sort_backwards
+def current_search(browser):
+    if hasattr(browser, 'current_search'):
+        return browser.current_search()
+    return browser.form.searchEdit.lineEdit().text()
 try:
     wait_until(lambda: aqt.mw.col is not None and aqt.mw.state == 'deckBrowser')
     print('PASS loaded disposable profile', base, flush=True)
@@ -156,9 +260,8 @@ try:
     note = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'GUI question', 'Back': 'GUI answer'})
     print('PASS native note', note['noteId'], flush=True)
     if scenario == 'editors':
-        from anki.collection import ExperimentFlag
-        for svelte in [False, True]:
-            aqt.mw.col._experiments[str(ExperimentFlag.SVELTE_EDITOR)] = svelte
+        for svelte in editor_variants():
+            use_editor(svelte)
             import base64
             open_media = ('open-' + str(svelte) + '.txt').lower()
             assert old('guiAddCards', note={'modelName': 'Basic', 'deckName': 'Default',
@@ -193,16 +296,18 @@ try:
             dialog = owner.runtime.gui.add_dialog()
             before = aqt.mw.col.note_count()
             if hasattr(dialog.editor, 'note'):
-                ready = [False]
-                def probe():
-                    dialog.editor.web.evalWithCallback('typeof saveNow === "function"', lambda v: ready.__setitem__(0, bool(v)))
-                    return ready[0]
-                wait_until(probe)
-                dialog.add_current_note()
+                # Draft loads queued before the page was ready replace focused fields, and
+                # each replaced field reports a blur with its old text into the shared
+                # unsaved note (ID 0 from 2.1.28). Blur the field and wait for the final
+                # report so the Add click does not race messages that are still pending.
+                save_editor(dialog.editor)
+                wait_until(lambda: dialog.editor.note.fields[0] == 'Draft question ' + str(svelte))
+                # Before 2.1.45 the Add button called addCards.
+                (dialog.add_current_note if hasattr(dialog, "add_current_note") else dialog.addCards)()
             else:
                 result(owner.runtime.gui.javascript(dialog.editor, 'document.querySelectorAll("button").forEach(button => { if (button.textContent.trim() === "Add") button.click(); }); return true;'))
             wait_until(lambda: aqt.mw.col.note_count() == before + 1)
-            wait_until(lambda: aqt.mw._background_op_count == 0)
+            wait_until(idle)
             saved = aqt.mw.col.find_notes('"Draft question ' + str(svelte) + '"')
             assert len(saved) == 1 and aqt.mw.col.get_note(saved[0])['Back'] == 'Draft answer appended legacy[sound:' + media_name + ']'
             assert set(aqt.mw.col.get_note(saved[0]).tags) == {'gui-smoke', 'extra'}
@@ -247,87 +352,94 @@ try:
         call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Second GUI question'})
         browser = owner.runtime.gui.browser()
         expected_cards = set(aqt.mw.col.find_cards(''))
-        before = {id: aqt.mw.col.get_card(id).due for id in expected_cards}
-        notifications = []
-        def reposition_notified(changes, initiator):
-            notifications.append(changes.card)
-        aqt.gui_hooks.operation_did_execute.append(reposition_notified)
-        try:
-            assert call('scheduling.repositionNewCards', cardIds=[selected_card],
-                        startingFrom=0, shiftExisting=True) == {'changedCount': 1}
-            assert any(notifications), 'Reposition replied before native change notification'
-            assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == {
-                id: 0 if str(id) == selected_card else due + 1 for id, due in before.items()}
-            # Collection undo requires closing affected editors first.
-            result(owner.runtime.gui.javascript(browser.editor, 'await saveNow(); return true;'))
-            aqt.dialogs.closeAll(onsuccess=lambda: None)
-            wait_until(aqt.dialogs.allClosed)
-            notifications.clear()
-            call('collection.undo')
-            assert any(notifications), 'Undo replied before native change notification'
-            assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == before
-        finally:
-            aqt.gui_hooks.operation_did_execute.remove(reposition_notified)
-        print('PASS new-card reposition, shifts, native notifications and undo with open browser', flush=True)
+        executed_hook = getattr(getattr(aqt, 'gui_hooks', None), 'operation_did_execute', None)
+        if supports('new-card reposition and undo with open browser', 'scheduling.repositionNewCards', 'collection.undo'):
+            before = {id: aqt.mw.col.get_card(id).due for id in expected_cards}
+            notifications = []
+            def reposition_notified(changes, initiator):
+                notifications.append(changes.card)
+            if executed_hook is not None:
+                executed_hook.append(reposition_notified)
+            try:
+                assert call('scheduling.repositionNewCards', cardIds=[selected_card],
+                            startingFrom=0, shiftExisting=True) == {'changedCount': 1}
+                # Before 2.1.45 Anki had no operation notifications.
+                assert executed_hook is None or any(notifications), 'Reposition replied before native change notification'
+                assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == {
+                    id: 0 if str(id) == selected_card else due + 1 for id, due in before.items()}
+                # Collection undo requires closing affected editors first.
+                save_editor(browser.editor)
+                aqt.dialogs.closeAll(onsuccess=lambda: None)
+                wait_until(aqt.dialogs.allClosed)
+                notifications.clear()
+                call('collection.undo')
+                assert executed_hook is None or any(notifications), 'Undo replied before native change notification'
+                assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == before
+            finally:
+                if executed_hook is not None:
+                    executed_hook.remove(reposition_notified)
+            print('PASS new-card reposition, shifts, native notifications and undo with open browser', flush=True)
         call('browser.open', query='')
         browser = owner.runtime.gui.browser()
-        # Distinct due days avoid relying on native tie-breaking between sibling cards.
-        for index, id in enumerate(sorted(expected_cards)):
-            call('scheduling.setDueDate', cardIds=[str(id)], days=str(index + 1))
-        def browser_items():
-            model = browser.table._model
-            return list(model.get_items([model.index(row, 0) for row in range(model.rowCount())]))
-        ascending = None
-        for direction in ['ascending', 'descending', 'ascending', 'descending']:
-            call('browser.open', query='', sort={'column': 'cardDue', 'direction': direction})
-            assert browser.table._state.sort_column == 'cardDue'
-            assert browser.table._state.sort_backwards == (direction == 'descending')
-            wait_until(lambda: set(browser_items()) == expected_cards)
-            items = browser_items()
-            if direction == 'ascending':
-                ascending = items
-            else:
-                assert items == ascending[::-1], (items, ascending)
-        print('PASS browser numeric sorting both directions', flush=True)
+        if supports('browser numeric sorting', 'scheduling.setDueDate'):
+            # Distinct due days avoid relying on native tie-breaking between sibling cards.
+            for index, id in enumerate(sorted(expected_cards)):
+                call('scheduling.setDueDate', cardIds=[str(id)], days=str(index + 1))
+            ascending = None
+            for direction in ['ascending', 'descending', 'ascending', 'descending']:
+                call('browser.open', query='', sort={'column': 'cardDue', 'direction': direction})
+                assert browser_sorting(browser) == ('cardDue', direction == 'descending'), browser_sorting(browser)
+                wait_until(lambda: set(browser_rows(browser)) == expected_cards)
+                items = browser_rows(browser)
+                if direction == 'ascending':
+                    ascending = items
+                else:
+                    assert items == ascending[::-1], (items, ascending)
+            print('PASS browser numeric sorting both directions', flush=True)
         legacy_reply = result(owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': ''}}))
         assert legacy_reply == {'result': sorted(aqt.mw.col.find_cards('')), 'error': None}, legacy_reply
         assert set(old('guiBrowse', http_v2=True, query='nid:' + note['noteId'])) == {
             int(id) for id in siblings}
         print('PASS legacy browser completion', flush=True)
-        result(owner.runtime.gui.javascript(owner.runtime.gui.browser().editor, 'await saveNow(); return true;'))
+        save_editor(owner.runtime.gui.browser().editor)
         aqt.dialogs.closeAll(onsuccess=lambda: None)
         wait_until(aqt.dialogs.allClosed)
     if scenario == 'browser-startup':
         import json
-        from anki.collection import ExperimentFlag
         from aqt.browser import Browser
         from plugin.web import WebRequest
         other = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
                      fields={'Front': 'Unrelated browser startup note'})
         query = 'nid:' + note['noteId']
         expected_cards = {int(id) for id in note['cardIds']}
+        # 2.1.41 normalizes the search, which quotes it.
+        shown = (query, '"' + query + '"')
         native_javascript = owner.runtime.gui.javascript
-        native_search = Browser.search_for
+        # Browser.search_for and the initial search argument arrived in 2.1.41.
+        native_search = getattr(Browser, 'search_for', None)
         searches, gates = [], []
         def record_search(browser, search, *args, **kwargs):
             searches.append(search)
             return native_search(browser, search, *args, **kwargs)
         def pause_readiness(editor, code, ready=None):
-            if ready == 'typeof saveNow === "function"':
+            if ready == SAVE_READY:
                 gate = Deferred()
                 gates.append(gate)
                 return gate
             return native_javascript(editor, code, ready)
         def table_cards(browser):
-            model = browser.table._model
-            return set(model.get_items([model.index(row, 0) for row in range(model.rowCount())]))
+            return set(browser_rows(browser))
+        from plugin import compat
+        # Before 2.1.41 a new browser first runs its own default search.
+        single_search = [['is:current'] * (not compat.browser_opens_with_search()) + [text] for text in shown]
         try:
-            Browser.search_for = record_search
-            for svelte in (False, True):
-                aqt.mw.col._experiments[str(ExperimentFlag.SVELTE_EDITOR)] = svelte
+            if native_search is not None:
+                Browser.search_for = record_search
+            for svelte in editor_variants():
+                use_editor(svelte)
                 for protocol in ('v1', 'legacy-v2', 'legacy-v6'):
                     assert owner.runtime.gui.browser() is None
-                    wait_until(lambda: aqt.mw._background_op_count == 0)
+                    wait_until(idle)
                     searches.clear()
                     gates.clear()
                     owner.runtime.gui.javascript = pause_readiness
@@ -346,12 +458,12 @@ try:
                     wait_until(lambda: bool(gates))
                     browser = owner.runtime.gui.browser()
                     # Search/table effects must precede editor readiness and API completion.
-                    assert browser.current_search() == query
+                    assert current_search(browser) in shown, current_search(browser)
                     wait_until(lambda: table_cards(browser) == expected_cards)
-                    assert searches == [query], searches
+                    assert native_search is None or searches in single_search, searches
                     assert not pending.done
                     owner.runtime.gui.javascript = native_javascript
-                    result(native_javascript(browser.editor, 'return true;', ready='typeof saveNow === "function"'))
+                    result(native_javascript(browser.editor, 'return true;', ready=SAVE_READY))
                     gates[0].resolve(True)
                     value = result(pending)
                     if protocol == 'v1':
@@ -360,47 +472,46 @@ try:
                         value = json.loads(value.split(b'\r\n\r\n', 1)[1])
                         cards = value if protocol == 'legacy-v2' else value['result']
                         assert set(cards) == expected_cards, value
-                    assert searches == [query], searches
+                    assert native_search is None or searches in single_search, searches
                     # Omitted query preserves the existing search on an open browser.
                     assert old('guiBrowse') == []
-                    assert browser.current_search() == query
+                    assert current_search(browser) in shown, current_search(browser)
                     # Stage an editor change, then search elsewhere through the same API.
                     edited = 'Browser edit ' + protocol + ' ' + str(svelte)
                     loaded = ('(() => { try { const info = getNoteInfo(); return String(info.id) === '
                               + json.dumps(note['noteId']) + ' && info.fields.length === 2; } catch { return false; } })()'
-                              if svelte else None)
-                    result(native_javascript(browser.editor,
-                        'setFields(["Front", "Back"], ' + json.dumps([edited, 'GUI answer']) + '); return true;',
-                        ready=loaded))
+                              if svelte else SAVE_READY)
+                    if not svelte:
+                        wait_until(lambda: getattr(browser.editor.note, 'id', None) == int(note['noteId']),
+                                   description='Browser editor shows the searched note')
+                    result(native_javascript(browser.editor, staged_fields(note['noteId'], [edited, 'GUI answer']),
+                                             ready=loaded))
                     if protocol == 'v1':
                         call('browser.open', query='nid:' + other['noteId'])
                     else:
                         old('guiBrowse', http_v2=protocol == 'legacy-v2', query='nid:' + other['noteId'])
                     wait_until(lambda: table_cards(browser) == {int(id) for id in other['cardIds']})
-                    wait_until(lambda: aqt.mw._background_op_count == 0)
+                    wait_until(idle)
                     assert aqt.mw.col.get_note(int(note['noteId']))['Front'] == edited
                     if svelte:
                         result(native_javascript(browser.editor, 'return true;', ready=loaded.replace(
                             json.dumps(note['noteId']), json.dumps(other['noteId']))))
-                    result(native_javascript(browser.editor, 'await saveNow(); return true;'))
+                    save_editor(browser.editor)
                     aqt.dialogs.closeAll(onsuccess=lambda: None)
                     wait_until(aqt.dialogs.allClosed)
                     print('PASS initial browser query before readiness and existing-editor save',
                           protocol, 'svelte=' + str(svelte), flush=True)
         finally:
-            Browser.search_for = native_search
+            if native_search is not None:
+                Browser.search_for = native_search
             owner.runtime.gui.javascript = native_javascript
-    if scenario == 'custom':
+    if scenario == 'custom' and supports('custom editor', 'editors.openNote'):
         editor = call('editors.openNote', noteId=note['noteId'])
         assert editor['noteId'] == note['noteId'], editor
         print('PASS custom editor', flush=True)
         dialog = aqt.dialogs._dialogs[Edit.dialog_registry_tag][1]
-        ready = [False]
-        def custom_ready():
-            dialog.editor.web.evalWithCallback('typeof saveNow === "function"', lambda v: ready.__setitem__(0, bool(v)))
-            return ready[0]
-        wait_until(custom_ready)
-        dialog.editor.web.eval('setFields(["Front", "Back"], ["Edited GUI question", "GUI answer"]);')
+        wait_until(page_ready(dialog.editor.web, SAVE_READY))
+        dialog.editor.web.eval('(() => { ' + staged_fields(note['noteId'], ['Edited GUI question', 'GUI answer']) + ' })();')
         saved = []
         dialog.editor.call_after_note_saved(lambda: saved.append(True))
         wait_until(lambda: bool(saved))
@@ -410,12 +521,12 @@ try:
         assert owner.runtime.gui.editors
         print('PASS custom editor save', flush=True)
         # Note-type writes reload open editors; the legacy facade saves them first.
-        dialog.editor.web.eval('setFields(["Front", "Back"], ["Unsaved GUI question", "GUI answer"]);')
+        dialog.editor.web.eval('(() => { ' + staged_fields(note['noteId'], ['Unsaved GUI question', 'GUI answer']) + ' })();')
         name = aqt.mw.col.get_note(int(note['noteId'])).note_type()['name']
         assert old('updateModelStyling', model={'name': name, 'css': '.card { color: navy; }'}) is None
         assert aqt.mw.col.get_note(int(note['noteId']))['Front'] == 'Unsaved GUI question'
         assert aqt.mw.col.models.by_name(name)['css'] == '.card { color: navy; }'
-        wait_until(lambda: aqt.mw._background_op_count == 0)
+        wait_until(idle)
         assert dialog.editor.note['Front'] == 'Unsaved GUI question'
         executed = []
         def record_op(changes, handler):
@@ -424,7 +535,7 @@ try:
         mod = aqt.mw.col.get_note(int(note['noteId'])).mod
         try:
             assert old('updateModelStyling', model={'name': name, 'css': '.card { color: teal; }'}) is None
-            wait_until(lambda: aqt.mw._background_op_count == 0)
+            wait_until(idle)
         finally:
             aqt.gui_hooks.operation_did_execute.remove(record_op)
         # A clean editor's save is a no-op rather than an extra note update.
@@ -434,57 +545,69 @@ try:
         aqt.dialogs.closeAll(onsuccess=lambda: None)
         wait_until(aqt.dialogs.allClosed)
     if scenario == 'reviewer':
-        call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Legacy reviewer question'})
-        assert old('guiDeckOverview', name='Default')
-        assert aqt.mw.state == 'overview'
-        assert old('guiDeckReview', name='Default')
-        call('application.navigate', view='review', deck={'name': 'Default'})
-        wait_until(lambda: aqt.mw.reviewer.card and aqt.mw.reviewer.state == 'question')
-        review = call('reviewer.get')
-        assert old('guiReviewActive')
-        assert old('guiCurrentCard')['cardId'] == int(review['card']['id'])
-        assert call('reviewer.startTimer', stateToken=review['stateToken']) == {'changed': True}
-        assert old('guiStartCardTimer')
-        call('reviewer.showAnswer', stateToken=review['stateToken'])
-        wait_until(lambda: aqt.mw.reviewer.state == 'answer')
-        review = call('reviewer.get')
-        assert call('reviewer.showQuestion', stateToken=review['stateToken']) == {'changed': True}
-        wait_until(lambda: aqt.mw.reviewer.state == 'question')
-        assert old('guiShowAnswer')
-        wait_until(lambda: aqt.mw.reviewer.state == 'answer')
-        assert old('guiShowQuestion')
-        wait_until(lambda: aqt.mw.reviewer.state == 'question')
-        assert old('guiShowAnswer')
-        wait_until(lambda: aqt.mw.reviewer.state == 'answer')
-        review = call('reviewer.get')
-        # Exercise real reviewer audio plumbing on a silent card. Audible output
-        # remains explicitly deferred; no audio device or player assertion here.
-        assert call('reviewer.playAudio', stateToken=review['stateToken']) == {'changed': True}
-        assert old('guiPlayAudio')
-        veto = lambda choice, reviewer, card: (False, choice[1])
-        aqt.gui_hooks.reviewer_will_answer_card.append(veto)
-        try:
-            call('reviewer.answer', stateToken=review['stateToken'], rating='good')
-            raise AssertionError('Vetoed answer succeeded')
-        except Exception as error:
-            assert getattr(error, 'kind', None) == 'vetoed', error
-        finally:
-            aqt.gui_hooks.reviewer_will_answer_card.remove(veto)
-        print('PASS reviewer veto', flush=True)
-        answered = call('reviewer.answer', stateToken=review['stateToken'], rating='good')
-        assert answered['reviewId'] is not None, answered
-        assert aqt.mw.col.db.scalar('select ease from revlog where id=?', int(answered['reviewId'])) == 3
-        print('PASS reviewer native answer', flush=True)
-        wait_until(lambda: aqt.mw.reviewer.card and aqt.mw.reviewer.state == 'question')
-        legacy_card = aqt.mw.reviewer.card.id
-        assert old('guiShowAnswer')
-        wait_until(lambda: aqt.mw.reviewer.state == 'answer')
-        assert old('guiAnswerCard', ease=3)
-        assert aqt.mw.col.db.scalar('select ease from revlog where cid=? order by id desc limit 1', legacy_card) == 3
-        assert old('guiDeckBrowser') is None
-        assert aqt.mw.state == 'deckBrowser'
-        call('application.navigate', view='deckBrowser')
-    if scenario == 'imports':
+        schedulers = ['default']
+        # From 2.1.45 to 2.1.66 the v3 scheduler is an option.
+        if hasattr(aqt.mw.col, 'v3_scheduler') and not aqt.mw.col.v3_scheduler():
+            schedulers.append('v3')
+        will_answer = getattr(getattr(aqt, 'gui_hooks', None), 'reviewer_will_answer_card', None)
+        for scheduler in schedulers:
+            if scheduler == 'v3':
+                aqt.mw.col.set_v3_scheduler(True)
+            call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Legacy reviewer question ' + scheduler})
+            assert old('guiDeckOverview', name='Default')
+            assert aqt.mw.state == 'overview'
+            assert old('guiDeckReview', name='Default')
+            call('application.navigate', view='review', deck={'name': 'Default'})
+            wait_until(lambda: aqt.mw.reviewer.card and aqt.mw.reviewer.state == 'question')
+            review = call('reviewer.get')
+            assert old('guiReviewActive')
+            assert old('guiCurrentCard')['cardId'] == int(review['card']['id'])
+            assert call('reviewer.startTimer', stateToken=review['stateToken']) == {'changed': True}
+            assert old('guiStartCardTimer')
+            call('reviewer.showAnswer', stateToken=review['stateToken'])
+            wait_until(lambda: aqt.mw.reviewer.state == 'answer')
+            review = call('reviewer.get')
+            assert call('reviewer.showQuestion', stateToken=review['stateToken']) == {'changed': True}
+            wait_until(lambda: aqt.mw.reviewer.state == 'question')
+            assert old('guiShowAnswer')
+            wait_until(lambda: aqt.mw.reviewer.state == 'answer')
+            assert old('guiShowQuestion')
+            wait_until(lambda: aqt.mw.reviewer.state == 'question')
+            assert old('guiShowAnswer')
+            wait_until(lambda: aqt.mw.reviewer.state == 'answer')
+            review = call('reviewer.get')
+            # Exercise real reviewer audio plumbing on a silent card. Audible output
+            # remains explicitly deferred; no audio device or player assertion here.
+            assert call('reviewer.playAudio', stateToken=review['stateToken']) == {'changed': True}
+            assert old('guiPlayAudio')
+            # Before 2.1.20 there was no answer hook to veto with.
+            if will_answer is not None:
+                veto = lambda choice, reviewer, card: (False, choice[1])
+                will_answer.append(veto)
+                try:
+                    call('reviewer.answer', stateToken=review['stateToken'], rating='good')
+                    raise AssertionError('Vetoed answer succeeded')
+                except Exception as error:
+                    assert getattr(error, 'kind', None) == 'vetoed', error
+                finally:
+                    will_answer.remove(veto)
+                print('PASS reviewer veto', scheduler, flush=True)
+            answered = call('reviewer.answer', stateToken=review['stateToken'], rating='good')
+            assert answered['reviewId'] is not None, answered
+            # v1 learning cards offer Again, Good and Easy as buttons 1 to 3.
+            good = [item['rating'] for item in review['answers']].index('good') + 1
+            assert aqt.mw.col.db.scalar('select ease from revlog where id=?', int(answered['reviewId'])) == good
+            print('PASS reviewer native answer', scheduler, [item['rating'] for item in review['answers']], flush=True)
+            wait_until(lambda: aqt.mw.reviewer.card and aqt.mw.reviewer.state == 'question')
+            legacy_card = aqt.mw.reviewer.card.id
+            assert old('guiShowAnswer')
+            wait_until(lambda: aqt.mw.reviewer.state == 'answer')
+            assert old('guiAnswerCard', ease=3)
+            assert aqt.mw.col.db.scalar('select ease from revlog where cid=? order by id desc limit 1', legacy_card) == 3
+            assert old('guiDeckBrowser') is None
+            assert aqt.mw.state == 'deckBrowser'
+            call('application.navigate', view='deckBrowser')
+    if scenario == 'imports' and supports('imports', 'application.importFile'):
         from aqt.import_export.import_dialog import ImportDialog
         csv = base / 'sample.csv'
         csv.write_text('imported front,imported back\n')
@@ -509,7 +632,7 @@ try:
                 return clicked
             return probe
         def start_import(path, allow_error=False):
-            wait_until(lambda: aqt.mw._background_op_count == 0)
+            wait_until(idle)
             handle = result(owner.runtime.dispatcher.invoke('application.importFile', {'path': str(path)}))
             pending = owner.runtime.operations.completions[handle['operationId']]
             wait_until(lambda: pending.done or visible_import(path), description='Open import ' + path.name)
@@ -544,7 +667,7 @@ try:
         print('PASS import success', flush=True)
         legacy_csv = base / 'legacy.csv'
         legacy_csv.write_text('legacy imported front,legacy imported back\n')
-        wait_until(lambda: aqt.mw._background_op_count == 0,
+        wait_until(idle,
                    description='Settle native work before legacy import')
         print('START legacy import', flush=True)
         legacy_import = owner.handler_async({'action': 'guiImportFile', 'version': 6,
@@ -579,7 +702,6 @@ try:
         print('PASS expected invalid-package import failure (dialog closed automatically)', flush=True)
     if scenario == 'profiles':
         import inspect
-        from aqt import gui_hooks
         from aqt.qt import QMessageBox
         from plugin import util
         from plugin.web import WebRequest
@@ -601,6 +723,9 @@ try:
             prompt = next(w for w in app.topLevelWidgets() if isinstance(w, QMessageBox) and w.isVisible())
             prompt.checkBox().setChecked(ignore)
             prompt.button(QMessageBox.StandardButton.Yes if choice == 'yes' else QMessageBox.StandardButton.No).click()
+            # Offscreen Qt has no window manager to reactivate the main window; 2.1.15
+            # would otherwise parent later progress dialogs to the deleted prompt.
+            aqt.mw.activateWindow()
             response = json.loads(result(reply).split(b'\r\n\r\n', 1)[1])
             assert response['result']['permission'] == ('granted' if choice == 'yes' else 'denied')
             key = 'webCorsOriginList' if choice == 'yes' else 'ignoreOriginList'
@@ -608,28 +733,46 @@ try:
         print('PASS native permission prompts and persistence for both protocols', flush=True)
         # Check real GUI sync dependencies without credentials or network I/O.
         # Signature checks do not certify full-sync or media completion.
-        for function, args, kwargs in (
-            (aqt.mw.taskman.with_progress, (lambda: None, lambda future: None), {}),
-            (aqt.mw.taskman.run_in_background, (aqt.mw.col.media_sync_status, lambda future: None), {'uses_collection': False}),
-            (aqt.mw.reopen, (), {'after_full_sync': True}),
-            (aqt.mw._refresh_after_sync, (), {}),
-            (aqt.mw.create_backup_now, (), {}),
-            (aqt.mw.media_syncer.start_monitoring, (), {}),
-            (aqt.mw.pm.set_host_number, (0,), {}),
-            (aqt.mw.pm.set_current_sync_url, (None,), {}),
-            (gui_hooks.collection_will_temporarily_close, (aqt.mw.col,), {}),
-        ):
-            inspect.signature(function).bind(*args, **kwargs)
+        if supports('sync dependency signatures', 'collection.sync'):
+            from plugin import compat
+            gui_hooks = getattr(aqt, 'gui_hooks', None)
+            col = aqt.mw.col
+            checks = [
+                (aqt.mw.taskman.with_progress, (lambda: None, lambda future: None), {}),
+                (aqt.mw.pm.set_host_number, (0,), {}),
+                (aqt.mw.pm.media_syncing_enabled, (), {}),
+                (getattr(aqt.mw, '_refresh_after_sync', None) or aqt.mw.toolbar.redraw, (), {}),
+                (aqt.mw.reopen if 'after_full_sync' in inspect.signature(aqt.mw.reopen).parameters else col.reopen,
+                 (), {'after_full_sync': True}),
+            ]
+            if compat.collection_syncs_media(col):
+                checks += [
+                    (aqt.mw.taskman.run_in_background, (col.media_sync_status, lambda future: None), {'uses_collection': False}),
+                    (aqt.mw.media_syncer.start_monitoring, (), {}),
+                ]
+            else:
+                checks += [(aqt.mw.media_syncer.start, (), {}), (aqt.mw.media_syncer.is_syncing, (), {})]
+            # Releases add these steps; the plugin uses them where present.
+            for owner_object, name, args in ((aqt.mw, 'create_backup_now', ()), (aqt.mw.pm, 'set_current_sync_url', (None,)),
+                                             (gui_hooks, 'collection_will_temporarily_close', (col,))):
+                if hasattr(owner_object, name):
+                    checks.append((getattr(owner_object, name), args, {}))
+            for function, args, kwargs in checks:
+                inspect.signature(function).bind(*args, **kwargs)
         old_session = owner.runtime.session
         assert 'User 1' in [profile['name'] for profile in call('profiles.list')]
         assert call('profiles.getActive')['name'] == 'User 1'
+        expected_sync = 'authenticationRequired' if supports('sync authentication', 'collection.sync') else 'unsupportedCapability'
         try:
             call('collection.sync')
             raise AssertionError('Sync without credentials succeeded')
         except Exception as error:
-            assert getattr(error, 'kind', None) == 'authenticationRequired', error
+            assert getattr(error, 'kind', None) == expected_sync, error
         sync_reply = result(owner.handler_async({'action': 'sync', 'version': 6}))
-        assert 'auth not configured' in sync_reply['error'], sync_reply
+        if expected_sync == 'authenticationRequired':
+            assert 'auth not configured' in sync_reply['error'], sync_reply
+        else:
+            assert sync_reply['error'], sync_reply
         assert old('getActiveProfile') == 'User 1'
         assert 'User 1' in old('getProfiles')
         aqt.mw.pm.create('Other')
@@ -641,11 +784,12 @@ try:
         assert call('collection.refresh', target='cachesAndWindows') == {'changed': True}
         assert old('reloadCollection') is None
         assert old('guiCheckDatabase')
-        created = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Undo GUI note'})
-        assert old('guiUndo')
-        assert not aqt.mw.col.find_notes('nid:' + created['noteId'])
+        if supports('GUI undo', 'collection.undo'):
+            created = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Undo GUI note'})
+            assert old('guiUndo')
+            assert not aqt.mw.col.find_notes('nid:' + created['noteId'])
         print('PASS profile switch', flush=True)
-    if scenario == 'colpkg':
+    if scenario == 'colpkg' and supports('collection package import', 'application.importFile'):
         from aqt import utils
         backup_dir = base / 'backups'
         backup_dir.mkdir()
@@ -727,7 +871,7 @@ try:
         assert aqt.mw.col.note_count() == 45  # 44 synced notes plus the scenario's setup note.
         # Native change notifications can queue deck-browser refresh queries.
         # The HTTP reply completes the API work, but those queries may still run.
-        wait_until(lambda: aqt.mw._background_op_count == 0,
+        wait_until(idle,
                    description='Obsidian native refresh completion')
         owner.server.close()
         owner.timer.stop()
@@ -771,8 +915,12 @@ try:
             assert aqt.mw.col.get_note(id)['word'] == '猫'
         response = exchange('storeMediaFile', {'filename': r'C:\GSM\猫.PNG',
             'data': base64.b64encode(b'GSM screenshot').decode()}, method='POST')
-        expected_name = '猫.png' if os.name == 'nt' else 'cgsm猫.png'
-        assert response == {'result': expected_name, 'error': None}, response
+        # Native Anki lowercases new media names from 26.5; earlier releases keep the case.
+        wait_until(idle, description='Settle before media case probe')
+        lowercases = aqt.mw.col.media.write_data('Case Probe.PNG', b'probe') == 'case probe.png'
+        expected_name = '猫.PNG' if os.name == 'nt' else 'CGSM猫.PNG'
+        expected_name = expected_name.lower() if lowercases else expected_name
+        assert response['error'] is None and os.path.normcase(response['result']) == os.path.normcase(expected_name), response
         assert (Path(aqt.mw.col.media.dir()) / response['result']).read_bytes() == b'GSM screenshot'
         assert exchange('updateModelTemplates', {'model': {'name': source['modelName'], 'templates': {
             'LUNACARDTEMPLATE1': {'Front': '{{#example_sentence}}{{example_sentence}}{{/example_sentence}}'}}}}) == {
@@ -783,7 +931,7 @@ try:
         actual = aqt.mw.col.get_note(fallback['result'])
         assert actual['word'] == 'Conditional fallback' and len(actual.card_ids()) == 1
         # Allow native refresh queries triggered by the final write to complete.
-        wait_until(lambda: aqt.mw._background_op_count == 0,
+        wait_until(idle,
                    description='Mining clients native refresh completion')
         owner.server.close()
         owner.timer.stop()
@@ -813,7 +961,8 @@ try:
                 replies.append(error)
         thread = threading.Thread(target=request_exit, daemon=True)
         closed = []
-        aqt.gui_hooks.profile_will_close.append(lambda: closed.append(True))
+        from plugin import compat
+        compat.gui_hook('profile_will_close').append(lambda: closed.append(True))
         thread.start()
         QTimer.singleShot(30000, lambda: app.exit(1))
         code = app.exec()

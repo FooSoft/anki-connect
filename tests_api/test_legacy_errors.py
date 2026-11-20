@@ -150,7 +150,7 @@ def test_legacy_missing_reviewer_error(admitted, action):
     ({'columnId': 'missing', 'order': 'ascending'}, 'invalid columnId: missing'),
 ])
 def test_legacy_browser_sort_errors(admitted, sort, message):
-    owner, _, drain, _, _ = admitted
+    owner, service, drain, _, _ = admitted
     pending = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'reorderCards': sort}})
     drain()
     assert pending.value == {'result': None, 'error': message}
@@ -172,6 +172,7 @@ def test_legacy_collection_unavailable_keeps_wording_without_changing_v1(admitte
 @pytest.fixture
 def media_server():
     import http.server
+    import socketserver
     import threading
     seen = []
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -192,7 +193,9 @@ def media_server():
             self.wfile.write(body)
         def log_message(self, *args):
             pass
-    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    # ThreadingHTTPServer needs Python 3.7; Anki 2.1.15 bundled 3.6.
+    server_class = type('Server', (socketserver.ThreadingMixIn, http.server.HTTPServer), {'daemon_threads': True})
+    server = server_class(('127.0.0.1', 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

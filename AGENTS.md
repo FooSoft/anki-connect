@@ -6,7 +6,7 @@ Anki-Connect is a Python add-on loaded by Anki Desktop. It lets external program
 including browser extensions such as Yomichan, query and modify the active Anki
 collection and control parts of the GUI through a JSON-over-HTTP API. Anki must
 be running; the default endpoint is `http://127.0.0.1:8765` and the API version
-is 6. The source currently enforces a minimum Anki version of 26.08; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
+is 6. The source currently enforces a minimum Anki version of 2.1.15; `/api/v1` uses JSON-RPC 2.0 and the root endpoint retains legacy API version 6.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for runtime structure and
 [API_V1.md](API_V1.md) and [API_LEGACY.md](API_LEGACY.md) for method documentation and request examples. Where the
@@ -26,6 +26,10 @@ documenting a change.
   card preview.
 - `plugin/util.py`: API decorator, configuration defaults, downloads, and
   compatibility helpers.
+- `plugin/compat.py`: versioning layer for differences between Anki releases;
+  prefer feature detection and report missing features as capabilities.
+- `tools/anki_matrix.json` and `tools/anki_env.py`: every supported Anki release
+  and the pinned environment preparation used by the test runners.
 - `plugin/config.json`: shipped add-on settings; `plugin/config.md` supplies the
   configuration help text.
 - `tests_api/`: default native collection and admission regression tests.

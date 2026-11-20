@@ -14,7 +14,7 @@ import pytest
 from plugin import util
 from plugin.web import WebRequest
 from tests_api.test_cors import response_parts
-from tests_api.test_runtime import admitted, native
+from tests_api.test_runtime import admitted, native, native_media_name
 
 
 @pytest.mark.parametrize('origin', [b'https://app.asbplayer.dev', b'chrome-extension://asbplayer'])
@@ -75,7 +75,7 @@ def test_asbplayer_browser_fetch_mining_media_update_and_status(admitted, monkey
     # Update modes store media first and consume the normalized returned name.
     filename = invoke('storeMediaFile', filename='ASB Screenshot.PNG',
                       data=base64.b64encode(b'asb picture').decode())
-    assert filename == 'asb screenshot.png'
+    assert filename == native_media_name('ASB Screenshot.PNG')
     assert (Path(service.col.media.dir()) / filename).read_bytes() == b'asb picture'
     edited = {**source, 'id': note, 'fields': {'Back': '<span>updated</span><img src="' + filename + '">'}}
     assert invoke('updateNoteFields', note=edited) is None
@@ -87,8 +87,10 @@ def test_asbplayer_browser_fetch_mining_media_update_and_status(admitted, monkey
     assert updated['cards'] == cards
     after = service.col.get_card(cards[0])._to_backend_card()
     for card in [before, after]:
-        card.ClearField('mtime_secs')
-        card.ClearField('usn')
+        # 2.1.28-2.1.35 name the modification time mtime.
+        for name in ('mtime_secs', 'mtime', 'usn'):
+            if name in card.DESCRIPTOR.fields_by_name:
+                card.ClearField(name)
     assert before == after and service.col.note_count() == 1
 
 

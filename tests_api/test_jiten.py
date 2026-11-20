@@ -6,11 +6,10 @@ server-side vocabulary import are not launched.
 import base64
 
 import pytest
-from anki.collection import AddNoteRequest
 
 from plugin.services import Services
 from plugin.legacy import Legacy
-from plugin import util
+from plugin import compat, util
 from tests_api.test_gsm import exchange
 from tests_api.test_runtime import admitted, call, native
 
@@ -57,8 +56,8 @@ def test_jiten_large_filtered_import_and_review_pages(admitted, monkeypatch):
     for index in range(2000):
         note = service.col.new_note(model)
         note['Front'], note['Back'] = '猫' + str(index), 'ねこ'
-        notes.append(AddNoteRequest(note=note, deck_id=1))
-    service.col.add_notes(notes)
+        notes.append(compat.AddNoteRequest(note=note, deck_id=1))
+    service.add_notes(notes)
     cards = invoke(owner, drain, 'findCards', query='deck:"Default"')
     assert len(cards) == 2000
     before = service.col.db.all('select * from cards order by id')

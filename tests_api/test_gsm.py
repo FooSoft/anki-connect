@@ -16,7 +16,7 @@ import pytest
 from plugin import util
 from plugin.web import WebRequest
 from tests_api.test_cors import response_parts
-from tests_api.test_runtime import admitted, call, native
+from tests_api.test_runtime import admitted, call, native, native_media_name
 
 
 def exchange(owner, drain, payload, headers=None):
@@ -30,14 +30,16 @@ def exchange(owner, drain, payload, headers=None):
     return reply
 
 
-@pytest.mark.parametrize('filename,expected', [
-    ('/tmp/GSM/猫 AUDIO.MP3', '猫 audio.mp3'),
+@pytest.mark.parametrize('filename,base', [
+    ('/tmp/GSM/猫 AUDIO.MP3', '猫 AUDIO.MP3'),
     (r'C:\Users\user\AppData\GSM\猫 AUDIO.MP3',
-     '猫 audio.mp3' if os.name == 'nt' else 'cusersuserappdatagsm猫 audio.mp3'),
+     '猫 AUDIO.MP3' if os.name == 'nt' else 'CUsersuserAppDataGSM猫 AUDIO.MP3'),
 ])
-def test_gsm_full_path_media_names_keep_native_legacy_normalization(admitted, filename, expected):
+def test_gsm_full_path_media_names_keep_native_legacy_normalization(admitted, filename, base):
     """storeMediaFile normalizes GSM's full path inside the media directory."""
     owner, service, drain, _, _ = admitted
+    # Native Anki lowercases new media names from 26.5; earlier releases keep the case.
+    expected = os.path.normcase(native_media_name(base))
     data = base64.b64encode(b'GSM captured audio').decode()
     reply = exchange(owner, drain, {'action': 'storeMediaFile', 'version': 6,
                                    'params': {'filename': filename, 'data': data}})
@@ -128,7 +130,7 @@ def test_gsm_overlay_discovery_and_index_keep_nested_envelopes(admitted, monkeyp
     assert speculative['error'] is None
     assert speculative['result'][2] == {'result': None, 'error': 'model was not found: Missing'}
     models = exchange(owner, drain, request('modelNamesAndIds'), headers)['result']
-    assert models['Basic'] == service.col.models.by_name('Basic')['id']
+    assert models['Basic'] == int(service.col.models.by_name('Basic')['id'])
     actions = [request('findNotes', query='mid:' + str(models['Basic'])),
                request('findNotes', query='mid:' + str(models['Basic']) + ' prop:ivl>=21')]
     assert exchange(owner, drain, request('multi', actions=actions), headers)['result'] == [

@@ -1,10 +1,15 @@
+import functools
 from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 import pytest
-from jsonschema import Draft202012Validator
-from anki.collection import Collection
-from plugin import AnkiConnect
+try:
+    from anki.collection import Collection
+except ImportError:  # Anki before 2.1.28 opens collections through anki.storage.
+    from anki.storage import Collection
+from plugin import AnkiConnect, compat
 from plugin.contract import SCHEMA
+from plugin.schema import validator as schema_validator
 from plugin.protocol import Dispatcher, ApiError, Operations, completed
 from plugin.services import Services, structure_name_key
 from plugin.legacy import Legacy
@@ -12,9 +17,16 @@ from plugin.legacy import Legacy
 
 @pytest.fixture
 def native(tmp_path):
-    from anki.lang import set_lang
-    set_lang('en')
+    import inspect
+    import anki.lang
+    # Before 2.1.22 it was named setLang.
+    set_lang = getattr(anki.lang, 'set_lang', None) or anki.lang.setLang
+    # Anki 2.1.44 and earlier also require a locale folder.
+    set_lang('en', *([''] if 'locale_dir' in inspect.signature(set_lang).parameters else []))
     col = Collection(str(tmp_path / 'collection.anki2'))
+    if hasattr(col, 'set_v3_scheduler') and not col.v3_scheduler():
+        # 2.1.45-2.1.65 create v2 collections; the scheduling API requires v3.
+        col.set_v3_scheduler(True)
     owner = AnkiConnect()
     runtime = owner.runtime
     runtime._collection, runtime._session, runtime.profile_name = col, 'test-session', 'test'
@@ -26,10 +38,24 @@ def native(tmp_path):
         col.close()
 
 
+@functools.lru_cache(maxsize=None)
+def native_media_name(name):
+    """The name this Anki release gives a new media file, probed in a scratch collection."""
+    with tempfile.TemporaryDirectory() as folder:
+        col = Collection(str(Path(folder) / 'collection.anki2'))
+        try:
+            return col.media.write_data(name, b'probe')
+        finally:
+            col.close()
+
+
 def call(service, method, **params):
     dispatcher = Dispatcher(service.runtime)
+    reason = service.runtime.capability_reason(method, service.col)
+    if reason:
+        pytest.skip(method + ' is unavailable on this Anki release: ' + reason)
     value = service.execute(method, dispatcher.params(method, params))
-    validator = Draft202012Validator({**SCHEMA, 'oneOf': [SCHEMA['x-methods'][method].get('operationResult', SCHEMA['x-methods'][method]['result'])]})
+    validator = schema_validator({**SCHEMA, 'oneOf': [SCHEMA['x-methods'][method].get('operationResult', SCHEMA['x-methods'][method]['result'])]})
     errors = list(validator.iter_errors(value))
     if errors:
         leaves = errors[0].context or errors
@@ -101,7 +127,7 @@ def test_bulk_atomic_validation_and_media_ownership(native, tmp_path, monkeypatc
         assert (Path(service.col.media.dir()) / 'existing.txt').read_bytes() == b'incoming'
         raise RuntimeError('native note write failed')
     with monkeypatch.context() as patch:
-        patch.setattr(service.col, 'add_notes', fail_after_media_install)
+        patch.setattr(service.col, 'add_notes' if hasattr(service.col, 'add_notes') else 'add_note', fail_after_media_install)
         with pytest.raises(RuntimeError, match='native note write failed'):
             legacy.add_notes([source], True)
     assert (Path(service.col.media.dir()) / 'existing.txt').read_bytes() == b'original'
@@ -175,15 +201,14 @@ def test_search_cursor_query_binding_and_deleted_ids(native):
 
 @pytest.mark.parametrize('action', ['findCards', 'findNotes'])
 def test_legacy_large_search_releases_snapshot(native, action):
-    from anki.collection import AddNoteRequest
     owner, service = native
     model = service.col.models.by_name('Basic')
     notes = []
     for index in range(10001):
         note = service.col.new_note(model)
         note['Front'] = str(index)
-        notes.append(AddNoteRequest(note=note, deck_id=1))
-    service.col.add_notes(notes)
+        notes.append(compat.AddNoteRequest(note=note, deck_id=1))
+    service.add_notes(notes)
     expected = sorted(service.col.find_cards('') if action == 'findCards' else service.col.find_notes(''))
     legacy = Legacy(owner, service)
     for _ in range(2):
@@ -281,6 +306,23 @@ def test_answer_many_and_filtered_home_history(native):
     assert service.col.get_card(int(notes[1]['cardIds'][0])).queue == before
 
 
+def test_reset_applies_native_options(native):
+    owner, service = native
+    ids = [call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'reset ' + str(index)})['cardIds'][0] for index in range(2)]
+    service.col.db.execute('update cards set type=2, queue=2, ivl=5, due=1, reps=3, lapses=1')
+    logs = lambda: service.col.db.scalar('select count() from revlog')
+    counts = compat.resets_counts()
+    call(service, 'scheduling.reset', cardIds=[ids[0]], resetCounts=counts, log=False)
+    card = service.col.get_card(int(ids[0]))
+    assert card.type == 0
+    # Review log options arrived in 2.1.39 and count resets in 2.1.50.
+    if compat.at_least(2, 1, 39):
+        assert logs() == 0
+        call(service, 'scheduling.reset', cardIds=[ids[1]], log=True)
+        assert logs() == 1
+    if counts:
+        assert (card.reps, card.lapses) == (0, 0)
+
 def test_legacy_preset_changes_use_native_updates(native):
     owner, service = native
     legacy = Legacy(owner, service)
@@ -298,6 +340,14 @@ def test_legacy_preset_changes_use_native_updates(native):
     updated['rev'].update(fuzz=0.05, minSpace=1)
     assert legacy.call('saveDeckConfig', {'config': updated})
     assert service.col.decks.get_config(1)['new']['ints'][:2] == [3, 5]
+    # Every release stores the leech action; 2.1.41 and later also mix new cards.
+    updated['lapse']['leechAction'] = 1 - updated['lapse']['leechAction']
+    if 'newMix' in updated:
+        updated['newMix'] = 2
+    assert legacy.call('saveDeckConfig', {'config': updated})
+    stored = service.col.decks.get_config(1)
+    assert stored['lapse']['leechAction'] == updated['lapse']['leechAction']
+    assert stored.get('newMix') == updated.get('newMix')
     updated['unsupported'] = 'new value'
     assert legacy.call('saveDeckConfig', {'config': updated}) is False
 
@@ -329,10 +379,17 @@ def admitted(native, monkeypatch):
             except Exception as error: future.set_exception(error)
             on_done(future)
         work_queue.append(run)
-    mw.taskman = SimpleNamespace(run_in_background=background)
+    mw.taskman = SimpleNamespace(run_in_background=background, run_on_main=work_queue.append)
     mw.reset = lambda: notifications.append('reset')
     monkeypatch.setattr(aqt, 'mw', mw)
-    monkeypatch.setattr(aqt.operations, 'on_op_finished', lambda mw, change, initiator: notifications.append(change))
+    # Releases before 2.1.66 have no on_op_finished; compat uses the patched one when present.
+    finished = lambda mw, change, initiator=None: notifications.append(change)
+    try:
+        import aqt.operations
+        monkeypatch.setattr(aqt.operations, 'on_op_finished', finished, raising=False)
+    except ImportError:
+        # Anki 2.1.44 and earlier have no operations module.
+        monkeypatch.setattr(compat, 'on_op_finished', finished)
     owner.runtime.schedule = timers.append
     owner.runtime.schedule_later = timers.append
     owner.runtime.operations.schedule = timers.append
@@ -522,19 +579,23 @@ def test_template_usage_respects_native_token_rules(native):
 
 def test_discovery_and_dispatch_agree_on_missing_native_capability(admitted, monkeypatch):
     owner, service, drain, work, notifications = admitted
-    monkeypatch.setattr(service.col, 'export_anki_package', None)
+    monkeypatch.setattr(service.col, 'update_note', None)
     methods = {item['name']: item for item in owner.runtime.describe()['methods']}
-    assert not methods['packages.export']['available']
-    assert 'export_anki_package' in methods['packages.export']['reason']
-    with pytest.raises(ApiError, match='export_anki_package') as error:
-        owner.runtime.invoke('packages.export', {})
+    assert not methods['notes.update']['available']
+    assert 'update_note' in methods['notes.update']['reason']
+    with pytest.raises(ApiError, match='update_note') as error:
+        owner.runtime.invoke('notes.update', {})
     assert error.value.kind == 'unsupportedCapability'
     assert not work
 
 
 def test_unload_hook_invalidates_same_collection_identity(admitted):
-    from aqt import gui_hooks
-    from plugin.edit import history
+    # Before 2.1.20 the profile hook ran by name as unloadProfile.
+    profile_will_close = compat.gui_hook('profile_will_close')
+    # Note history belongs to the custom editor, which needs Anki 2.1.50.
+    history = SimpleNamespace(note_ids=[])
+    if compat.editor_dialog_available():
+        from plugin.edit import history
     owner, service, drain, work, notifications = admitted
     runtime = owner.runtime
     runtime.register_hooks()
@@ -542,13 +603,20 @@ def test_unload_hook_invalidates_same_collection_identity(admitted):
     runtime.tokens['old'] = None
     runtime.cursors['old'] = None
     history.note_ids.append(123)
+    # Before 2.1.51 collections close only when the profile unloads.
+    temporary = compat.gui_hook('collection_will_temporarily_close')
     try:
-        gui_hooks.collection_will_temporarily_close(service.col)
+        if temporary is not None:
+            temporary(service.col)
+        else:
+            profile_will_close()
         assert runtime.session != previous
-        assert not runtime.tokens and not runtime.cursors and not history.note_ids
+        assert not runtime.tokens and not runtime.cursors
+        assert not history.note_ids or not compat.editor_dialog_available()
     finally:
-        gui_hooks.profile_will_close.remove(runtime.invalidate_session)
-        gui_hooks.collection_will_temporarily_close.remove(runtime.invalidate_session)
+        profile_will_close.remove(runtime.invalidate_session)
+        if temporary is not None:
+            temporary.remove(runtime.invalidate_session)
 
 
 def test_execute_cancel_preserves_completed_outcomes(admitted):
@@ -701,8 +769,14 @@ def test_note_type_name_identity_matches_anki(native):
             models.add_field(model, models.new_field('Z'))
         saved = models.get(models.add_dict(model).id)['flds' if is_field else 'tmpls']
         anki_repeats = saved[1]['name'].endswith('+')
+        # Before 2.1.28 Anki stored structure names verbatim, so AnkiConnect applies the 2.1.28 rules itself.
+        if compat.release() < (2, 1, 28):
+            assert not anki_repeats
+            continue
         assert anki_repeats == (structure_name_key(first, is_field) == structure_name_key(second, is_field)), (first, second)
-    for edit, message in [({'op': 'addField', 'field': {'name': ' #back'}}, 'Duplicate field name: " #back" is the same as "Back" in Anki.'),
+    # Before 2.1.41 Anki kept leading "#", "^" and "/" in field names.
+    name = ' #back' if compat.release() >= (2, 1, 41) else ' back'
+    for edit, message in [({'op': 'addField', 'field': {'name': name}}, 'Duplicate field name: "' + name + '" is the same as "Back" in Anki.'),
                           ({'op': 'removeTemplate', 'name': 'Card 1'}, 'A note type must keep at least one template.')]:
         with pytest.raises(ApiError) as error:
             call(service, 'noteTypes.editStructure', noteType={'name': 'Basic'}, edits=[edit])

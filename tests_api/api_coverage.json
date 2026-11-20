@@ -839,7 +839,7 @@
       "layer": "controlled-admission",
       "outcome": "failure",
       "v1": [
-        "packages.export"
+        "notes.update"
       ],
       "legacy": [],
       "notes": "Removed native capability produces unsupportedCapability. Runtime.describe is a helper, not an api.describe request."

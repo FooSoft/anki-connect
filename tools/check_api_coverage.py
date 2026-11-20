@@ -51,9 +51,14 @@ def source_case(source, case):
     else:
         matches = []
         for node in ast.walk(tree):
-            if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+            if not isinstance(node, ast.If):
                 continue
             condition = node.test
+            # A scenario may be gated by release support: scenario == 'x' and supports(...).
+            if isinstance(condition, ast.BoolOp) and isinstance(condition.op, ast.And):
+                condition = condition.values[0]
+            if not isinstance(condition, ast.Compare):
+                continue
             if (isinstance(condition.left, ast.Name) and condition.left.id == 'scenario'
                     and len(condition.comparators) == 1):
                 value = condition.comparators[0]

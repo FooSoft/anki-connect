@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from .contract import SCHEMA
+from .schema import validator
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -13,6 +14,11 @@ def timestamp(seconds=None):
     # Epoch arithmetic avoids Windows' OSError for negative fromtimestamp() input.
     return (EPOCH + timedelta(seconds=time.time() if seconds is None else seconds)).isoformat(
         timespec='milliseconds').replace('+00:00', 'Z')
+
+
+def epoch_seconds(text):
+    """Seconds since the epoch of a timestamp() string."""
+    return (datetime.strptime(text, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc) - EPOCH).total_seconds()
 
 
 class ApiError(Exception):
@@ -131,10 +137,9 @@ class Operations:
         future = self.completions[key] = Deferred()
         def finish(source):
             if not source.error and method in SCHEMA['x-methods']:
-                from jsonschema import Draft202012Validator
                 meta = SCHEMA['x-methods'][method]
                 schema = meta.get('operationResult', meta['result'])
-                if not Draft202012Validator({**SCHEMA, 'oneOf': [schema]}).is_valid(source.value):
+                if not validator({**SCHEMA, 'oneOf': [schema]}).is_valid(source.value):
                     source = completed(error=ApiError('internalError', 'Operation produced an invalid result.'))
             record = self.records[key]
             record.update(updatedAt=timestamp(self.now()), cancellable=False)
@@ -181,9 +186,8 @@ class Operations:
 
 class Dispatcher:
     def __init__(self, runtime):
-        from jsonschema import Draft202012Validator
         self.runtime = runtime
-        self.validators = {name: Draft202012Validator({**SCHEMA, 'oneOf': [meta['params']]})
+        self.validators = {name: validator({**SCHEMA, 'oneOf': [meta['params']]})
                            for name, meta in SCHEMA['x-methods'].items()}
 
     def params(self, method, params):

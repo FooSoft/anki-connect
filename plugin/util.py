@@ -18,13 +18,18 @@ import os
 
 import aqt
 
+from . import compat
+
 
 def api():
     """Declare a legacy action; the signature defines its historical parameter binding."""
     def decorator(func):
         @functools.wraps(func)
         def declaration(self, *args, **kwargs):
-            func(self, *args, **kwargs)
+            try:
+                func(self, *args, **kwargs)
+            except TypeError as error:
+                raise compat.binding_error(error, func) from None
             raise NotImplementedError('Legacy actions execute through AnkiConnect.handler_async.')
         declaration.api = True
         return declaration
@@ -55,9 +60,8 @@ def setting(key):
 
 def download(url, limit):
     """Fetch media with Anki's HTTP client, returning at most limit + 1 bytes."""
-    from anki.httpclient import HttpClient
     from .protocol import ApiError
-    with HttpClient() as client:
+    with compat.http_client() as client:
         client.timeout = setting('webTimeout') / 1000
         try:
             response = client.get(url)

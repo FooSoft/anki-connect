@@ -10,6 +10,7 @@ import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from . import compat
 from .protocol import ApiError, error_record, timestamp
 
 
@@ -29,8 +30,6 @@ FIELD_KEYS = {'fontFamily': 'font', 'fontSize': 'size', 'description': 'descript
               'collapsed': 'collapsed', 'excludeFromSearch': 'excludeFromSearch'}
 TEMPLATE_KEYS = {'questionHtml': 'qfmt', 'answerHtml': 'afmt', 'browserQuestionHtml': 'bqfmt',
                  'browserAnswerHtml': 'bafmt', 'browserFontFamily': 'bfont', 'browserFontSize': 'bsize'}
-FIELD_NAME_REMOVED_CHARACTERS = re.compile(r'[:{}"]')
-FIELD_NAME_LEADING_CHARACTERS = re.compile(r'^[\s#/^]+')
 PRESET_KEYS = {
     'learnStepsMinutes': 'learn_steps', 'relearnStepsMinutes': 'relearn_steps',
     'fsrsParameters4': 'fsrs_params_4', 'fsrsParameters5': 'fsrs_params_5', 'fsrsParameters6': 'fsrs_params_6',
@@ -48,17 +47,66 @@ PRESET_KEYS = {
     'waitForAudio': 'wait_for_audio', 'skipQuestionOnAnswerReplay': 'skip_question_when_replaying_answer',
     'buryNew': 'bury_new', 'buryReviews': 'bury_reviews', 'buryDayLearning': 'bury_interday_learning',
 }
+
+def enum_names(prefix, **names):
+    return {public: prefix + native for public, native in names.items()}
+
+
+# Values map to native enum names, not numbers: releases renumbered and renamed
+# some options (23.10 stored relative overdueness as 7, later retrievability).
+REVIEW_MIX = enum_names('REVIEW_MIX_', mixed='MIX_WITH_REVIEWS', afterReviews='AFTER_REVIEWS',
+                        beforeReviews='BEFORE_REVIEWS')
 PRESET_ENUMS = {
-    'newInsertOrder': ('new_card_insert_order', ['due', 'random']),
-    'newGatherOrder': ('new_card_gather_priority', ['deck', 'lowestPosition', 'highestPosition', 'randomNotes', 'randomCards', 'deckThenRandomNotes']),
-    'newSortOrder': ('new_card_sort_order', ['template', 'none', 'templateThenRandom', 'randomNoteThenTemplate', 'randomCard']),
-    'reviewOrder': ('review_order', ['day', 'dayThenDeck', 'deckThenDay', 'intervalAscending', 'intervalDescending', 'easeAscending', 'easeDescending', 'retrievabilityAscending', 'random', 'added', 'reverseAdded', 'retrievabilityDescending', 'relativeOverdueness']),
-    'newMix': ('new_mix', ['mixed', 'afterReviews', 'beforeReviews']),
-    'dayLearningMix': ('interday_learning_mix', ['mixed', 'afterReviews', 'beforeReviews']),
-    'leechAction': ('leech_action', ['suspend', 'tagOnly']),
-    'questionAction': ('question_action', ['showAnswer', 'showReminder']),
-    'answerAction': ('answer_action', ['buryCard', 'again', 'good', 'hard', 'showReminder']),
+    'newInsertOrder': ('new_card_insert_order', enum_names('NEW_CARD_INSERT_ORDER_', due='DUE', random='RANDOM')),
+    'newGatherOrder': ('new_card_gather_priority', enum_names(
+        'NEW_CARD_GATHER_PRIORITY_', deck='DECK', lowestPosition='LOWEST_POSITION', highestPosition='HIGHEST_POSITION',
+        randomNotes='RANDOM_NOTES', randomCards='RANDOM_CARDS', deckThenRandomNotes='DECK_THEN_RANDOM_NOTES')),
+    'newSortOrder': ('new_card_sort_order', enum_names(
+        'NEW_CARD_SORT_ORDER_', template='TEMPLATE', none='NO_SORT', templateThenRandom='TEMPLATE_THEN_RANDOM',
+        randomNoteThenTemplate='RANDOM_NOTE_THEN_TEMPLATE', randomCard='RANDOM_CARD')),
+    'reviewOrder': ('review_order', enum_names(
+        'REVIEW_CARD_ORDER_', day='DAY', dayThenDeck='DAY_THEN_DECK', deckThenDay='DECK_THEN_DAY',
+        intervalAscending='INTERVALS_ASCENDING', intervalDescending='INTERVALS_DESCENDING',
+        easeAscending='EASE_ASCENDING', easeDescending='EASE_DESCENDING',
+        retrievabilityAscending='RETRIEVABILITY_ASCENDING', random='RANDOM', added='ADDED',
+        reverseAdded='REVERSE_ADDED', retrievabilityDescending='RETRIEVABILITY_DESCENDING',
+        relativeOverdueness='RELATIVE_OVERDUENESS')),
+    'newMix': ('new_mix', REVIEW_MIX),
+    'dayLearningMix': ('interday_learning_mix', REVIEW_MIX),
+    'leechAction': ('leech_action', enum_names('LEECH_ACTION_', suspend='SUSPEND', tagOnly='TAG_ONLY')),
+    'questionAction': ('question_action', enum_names('QUESTION_ACTION_', showAnswer='SHOW_ANSWER',
+                                                     showReminder='SHOW_REMINDER')),
+    'answerAction': ('answer_action', enum_names(
+        'ANSWER_ACTION_', buryCard='BURY_CARD', again='ANSWER_AGAIN', good='ANSWER_GOOD', hard='ANSWER_HARD',
+        showReminder='SHOW_REMINDER')),
 }
+# Before 2.1.28 no descriptor exists; the JSON presets store only these enums.
+LEGACY_PRESET_ENUMS = {'leech_action': {0: 'LEECH_ACTION_SUSPEND', 1: 'LEECH_ACTION_TAG_ONLY'}}
+
+
+def native_preset_enum(native):
+    """This release's {number: name} values of a native preset enum, or None when it lacks the option."""
+    descriptor = compat.deck_config_descriptor()
+    if descriptor is None:
+        return LEGACY_PRESET_ENUMS.get(native)
+    field = descriptor.fields_by_name.get(native)
+    return None if field is None else {value.number: value.name for value in field.enum_type.values}
+
+
+def preset_enum_value(public, number):
+    """The public value of a native preset enum number, or None when this release's option has no public name."""
+    native, names = PRESET_ENUMS[public]
+    value = (native_preset_enum(native) or {}).get(number)
+    return next((key for key, name in names.items() if value is not None and name == value), None)
+
+
+def preset_enum_number(public, value):
+    """The native number of a public preset enum value, rejecting options this release lacks."""
+    native, names = PRESET_ENUMS[public]
+    found = {name: number for number, name in (native_preset_enum(native) or {}).items()}.get(names[value])
+    if found is None:
+        raise ApiError('unsupportedCapability', 'This Anki release has no ' + public + ' option ' + value + '.')
+    return found
 
 
 def entity_id(value):
@@ -72,8 +120,7 @@ def interval(value):
 
 
 def normalized_field(value):
-    from anki.utils import strip_html_media
-    return unicodedata.normalize('NFC', strip_html_media(value))
+    return unicodedata.normalize('NFC', compat.strip_html_media(value))
 
 
 def template_fields(text, names):
@@ -112,7 +159,8 @@ def structure_name_key(name, is_field):
     """Mirror the name identity Anki uses when it appends "+" to repeated field/template names."""
     name = unicodedata.normalize('NFC', name)
     if is_field:
-        name = FIELD_NAME_LEADING_CHARACTERS.sub('', FIELD_NAME_REMOVED_CHARACTERS.sub('', name)).rstrip()
+        removed, leading = compat.field_name_rules()
+        name = leading.sub('', removed.sub('', name)).rstrip()
     return name.casefold()
 
 
@@ -133,9 +181,13 @@ class Services:
         self.undo_target = False
 
     def change(self, result):
+        if result is None and not compat.reports_changes():
+            # Writes before 2.1.45 return nothing; treat each one as a change.
+            result = compat.LegacyChanges()
         if result is not None:
             self.changes.append(result.changes if hasattr(result, 'changes') else result)
-            if self.undo_target is not False:
+            # Releases before 2.1.45 have no undo steps to group.
+            if self.undo_target is not False and compat.has(self.col, 'undo_status'):
                 if self.undo_target is None:
                     self.undo_target = self.col.undo_status().last_step
                 else:
@@ -149,6 +201,9 @@ class Services:
         handler = getattr(self, method.replace('.', '_'), None)
         if handler is None:
             raise ApiError('unsupportedCapability', 'No verified adapter for ' + method)
+        reason = self.runtime.capability_reason(method, self.col)
+        if reason:
+            raise ApiError('unsupportedCapability', reason)
         from .contract import SCHEMA
         previous_group = self.undo_target
         if SCHEMA['x-methods'][method]['undo'] in ('single', 'grouped'):
@@ -158,10 +213,10 @@ class Services:
         except ApiError:
             raise
         except Exception as error:
-            from anki.errors import BackendError, NotFoundError
+            from anki.errors import NotFoundError
             if isinstance(error, NotFoundError):
-                raise ApiError('notFound', str(error)) from error
-            if method in ('packages.import', 'packages.export', 'media.get', 'media.delete') and isinstance(error, (OSError, BackendError)):
+                raise ApiError('notFound', compat.error_message(error)) from error
+            if method in ('packages.import', 'packages.export', 'media.get', 'media.delete') and isinstance(error, (OSError,) + compat.backend_errors()):
                 raise ApiError('ioError', str(error)) from error
             raise
         finally:
@@ -179,7 +234,7 @@ class Services:
             except Exception as error:
                 from anki.errors import NotFoundError
                 if isinstance(error, NotFoundError):
-                    error = ApiError('notFound', str(error))
+                    error = ApiError('notFound', compat.error_message(error))
                 entry = {'error': error_record(error)}
             cache[key] = entry
             items.append({'index': index, **entry})
@@ -200,7 +255,10 @@ class Services:
             value = manager.by_name(reference['name'])
         if value is None:
             raise ApiError('notFound', kind.title() + ' not found: ' + str(reference))
-        return copy.deepcopy(value)
+        value = copy.deepcopy(value)
+        # 2.1.24-2.1.26 keep some deck and note type ids as strings.
+        value['id'] = int(value['id'])
+        return value
 
     def summary(self, value):
         return {'id': str(value['id']), 'name': value['name']}
@@ -229,17 +287,18 @@ class Services:
             return self.page(None, kind + '.search', {**params, 'cursor': cursor})
         order = False
         if sort:
+            if not compat.has(self.col, 'get_browser_column'):
+                raise ApiError('unsupportedCapability', 'Sorting by browser column requires Anki 2.1.45 or later.')
             from anki.collection import BrowserColumns
             order = self.col.get_browser_column(sort['column'])
             if order is None:
                 raise ApiError('invalidParams', 'Unknown browser sort column.')
-            sorting = order.sorting_notes if kind == 'notes' else order.sorting_cards
+            sorting = compat.column_sorting(order, kind)
             if sorting == BrowserColumns.SORTING_NONE:
                 raise ApiError('invalidParams', 'Browser sort column does not support this search.')
         try:
-            finder = self.col.find_notes if kind == 'notes' else self.col.find_cards
-            ids = list(finder(query, order=order,
-                              reverse=bool(sort and sort['direction'] == 'descending')))
+            ids = list(compat.find_ids(self.col, kind, query, order,
+                                       reverse=bool(sort and sort['direction'] == 'descending')))
         except Exception as error:
             raise ApiError('invalidSearch', str(error)) from error
         if sort is None:
@@ -267,15 +326,18 @@ class Services:
 
     def empty_questions(self, note):
         from anki.utils import to_json_bytes
+        if not compat.renders_uncommitted(self.col):
+            # 2.1.24-2.1.26 add only templates whose required fields are filled.
+            return not self.col.findTemplates(note)
         model = note.note_type()
         templates = model['tmpls']
         if model['type'] == 1:
             # Native cloze ordinal enumeration, including fallback card 0.
-            ordinals = set(n - 1 for n in self.col._backend.cloze_numbers_in_note(note._to_backend_note())) or {0}
+            ordinals = set(n - 1 for n in compat.cloze_numbers(self.col, note)) or {0}
             templates = [{**templates[0], 'ord': index} for index in sorted(ordinals)]
-        return all(self.col._backend.render_uncommitted_card_legacy(
-            note=note._to_backend_note(), card_ord=template['ord'], template=to_json_bytes(template),
-            fill_empty=False, partial_render=True).is_empty for template in templates)
+        return all(compat.rendered_empty(compat.render_uncommitted(
+            self.col, note._to_backend_note(), template['ord'], to_json_bytes(template), fill_empty=False))
+            for template in templates)
 
     def validation(self, note, deck, policy, reject_empty, cloze_checks=True):
         result = int(note.fields_check())
@@ -292,8 +354,7 @@ class Services:
         policy = policy or {}
         source = normalized_field(note.fields[0])
         if not policy.get('allow', False):
-            from anki.utils import field_checksum
-            candidates = self.col.db.list('select id from notes where csum=? and id!=?', field_checksum(note.fields[0]), note.id)
+            candidates = self.col.db.list('select id from notes where csum=? and id!=?', compat.field_checksum(note.fields[0]), note.id)
             scope_decks = None
             if policy.get('scope', 'collection') == 'deck':
                 target = self.resolve(policy.get('deck', self.summary(deck)), 'deck')
@@ -302,7 +363,7 @@ class Services:
                     scope_decks.update(id for _, id in self.col.decks.children(target['id']))
             for id in candidates:
                 other = self.col.get_note(id)
-                if not policy.get('acrossNoteTypes', False) and other.mid != note.mid:
+                if not policy.get('acrossNoteTypes', False) and int(other.mid) != int(note.mid):
                     continue
                 if normalized_field(other.fields[0]) != source:
                     continue
@@ -339,13 +400,32 @@ class Services:
         if errors:
             raise ApiError('validationFailed', 'Atomic batch validation failed.', {'items': errors})
         if prepared:
-            self.change(self.col.add_notes(prepared))
+            self.add_notes(prepared)
         return {'items': [{'index': index, 'result': {'noteId': str(req.note.id), 'cardIds': [str(id) for id in req.note.card_ids()]}}
                           for index, req in enumerate(prepared)]}
 
+    def add_notes(self, requests):
+        if compat.has(self.col, 'add_notes'):
+            return self.change(self.col.add_notes(requests))
+        # Before 23.10, add one at a time in a single undo step and remove partial
+        # batches within that step, so undoing a failed batch restores nothing.
+        added, previous_group = [], self.undo_target
+        if previous_group is False:
+            self.undo_target = None
+        try:
+            for request in requests:
+                self.change(self.col.add_note(request.note, request.deck_id))
+                added.append(request.note.id)
+        except BaseException:
+            if added:
+                self.change(self.col.remove_notes(added))
+            raise
+        finally:
+            if previous_group is False:
+                self.undo_target = False
+
     def prepare_notes(self, notes):
         """Validate an ordered batch without writing it, including duplicates."""
-        from anki.collection import AddNoteRequest
         prepared, errors, seen = [], [], []
         for index, data in enumerate(notes):
             try:
@@ -357,7 +437,7 @@ class Services:
                     for old_note, old_deck in seen:
                         if normalized_field(note.fields[0]) != normalized_field(old_note.fields[0]):
                             continue
-                        if not policy.get('acrossNoteTypes', False) and old_note.mid != note.mid:
+                        if not policy.get('acrossNoteTypes', False) and int(old_note.mid) != int(note.mid):
                             continue
                         if policy.get('scope') == 'deck':
                             scoped = self.resolve(policy.get('deck', self.summary(deck)), 'deck')['id']
@@ -370,7 +450,7 @@ class Services:
                         validation['issues'].append({'type': 'duplicate', 'message': 'Duplicate within batch.'})
                 if not validation['valid']:
                     raise ApiError('validationFailed', 'Invalid note.', validation)
-                prepared.append(AddNoteRequest(note=note, deck_id=deck['id']))
+                prepared.append(compat.AddNoteRequest(note=note, deck_id=deck['id']))
                 seen.append((note, deck))
             except Exception as error:
                 errors.append({'index': index, 'error': error_record(error)})
@@ -396,7 +476,7 @@ class Services:
 
     def notes_planConversion(self, source, target):
         old, new = self.resolve(source, 'noteType'), self.resolve(target, 'noteType')
-        info = self.col.models.change_notetype_info(old_notetype_id=old['id'], new_notetype_id=new['id'])
+        info = compat.change_notetype_info(self.col, old['id'], new['id'])
         def maps(key, indices):
             return [{'target': item['name'], 'source': old[key][index]['name'] if index >= 0 else None}
                     for item, index in zip(new[key], indices)]
@@ -408,14 +488,14 @@ class Services:
         if not ids:
             return {'changedCount': 0}
         notes = [self.note(id) for id in ids]
-        old = copy.deepcopy(notes[0].note_type())
+        old = self.resolve({'id': str(notes[0].mid)}, 'noteType')
         new = self.resolve(target, 'noteType')
-        if any(note.mid != old['id'] for note in notes):
+        if any(int(note.mid) != old['id'] for note in notes):
             raise ApiError('validationFailed', 'Conversion requires one source note type.')
         self.runtime.check_token(planToken, 'conversion', [old, new])
-        info = self.col.models.change_notetype_info(old_notetype_id=old['id'], new_notetype_id=new['id'])
+        info = compat.change_notetype_info(self.col, old['id'], new['id'])
         def indices(mapping, key):
-            if key == 'tmpls' and info.input.is_cloze:
+            if key == 'tmpls' and compat.field(info.input, 'is_cloze', old['type'] == 1 or new['type'] == 1):
                 if mapping:
                     raise ApiError('invalidParams', 'Native cloze conversion requires an empty template map.')
                 return []
@@ -432,7 +512,7 @@ class Services:
         request.note_ids.extend(entity_id(id) for id in ids)
         request.new_fields[:] = indices(fields, 'flds')
         request.new_templates[:] = indices(templates, 'tmpls')
-        self.change(self.col.models.change_notetype_of_notes(request))
+        self.change(compat.change_notetype_of_notes(self.col, request))
         return {'changedCount': len(set(ids))}
 
     def notes_findEmpty(self, criterion, query='', limit=100, cursor=None):
@@ -481,12 +561,16 @@ class Services:
                 note.remove_tag(params['from'])
                 note.add_tag(params['to'])
                 changed.append(note)
-        if changed:
+        if not hasattr(self.col, 'update_notes'):
+            # 2.1.45 updates one note at a time; change() merges them into one undo step.
+            for note in changed:
+                self.change(self.col.update_note(note))
+        elif changed:
             self.change(self.col.update_notes(changed))
         return {'changedCount': len(changed)}
 
     def tags_deleteUnused(self):
-        out = self.change(self.col.tags.clear_unused_tags())
+        out = self.change(compat.clear_unused_tags(self.col))
         return {'changedCount': out.count}
 
     def state_record(self, card):
@@ -505,21 +589,14 @@ class Services:
             due = {'kind': 'day', 'day': card.due}
         seconds = None
         if card.type in (1, 3):
-            states = self.col._backend.get_scheduling_states(card.id)
-            native = states.current.normal
-            if states.current.WhichOneof('kind') == 'filtered' and states.current.filtered.WhichOneof('kind') == 'rescheduling':
-                native = states.current.filtered.rescheduling.original_state
-            kind = native.WhichOneof('kind')
-            if kind == 'learning':
-                seconds = native.learning.scheduled_secs
-            elif kind == 'relearning':
-                seconds = native.relearning.learning.scheduled_secs
-        memory = card.memory_state
+            seconds = compat.learning_seconds(self.col, card)
+        # FSRS card state arrived in 23.10.
+        memory = getattr(card, 'memory_state', None)
         return {'type': TYPES[card.type], 'queue': queue, 'due': due, 'intervalDays': card.ivl,
                 'learningIntervalSeconds': seconds, 'remainingSteps': card.left, 'repetitions': card.reps,
                 'lapses': card.lapses, 'sm2EasePermille': card.factor,
                 'fsrsMemory': {'difficulty': memory.difficulty, 'stabilityDays': memory.stability} if memory else None,
-                'desiredRetention': card.desired_retention}
+                'desiredRetention': getattr(card, 'desired_retention', None)}
 
     def card_record(self, card):
         return {'id': str(card.id), 'noteId': str(card.nid), 'deck': self.summary(self.resolve({'id': str(card.did)}, 'deck')),
@@ -580,19 +657,19 @@ class Services:
 
     def scheduling_predict(self, cardId):
         card = self.card(cardId)
-        states = self.col._backend.get_scheduling_states(card.id)
+        states = compat.scheduling_states(self.col, card.id)
         labels = self.col._backend.describe_next_states(states)
         answers = []
         for rating, label in zip(RATINGS, labels):
             state = getattr(states, rating)
             native = state.normal
-            if state.WhichOneof('kind') == 'filtered':
-                if state.filtered.WhichOneof('kind') == 'preview':
+            if compat.which(state) == 'filtered':
+                if compat.which(state.filtered) == 'preview':
                     amount = {'value': state.filtered.preview.scheduled_secs, 'unit': 'seconds'}
                     answers.append({'rating': rating, 'label': label, 'interval': amount})
                     continue
                 native = state.filtered.rescheduling.original_state
-            kind = native.WhichOneof('kind')
+            kind = compat.which(native)
             if kind == 'review':
                 amount = {'value': native.review.scheduled_days, 'unit': 'days'}
             elif kind == 'learning':
@@ -624,7 +701,7 @@ class Services:
             raise ApiError('invalidState', 'This card cannot be answered outside the reviewer.')
         if self.runtime.active_reviewer_card == card.id:
             raise ApiError('invalidState', 'Use reviewer.answer for the active GUI card.')
-        states = self.col._backend.get_scheduling_states(card.id)
+        states = compat.scheduling_states(self.col, card.id)
         self.runtime.check_token(stateToken, 'scheduler', [card._to_backend_card().SerializeToString().hex(), states.SerializeToString().hex(), self.col.sched.today])
         card.start_timer()
         native_rating = {'again': CardAnswer.AGAIN, 'hard': CardAnswer.HARD,
@@ -658,11 +735,11 @@ class Services:
         return {'changedCount': out.count}
 
     def scheduling_reset(self, cardIds, restorePosition=True, resetCounts=False, log=True):
-        from anki.scheduler.base import ScheduleCardsAsNew
+        if resetCounts and not compat.resets_counts():
+            raise ApiError('unsupportedCapability', 'Resetting review counts requires Anki 2.1.50.')
         def reset(id):
             card = self.card(id)
-            self.change(self.col._backend.schedule_cards_as_new(ScheduleCardsAsNew(
-                card_ids=[card.id], restore_position=restorePosition, reset_counts=resetCounts, log=log)))
+            self.change(compat.schedule_cards_as_new(self.col, [card.id], restorePosition, resetCounts, log))
             return {'changed': True}
         return self.many(cardIds, reset, True)
 
@@ -671,9 +748,9 @@ class Services:
             from anki.errors import InvalidInput
             card = self.card(id)
             try:
-                self.change(self.col.sched.set_due_date([card.id], days, config_key=None))
+                self.change(compat.set_due_date(self.col, [card.id], days))
             except InvalidInput as error:
-                raise ApiError('invalidParams', str(error)) from error
+                raise ApiError('invalidParams', compat.error_message(error)) from error
             return {'changed': True}
         return self.many(cardIds, set_due, True)
 
@@ -696,7 +773,9 @@ class Services:
         other = self.col.decks.id_for_name(name)
         if other and other != value['id']:
             raise ApiError('conflict', 'A deck with this name exists.')
-        self.change(self.col.decks.rename(value['id'], name))
+        # Before 2.1.45 rename takes the deck dictionary.
+        # Before 2.1.28 renaming changes only the dict it is given, so pass the registered one.
+        self.change(self.col.decks.rename(value['id'] if compat.reports_changes() else self.col.decks.get(value['id']), name))
         return self.decks_get({'id': str(value['id'])})
 
     def decks_delete(self, decks, deleteCards):
@@ -786,7 +865,7 @@ class Services:
         mapping = {'name': 'name', 'css': 'css', 'latexHeader': 'latexPre', 'latexFooter': 'latexPost', 'latexSvg': 'latexsvg'}
         if 'name' in patch:
             other = self.col.models.by_name(patch['name'])
-            if other and other['id'] != model['id']:
+            if other and int(other['id']) != model['id']:
                 raise ApiError('conflict', 'Note type name exists.')
         for key, value in patch.items():
             if key == 'sortField':
@@ -880,11 +959,17 @@ class Services:
 
     def preset_record(self, config):
         settings = {}
+        # Settings this Anki release does not define are omitted.
+        native_fields = config.config.DESCRIPTOR.fields_by_name
         for public, native in PRESET_KEYS.items():
-            value = getattr(config.config, native)
-            settings[public] = list(value) if config.config.DESCRIPTOR.fields_by_name[native].is_repeated else value
+            if native in native_fields:
+                value = getattr(config.config, native)
+                settings[public] = list(value) if compat.repeated(native_fields[native]) else value
         for public, (native, names) in PRESET_ENUMS.items():
-            settings[public] = names[getattr(config.config, native)]
+            if native in native_fields:
+                value = preset_enum_value(public, getattr(config.config, native))
+                if value is not None:
+                    settings[public] = value
         return {'id': str(config.id), 'name': config.name, 'settings': settings, 'modifiedAt': timestamp(config.mtime_secs)}
 
     def deckPresets_list(self):
@@ -895,13 +980,16 @@ class Services:
 
     def preset_update_request(self, deck_id, configs=(), remove=(), reschedule=False):
         from anki.decks import UpdateDeckConfigs
+        if reschedule and 'fsrs_reschedule' not in UpdateDeckConfigs.DESCRIPTOR.fields_by_name:
+            raise ApiError('unsupportedCapability', 'This Anki release cannot reschedule cards with FSRS.')
         current = self.col.decks.get_deck_configs_for_update(deck_id)
-        return UpdateDeckConfigs(target_deck_id=deck_id, configs=configs, removed_config_ids=remove,
-                                 mode=0, limits=current.current_deck.limits,
-                                 card_state_customizer=current.card_state_customizer,
-                                 new_cards_ignore_review_limit=current.new_cards_ignore_review_limit,
-                                 fsrs=current.fsrs, apply_all_parent_limits=current.apply_all_parent_limits,
-                                 fsrs_reschedule=reschedule, fsrs_health_check=current.fsrs_health_check)
+        # Retain the current values of options this API does not expose.
+        retained = {name: compat.field(current, name) for name in (
+            'card_state_customizer', 'new_cards_ignore_review_limit', 'fsrs',
+            'apply_all_parent_limits', 'fsrs_health_check')}
+        return compat.message(UpdateDeckConfigs, target_deck_id=deck_id, configs=configs, removed_config_ids=remove,
+                              mode=0, limits=compat.field(current.current_deck, 'limits'),
+                              fsrs_reschedule=reschedule, **retained)
 
     def deckPresets_create(self, name, cloneFrom=None):
         if any(value['name'] == name for value in self.col.decks.all_config()):
@@ -919,12 +1007,14 @@ class Services:
         config = copy.deepcopy(self.preset(preset))
         if name:
             config.name = name
+        native_fields = config.config.DESCRIPTOR.fields_by_name
         for public, value in (settings or {}).items():
+            native = PRESET_ENUMS[public][0] if public in PRESET_ENUMS else PRESET_KEYS[public]
+            if native not in native_fields:
+                raise ApiError('unsupportedCapability', 'This Anki release has no preset setting ' + public + '.')
             if public in PRESET_ENUMS:
-                native, names = PRESET_ENUMS[public]
-                setattr(config.config, native, names.index(value))
+                setattr(config.config, native, preset_enum_number(public, value))
             else:
-                native = PRESET_KEYS[public]
                 destination = getattr(config.config, native)
                 if isinstance(value, list):
                     destination[:] = value
@@ -994,10 +1084,9 @@ class Services:
 
     def store_bytes(self, filename, data, collision='rename', skipIfHash=None):
         if collision != 'replace':
-            from anki.errors import BackendError
             try:
                 return self._store_bytes(filename, data, collision, skipIfHash)
-            except (OSError, BackendError) as error:
+            except (OSError,) + compat.backend_errors() as error:
                 raise ApiError('ioError', str(error)) from error
         from .media import MediaTransaction
         transaction = MediaTransaction(self)
@@ -1032,16 +1121,15 @@ class Services:
         if cardIds is not None:
             for id in cardIds:
                 self.card(id)
-            clauses.append('cid in (' + ','.join('?' for _ in cardIds) + ')')
-            args.extend(entity_id(id) for id in cardIds)
+            # Inline validated integers; SQLite before 3.32 allows only 999 parameters.
+            clauses.append('cid in (' + ','.join(str(entity_id(id)) for id in cardIds) + ')')
         if deck:
             value = self.resolve(deck, 'deck')
             dids = [value['id']]
             if includeChildren:
                 dids.extend(id for _, id in self.col.decks.children(value['id']))
             column = '(case when odid!=0 then odid else did end)' if membership == 'home' else 'did'
-            clauses.append('cid in (select id from cards where ' + column + ' in (' + ','.join('?' for _ in dids) + '))')
-            args.extend(dids)
+            clauses.append('cid in (select id from cards where ' + column + ' in (' + ','.join(str(int(id)) for id in dids) + '))')
         if afterId:
             clauses.append('id>?')
             args.append(entity_id(afterId))
@@ -1063,27 +1151,28 @@ class Services:
     def reviews_list(self, limit=100, cursor=None, **params):
         ids = None if cursor else self.review_ids(**params)
         page = self.page(ids, 'reviews.list', {**params, 'limit': limit, 'cursor': cursor})
-        return {'items': [value for id in page['ids'] if (value := self.review_record(int(id)))], 'nextCursor': page['nextCursor']}
+        records = (self.review_record(int(id)) for id in page['ids'])
+        return {'items': [value for value in records if value], 'nextCursor': page['nextCursor']}
 
     def reviews_getLatestId(self, **params):
         ids = self.review_ids(**params)
         return {'id': str(ids[-1]) if ids else None}
 
     def statistics_getToday(self):
-        graphs = self.col._backend.graphs(search='', days=0)
-        cutoff = self.col.sched.day_cutoff
+        graphs = compat.graphs(self.col, '')
+        cutoff = compat.day_cutoff(self.col)
         return {'count': graphs.today.answer_count, 'day': datetime.fromtimestamp(cutoff - 86400).date().isoformat(), 'nextDayAt': timestamp(cutoff)}
 
     def statistics_getReviewDays(self):
-        graphs = self.col._backend.graphs(search='', days=0)
-        today = datetime.fromtimestamp(self.col.sched.day_cutoff - 86400).date()
+        graphs = compat.graphs(self.col, '')
+        today = datetime.fromtimestamp(compat.day_cutoff(self.col) - 86400).date()
         return [{'day': (today + timedelta(days=offset)).isoformat(),
                  'count': counts.learn + counts.relearn + counts.young + counts.mature + counts.filtered}
                 for offset, counts in sorted(graphs.reviews.count.items(), reverse=True)]
 
     def statistics_getSummary(self, deck=None):
-        query = self.col.build_search_string(__import__('anki.collection', fromlist=['SearchNode']).SearchNode(deck=self.resolve(deck, 'deck')['name'])) if deck else ''
-        graphs = self.col._backend.graphs(search=query, days=0)
+        query = compat.deck_search(self.col, self.resolve(deck, 'deck')['name']) if deck else ''
+        graphs = compat.graphs(self.col, query)
         counts = graphs.card_counts.excluding_inactive
         card_ids = self.col.find_cards(query)
         note_ids = {self.col.get_card(id).nid for id in card_ids}
@@ -1102,25 +1191,21 @@ class Services:
         return {'html': stats.report(), 'format': 'legacyReport'}
 
     def packages_import(self, path):
-        from anki.collection import ImportAnkiPackageRequest, ImportAnkiPackageOptions
         if not os.path.isfile(path):
             raise ApiError('notFound', 'Package not found.')
-        self.change(self.col.import_anki_package(ImportAnkiPackageRequest(
-            package_path=path, options=ImportAnkiPackageOptions(
-                merge_notetypes=True, with_scheduling=True, with_deck_configs=True))))
+        self.change(compat.import_package(self.col, path))
         return {'completed': True}
 
     def packages_export(self, deck, path, includeScheduling=False):
-        from anki.collection import ExportAnkiPackageOptions, DeckIdLimit
-        self.col.export_anki_package(out_path=path, options=ExportAnkiPackageOptions(
-            with_scheduling=includeScheduling, with_media=True, legacy=True),
-            limit=DeckIdLimit(deck_id=self.resolve(deck, 'deck')['id']))
+        compat.export_package(self.col, path, self.resolve(deck, 'deck')['id'], includeScheduling)
         return {'path': os.path.abspath(path)}
 
     def advanced_cards_update(self, cardId, patch):
         card = self.card(cardId)
         if any(key in patch for key in ('remainingSteps', 'fsrsMemory')):
             raise ApiError('unsupportedCapability', 'Coupled scheduler state must use native scheduling transitions.')
+        if 'customData' in patch and not hasattr(card, 'custom_data'):
+            raise ApiError('unsupportedCapability', 'Card custom data requires Anki 2.1.55.')
         mapping = {'intervalDays': 'ivl', 'sm2EasePermille': 'factor', 'repetitions': 'reps', 'lapses': 'lapses', 'customData': 'custom_data'}
         for key, value in patch.items():
             if key == 'customData':
@@ -1155,7 +1240,7 @@ class Services:
             rows.append((id, cid, -1, ease, encoded(review['interval']), encoded(review['previousInterval']),
                          factor, elapsed, KINDS.index(review['kind'])))
         if rows:
-            self.col.db.transact(lambda: self.col.db.executemany(
+            compat.transact(self.col, lambda: self.col.db.executemany(
                 'insert into revlog (id,cid,usn,ease,ivl,lastIvl,factor,time,type) values (?,?,?,?,?,?,?,?,?)', rows))
             self.runtime.full_reset_required = True
             self.runtime.invalidate_predictions()

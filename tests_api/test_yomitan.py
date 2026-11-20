@@ -158,7 +158,8 @@ def test_yomitan_mining_lookup_overwrite_media_and_suspension(admitted, monkeypa
     assert invoke('addNotes', notes=[]) == []
     assert invoke('canAddNotesWithErrorDetail', notes=[]) == []
     owner.window().pm.sync_auth = lambda: None
-    assert invoke('sync') == {'result': None, 'error': 'sync: auth not configured'}
+    sync_reason = owner.runtime.capability_reason('collection.sync')
+    assert invoke('sync') == {'result': None, 'error': sync_reason or 'sync: auth not configured'}
     assert invoke('notAnAction') == {'result': None, 'error': 'unsupported action'}
     assert notifications and owner.window()._background_op_count == 0
 

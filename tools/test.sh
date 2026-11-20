@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
-ANKI_VERSIONS=(
-    "26.8"
-    "26.9.4"
-)
-
+# Anki releases and their pinned environments come from tools/anki_matrix.json;
+# tools/anki_env.py selects and prepares them. The latest stable release is the default.
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 CACHE_DIR="${ANKI_TEST_CACHE:-$ROOT_DIR/.test-cache}"
 BOOTSTRAP_PYTHON="${ANKI_TEST_BOOTSTRAP_PYTHON:-python3}"
-TEST_PYTHON="${ANKI_TEST_PYTHON:-3.13}"
 RUN_UI=1
 RUN_ALL_VERSIONS=0
 requested_versions=()
@@ -21,7 +16,8 @@ for argument in "$@"; do
         --all-versions) RUN_ALL_VERSIONS=1 ;;
         -h|--help)
             printf 'Usage: ./tools/test.sh [--no-ui] [--all-versions | ANKI_VERSION ...]\n'
-            printf 'Test the latest matrix version by default; --all-versions tests the full matrix.\n'
+            printf 'Test the latest stable release by default; --all-versions tests every release in\n'
+            printf 'tools/anki_matrix.json. Versions may be release tags (26.09.4) or PyPI versions (26.9.4).\n'
             printf 'Run unit and UI tests; --no-ui skips UI scenarios.\n'
             exit 0
             ;;
@@ -32,21 +28,20 @@ for argument in "$@"; do
         *) requested_versions+=("$argument") ;;
     esac
 done
-if (( ${#requested_versions[@]} > 0 )); then
-    if (( RUN_ALL_VERSIONS )); then
-        printf 'Cannot combine --all-versions with explicit Anki versions.\n' >&2
-        exit 2
-    fi
-    ANKI_VERSIONS=("${requested_versions[@]}")
-elif (( ! RUN_ALL_VERSIONS )); then
-    ANKI_VERSIONS=("${ANKI_VERSIONS[${#ANKI_VERSIONS[@]}-1]}")
+if (( ${#requested_versions[@]} > 0 && RUN_ALL_VERSIONS )); then
+    printf 'Cannot combine --all-versions with explicit Anki versions.\n' >&2
+    exit 2
 fi
-for version in "${ANKI_VERSIONS[@]}"; do
+for version in "${requested_versions[@]}"; do
     if [[ ! "$version" =~ ^[0-9][0-9A-Za-z.+-]*$ ]]; then
         printf 'Invalid Anki version: %s\n' "$version" >&2
         exit 2
     fi
 done
+select_arguments=("${requested_versions[@]}")
+if (( RUN_ALL_VERSIONS )); then select_arguments=(--all); fi
+selected="$("$BOOTSTRAP_PYTHON" tools/anki_env.py select "${select_arguments[@]}")"
+mapfile -t ANKI_VERSIONS <<< "$selected"
 mkdir -p "$CACHE_DIR"
 CACHE_DIR="$(cd -- "$CACHE_DIR" && pwd)"
 export UV_CACHE_DIR="$CACHE_DIR/downloads"
@@ -55,38 +50,31 @@ export UV_NO_PROGRESS=1
 export UV_NO_CONFIG=1
 # All dependencies and interpreters belong to the cache; never use a personal collection.
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+# Early Rust backends request an executable stack, which glibc 2.41+ refuses by default.
+export GLIBC_TUNABLES="${GLIBC_TUNABLES:-glibc.rtld.execstack=2}"
 UV_BIN="$("$BOOTSTRAP_PYTHON" tools/bootstrap_test_uv.py "$CACHE_DIR")"
+prepare() {
+    "$BOOTSTRAP_PYTHON" tools/anki_env.py prepare "$CACHE_DIR" "$UV_BIN" "$1"
+}
+
+# The repository checks need Python 3.10+ and jsonschema 4.18, not a particular Anki.
+printf 'Checking the API contract, documentation and coverage\n'
+CHECK_PYTHON="$(prepare "$("$BOOTSTRAP_PYTHON" tools/anki_env.py select)")"
+"$CHECK_PYTHON" tools/build_api_contract.py --check
+"$CHECK_PYTHON" tools/check_api_spec.py
+"$CHECK_PYTHON" tools/check_api_docs.py
+"$CHECK_PYTHON" tools/check_api_coverage.py
 
 run_version() (
     set -e
     local version="$1"
-    local environment="$CACHE_DIR/envs/anki-$version"
-    local interpreter="$environment/bin/python"
     printf '\nTesting Anki %s\n' "$version"
-    if [[ ! -d "$environment" ]]; then
-        "$UV_BIN" venv --python "$TEST_PYTHON" "$environment"
-    fi
-    if [[ -f "$environment/Scripts/python.exe" ]]; then
-        interpreter="$environment/Scripts/python.exe"
-    fi
-    "$UV_BIN" pip install --python "$interpreter" \
-        "anki==$version" "aqt==$version" 'jsonschema>=4.18' 'pytest>=8'
-    "$UV_BIN" pip check --python "$interpreter"
-    "$interpreter" - "$version" <<'PY'
-from importlib.metadata import version
-import sys
-from packaging.version import Version
-requested = Version(sys.argv[1])
-for name in ('anki', 'aqt'):
-    actual = version(name)
-    if Version(actual) != requested:
-        raise RuntimeError(f'{name}: expected {requested}, installed {actual}')
-    print(f'{name}=={actual}')
-PY
-    "$interpreter" tools/build_api_contract.py --check
-    "$interpreter" tools/check_api_spec.py
-    "$interpreter" tools/check_api_docs.py
-    "$interpreter" tools/check_api_coverage.py
+    local interpreter
+    interpreter="$(prepare "$version")"
+    # Early releases share, then delete at exit, a fixed anki_temp folder in the temp directory.
+    TMPDIR="$(mktemp -d)"
+    export TMPDIR
+    trap 'rm -rf "$TMPDIR"' EXIT
     # This is the complete maintained unit suite, including both API protocols.
     QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$interpreter" -m pytest -q --tb=short tests_api
     if (( RUN_UI )); then
@@ -95,8 +83,14 @@ PY
             printf 'UI tests require a display. Use xvfb-run make test or make test-unit.\n' >&2
             exit 1
         fi
+        ui_env=()
+        if [[ "${QT_QPA_PLATFORM:-}" == offscreen ]]; then
+            # With a display, offscreen Qt 6.2-6.5 renders through GLX and crashes in WebEngine;
+            # without one, Qt 5 Quick widgets need the software backend instead of OpenGL.
+            ui_env=(-u DISPLAY -u WAYLAND_DISPLAY "QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-software}")
+        fi
         # Disposable profiles and trusted test content; allow WebEngine in CI containers.
-        QTWEBENGINE_DISABLE_SANDBOX="${QTWEBENGINE_DISABLE_SANDBOX:-1}" \
+        env ${ui_env[@]+"${ui_env[@]}"} QTWEBENGINE_DISABLE_SANDBOX="${QTWEBENGINE_DISABLE_SANDBOX:-1}" \
             "$interpreter" tools/smoke_gui.py all
     else
         printf 'UI scenarios disabled (--no-ui).\n'

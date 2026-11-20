@@ -14,9 +14,19 @@ legacy guide for supported actions and compatibility details.
 
 ## Install and run
 
-Anki-Connect requires **Anki Desktop 26.08 or later**. Compatibility is tested with
-26.08 and 26.09.4. Use `api.describe` to check method availability in your running
-Anki instance.
+Anki-Connect requires **Anki Desktop 2.1.15 or later**. Compatibility is tested with
+every Anki 2.1 and later GitHub release listed in `tools/anki_matrix.json`, including
+prereleases. Some methods need newer native features and report
+`unsupportedCapability` on older releases; use `api.describe` to check method
+availability in your running Anki instance.
+
+| Methods | Available from |
+| --- | --- |
+| `collection.sync` | 2.1.28 |
+| `collection.undo`, `deckPresets.*`, `scheduling.repositionNewCards` | 2.1.45 |
+| `scheduling.answer`, `scheduling.answerMany`, `scheduling.getQueue`, `scheduling.predict` | 2.1.45 with the v3 scheduler enabled (the default for new collections from 2.1.66) |
+| `editors.openNote` (and legacy `guiEditNote`) | 2.1.50 |
+| `application.importFile` (and legacy `guiImportFile`) | 23.10 |
 
 Install [Anki-Connect from AnkiWeb](https://ankiweb.net/shared/info/2055492159):
 
@@ -120,6 +130,8 @@ including GUI scenarios. To skip GUI scenarios, use `make test-unit` or
 `.\tools\test.ps1 -NoUI`.
 To test the full compatibility matrix, use `make test TEST_ARGS=--all-versions`,
 `./tools/test.sh --all-versions`, or `.\tools\test.ps1 -AllVersions`.
+On Linux without a display, set `QT_QPA_PLATFORM=offscreen`; the runner then
+hides any desktop session from Qt and uses software Qt Quick rendering.
 
 Run `make help` for all development commands. Use `make test VERSIONS="26.9.4"`
 to select Anki versions. The runners cache dependencies and interpreters in

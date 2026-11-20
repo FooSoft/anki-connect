@@ -7,15 +7,13 @@ param(
     [switch]$Help
 )
 
-# Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
-$ANKI_VERSIONS = @(
-    '26.8'
-    '26.9.4'
-)
+# Anki releases and their pinned environments come from tools/anki_matrix.json;
+# tools/anki_env.py selects and prepares them. The latest stable release is the default.
 
 if ($Help) {
-    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-AllVersions | -Versions 26.8,26.9.4]'
-    Write-Host 'Test the latest matrix version by default; -AllVersions tests the full matrix.'
+    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-AllVersions | -Versions 2.1.50,26.9.4]'
+    Write-Host 'Test the latest stable release by default; -AllVersions tests every release in'
+    Write-Host 'tools/anki_matrix.json that this platform can run.'
     Write-Host 'Run unit and UI tests; -NoUI skips UI scenarios.'
     exit 0
 }
@@ -24,21 +22,22 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 # Check native exit codes explicitly, including under PowerShell 7.3+.
 $PSNativeCommandUseErrorActionPreference = $false
+$selectArguments = @()
 if ($PSBoundParameters.ContainsKey('Versions')) {
     if ($AllVersions) {
         throw 'Cannot combine -AllVersions with -Versions.'
     }
-    $ANKI_VERSIONS = $Versions
-} elseif (-not $AllVersions) {
-    $ANKI_VERSIONS = @($ANKI_VERSIONS[-1])
-}
-if (-not $ANKI_VERSIONS.Count) {
-    throw 'Specify at least one Anki version.'
-}
-foreach ($version in $ANKI_VERSIONS) {
-    if ($version -notmatch '^[0-9][0-9A-Za-z.+-]*$') {
-        throw "Invalid Anki version: $version"
+    if (-not $Versions.Count) {
+        throw 'Specify at least one Anki version.'
     }
+    foreach ($version in $Versions) {
+        if ($version -notmatch '^[0-9][0-9A-Za-z.+-]*$') {
+            throw "Invalid Anki version: $version"
+        }
+    }
+    $selectArguments = $Versions
+} elseif ($AllVersions) {
+    $selectArguments = @('--all')
 }
 
 function Invoke-Checked {
@@ -77,7 +76,6 @@ try {
     $env:UV_NO_CONFIG = '1'
     $env:UV_SYSTEM_CERTS = 'true'
     $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
-    $testPython = if ($env:ANKI_TEST_PYTHON) { $env:ANKI_TEST_PYTHON } else { '3.13' }
 
     $bootstrapArguments = @()
     if ($env:ANKI_TEST_BOOTSTRAP_PYTHON) {
@@ -100,40 +98,29 @@ try {
         throw 'The uv bootstrap did not return an executable path.'
     }
 
-    $verifyVersions = @'
-from importlib.metadata import version
-import sys
-from packaging.version import Version
-requested = Version(sys.argv[1])
-for name in ('anki', 'aqt'):
-    actual = version(name)
-    if Version(actual) != requested:
-        raise RuntimeError(f'{name}: expected {requested}, installed {actual}')
-    print(f'{name}=={actual}')
-'@
+    $ANKI_VERSIONS = @(Invoke-Checked $bootstrap ($bootstrapArguments + @('tools/anki_env.py', 'select') + $selectArguments))
+    function Initialize-AnkiEnvironment([string]$Version) {
+        $interpreter = Invoke-Checked $bootstrap ($bootstrapArguments + @('tools/anki_env.py', 'prepare', $cache, $uv, $Version))
+        if (-not ($interpreter -is [string]) -or -not (Test-Path -LiteralPath $interpreter -PathType Leaf)) {
+            throw "Preparing Anki $Version did not return an interpreter path."
+        }
+        return $interpreter
+    }
+
+    # The repository checks need Python 3.10+ and jsonschema 4.18, not a particular Anki.
+    Write-Host 'Checking the API contract, documentation and coverage'
+    $latest = Invoke-Checked $bootstrap ($bootstrapArguments + @('tools/anki_env.py', 'select'))
+    $checkPython = Initialize-AnkiEnvironment $latest
+    Invoke-Checked $checkPython @('tools/build_api_contract.py', '--check')
+    Invoke-Checked $checkPython @('tools/check_api_spec.py')
+    Invoke-Checked $checkPython @('tools/check_api_docs.py')
+    Invoke-Checked $checkPython @('tools/check_api_coverage.py')
     $passed = @()
     $failed = @()
     foreach ($version in $ANKI_VERSIONS) {
         try {
             Write-Host "`nTesting Anki $version"
-            $environment = Join-Path $cache "envs/anki-$version"
-            if (-not (Test-Path -LiteralPath $environment -PathType Container)) {
-                Invoke-Checked $uv @('venv', '--python', $testPython, $environment)
-            }
-            $interpreter = Join-Path $environment 'Scripts/python.exe'
-            if (-not (Test-Path -LiteralPath $interpreter -PathType Leaf)) {
-                $interpreter = Join-Path $environment 'bin/python'
-            }
-            Invoke-Checked $uv @('pip', 'install', '--python', $interpreter,
-                "anki==$version", "aqt==$version", 'jsonschema>=4.18', 'pytest>=8')
-            Invoke-Checked $uv @('pip', 'check', '--python', $interpreter)
-            # Send Python source through stdin to avoid Windows native quote escaping.
-            $verifyVersions | & $interpreter - $version
-            if ($LASTEXITCODE -ne 0) { throw 'Installed Anki version validation failed.' }
-            Invoke-Checked $interpreter @('tools/build_api_contract.py', '--check')
-            Invoke-Checked $interpreter @('tools/check_api_spec.py')
-            Invoke-Checked $interpreter @('tools/check_api_docs.py')
-            Invoke-Checked $interpreter @('tools/check_api_coverage.py')
+            $interpreter = Initialize-AnkiEnvironment $version
             try {
                 if (-not $env:QT_QPA_PLATFORM) { $env:QT_QPA_PLATFORM = 'offscreen' }
                 Invoke-Checked $interpreter @('-m', 'pytest', '-q', '--tb=short', 'tests_api')

@@ -5,6 +5,7 @@ import json
 import time
 import uuid
 
+from . import compat
 from .contract import SCHEMA
 from .gui import Gui
 from .protocol import ApiError, Deferred, Dispatcher, Operations, completed
@@ -15,32 +16,46 @@ GUI_METHODS = {'collection.refresh', 'collection.sync', 'profiles.list', 'profil
                'profiles.switch', 'application.navigate', 'application.exit', 'application.importFile'}
 GUI_METHODS.update(name for name in SCHEMA['x-methods'] if name.startswith(('browser.', 'editors.', 'reviewer.')))
 
+# Collection paths each method needs; "a|b" accepts either name. Scheduler paths
+# such as sched.build_answer exist only while the v3 scheduler is active.
 NATIVE_REQUIREMENTS = {
-    'notes.create': ('add_note', '_backend.render_uncommitted_card_legacy'),
-    'notes.createMany': ('add_notes', '_backend.render_uncommitted_card_legacy'),
-    'notes.validate': ('_backend.render_uncommitted_card_legacy',),
-    'notes.planConversion': ('models.change_notetype_info',),
-    'notes.convert': ('models.change_notetype_of_notes',),
+    'notes.create': ('add_note', '_backend.render_uncommitted_card_legacy|_backend.render_uncommitted_card|findTemplates'),
+    'notes.createMany': ('add_note', '_backend.render_uncommitted_card_legacy|_backend.render_uncommitted_card|findTemplates'),
+    'notes.validate': ('_backend.render_uncommitted_card_legacy|_backend.render_uncommitted_card|findTemplates',),
     'notes.update': ('update_note',),
     'cards.move': ('set_deck',),
-    'scheduling.predict': ('_backend.get_scheduling_states', '_backend.describe_next_states'),
+    'scheduling.getQueue': ('sched.get_queued_cards',),
+    'scheduling.predict': ('_backend.get_scheduling_states|_backend.get_next_card_states',
+                           '_backend.describe_next_states', 'sched.build_answer'),
     'scheduling.answer': ('sched.build_answer', 'sched.answer_card'),
     'scheduling.answerMany': ('sched.build_answer', 'sched.answer_card'),
     'scheduling.repositionNewCards': ('sched.reposition_new_cards',),
-    'scheduling.reset': ('_backend.schedule_cards_as_new',),
-    'reviewer.answer': ('sched.build_answer', 'sched.answer_card', 'sched.state_is_leech'),
+    'scheduling.setDueDate': ('sched.set_due_date',),
     'deckPresets.get': ('_backend.get_deck_config',),
     'deckPresets.create': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
     'deckPresets.update': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
     'deckPresets.assign': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
     'deckPresets.delete': ('decks.get_deck_configs_for_update', 'decks.update_deck_configs'),
     'media.store': ('media.write_data', 'media.trash_files'),
-    'packages.export': ('export_anki_package',),
-    'packages.import': ('import_anki_package',),
     'collection.checkIntegrity': ('fix_integrity',),
-    'collection.undo': ('undo',),
-    'statistics.getSummary': ('_backend.graphs',),
+    'collection.undo': ('undo', 'undo_status'),
+    # Before 2.1.28 Python synced over HTTP itself; there is no backend sync to drive.
+    'collection.sync': ('_backend.sync_collection',),
 }
+REQUIREMENT_REASONS = {
+    '_backend.sync_collection': 'Requires the native sync of Anki 2.1.28 or later.',
+}
+# Release features without a collection path; see compat.FEATURES.
+FEATURE_REQUIREMENTS = {
+    'editors.openNote': ('editorDialog',),
+    'application.importFile': ('importDialog',),
+}
+
+
+def clear_editor_history():
+    if compat.editor_dialog_available():
+        from .edit import history
+        history.note_ids.clear()
 
 
 class Runtime:
@@ -74,8 +89,7 @@ class Runtime:
     def session(self):
         col = self.mw.col if self.mw else None
         if col is not self._collection:
-            from .edit import history
-            history.note_ids.clear()
+            clear_editor_history()
             self._collection = col
             self._session = uuid.uuid4().hex if col else None
             self.profile_name = self.mw.pm.name if col else None
@@ -90,13 +104,11 @@ class Runtime:
         self.tokens.clear()
         self.cursors.clear()
         self.gui.editors.clear()
-        from .edit import history
-        history.note_ids.clear()
+        clear_editor_history()
 
     def register_hooks(self):
-        from aqt import gui_hooks
-        gui_hooks.profile_will_close.append(self.invalidate_session)
-        gui_hooks.collection_will_temporarily_close.append(self.invalidate_session)
+        compat.gui_hook('profile_will_close').append(self.invalidate_session)
+        compat.register_collection_close(self.invalidate_session)
 
     def service(self):
         session = self.session
@@ -161,7 +173,7 @@ class Runtime:
             selected = [id for id in selected if self._collection.db.scalar('select 1 from cards where id=?', id)]
         return {'ids': [str(id) for id in selected], 'nextCursor': next_cursor}
 
-    def capability_reason(self, method):
+    def capability_reason(self, method, col=None):
         if method in ('api.describe', 'api.execute', 'operations.get', 'operations.cancel', 'access.requestPermission', 'media.store'):
             handler = True
         else:
@@ -169,14 +181,20 @@ class Runtime:
             handler = callable(getattr(adapter, method.replace('.', '_'), None))
         if not handler:
             return 'No adapter for ' + method
-        col = self.mw.col if self.mw else None
+        for name in FEATURE_REQUIREMENTS.get(method, ()):
+            reason = compat.missing_feature(name)
+            if reason:
+                return reason
+        if col is None:
+            col = self.mw.col if self.mw else None
         if col:
             for path in NATIVE_REQUIREMENTS.get(method, ()):
-                value = col
-                for part in path.split('.'):
-                    value = getattr(value, part, None)
-                if not callable(value):
-                    return 'Native capability missing: ' + path
+                if not any(callable(compat.lookup(col, choice)) for choice in path.split('|')):
+                    if path.startswith('sched.') and hasattr(col, 'v3_scheduler') and not col.v3_scheduler():
+                        return 'Requires the v3 scheduler; enable it in Anki preferences.'
+                    if path.startswith('sched.') and not hasattr(col, 'v3_scheduler'):
+                        return 'Requires the v3 scheduler of Anki 2.1.45 or later.'
+                    return REQUIREMENT_REASONS.get(path, 'Native capability missing: ' + path)
         return None
 
     def require_capability(self, method):
@@ -194,10 +212,11 @@ class Runtime:
                 'methods': methods, 'limits': copy.deepcopy(SCHEMA['x-limits'])}
 
     def finish_changes(self, service, initiator=None):
-        from aqt.operations import on_op_finished
         changes, service.changes = service.changes, []
-        for change in changes:
-            on_op_finished(self.mw, change, initiator)
+        legacy = [change for change in changes if isinstance(change, compat.LegacyChanges)]
+        # Untracked changes refresh every screen, so one notification covers them all.
+        for change in [change for change in changes if not isinstance(change, compat.LegacyChanges)] + legacy[:1]:
+            compat.on_op_finished(self.mw, change, initiator)
         if self.full_reset_required:
             self.full_reset_required = False
             self.mw.reset()
@@ -223,7 +242,7 @@ class Runtime:
         service = Services(self, col, session)
         result = Deferred()
         # A GUI/background operation could otherwise unload the captured collection.
-        self.mw._increase_background_ops()
+        compat.increase_background_ops(self.mw)
         reviewer = self.mw.reviewer
         self.active_reviewer_card = reviewer.card.id if reviewer and reviewer.card and self.mw.state == 'review' else None
         def task():
@@ -236,7 +255,7 @@ class Runtime:
                 MediaTransaction.recover(service)
             return work(service)
         def finished(future):
-            self.mw._decrease_background_ops()
+            compat.decrease_background_ops(self.mw)
             try:
                 value = future.result()
                 if after:
@@ -249,7 +268,7 @@ class Runtime:
                     self.finish_changes(service, initiator)
                 finally:
                     result.resolve(error=error)
-        self.mw.taskman.run_in_background(task, finished)
+        compat.run_in_background(self.mw, task, finished)
         return result
 
     def invoke(self, method, params):
@@ -276,7 +295,7 @@ class Runtime:
             session = self.session
         if meta['effect'] in ('write', 'advancedWrite'):
             self.gui.guard(method, params)
-        if method in GUI_METHODS and meta['scope'] == 'collection' and self.mw._background_op_count:
+        if method in GUI_METHODS and meta['scope'] == 'collection' and compat.background_op_count(self.mw):
             raise ApiError('busy', 'A collection operation is active.')
         def start(key=None):
             self.require_capability(method)
@@ -286,7 +305,7 @@ class Runtime:
                 self.gui.guard(method, params)
             if meta['scope'] == 'collection':
                 self.capture(session)
-                if method in GUI_METHODS and self.mw._background_op_count:
+                if method in GUI_METHODS and compat.background_op_count(self.mw):
                     raise ApiError('busy', 'A collection operation is active.')
             if method in GUI_METHODS:
                 value = self.gui.execute(method, params, operation_id=key)
@@ -361,7 +380,7 @@ class Runtime:
                 self.background(lambda service: service.store_bytes(params['filename'], data, params.get('collision', 'rename'), params.get('skipIfHash')), session).then(lambda source: result.resolve(source.value, source.error))
             except Exception as error:
                 result.resolve(error=error if isinstance(error, ApiError) else ApiError('ioError', str(error)))
-        self.mw.taskman.run_in_background(read, done, uses_collection=False)
+        compat.run_in_background(self.mw, read, done, uses_collection=False)
         return result
 
     def permission(self, context):
