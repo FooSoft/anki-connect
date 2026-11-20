@@ -8,7 +8,7 @@ import time
 import pytest
 
 from plugin.legacy import Legacy
-from plugin.protocol import ApiError
+from plugin.protocol import ApiError, timestamp
 from tests_api.test_runtime import admitted, call, native
 
 
@@ -501,6 +501,34 @@ def test_legacy_decks_configs_and_card_projections(native):
     assert old(native, 'getDeckConfig', deck='Destination')['id'] == 1
     old(native, 'deleteDecks', decks=['Destination'], cardsToo=True)
     assert service.col.decks.by_name('Destination') is None and service.col.note_count() == 0
+
+
+def test_filtered_build_order_is_not_reported_as_timestamp(native):
+    owner, service = native
+    col = service.col
+    learning, review = (col.get_note(old(native, 'addNote', note=legacy_note(front))).card_ids()[0]
+                        for front in ('learning', 'review'))
+    old(native, 'answerCards', answers=[{'cardId': learning, 'ease': 1}, {'cardId': review, 'ease': 4}])
+    home_due = col.get_card(learning).due
+    did = col.decks.new_filtered('Filtered')
+    deck = col.decks.get(did)
+    deck['terms'] = [['cid:{}'.format(learning), 100, 0], ['cid:{}'.format(review), 100, 0]]
+    col.decks.save(deck)
+    col.sched.rebuild_filtered_deck(did)
+    # Native filtered builds keep the learning queue but replace due with a negative build order.
+    native_card = col.get_card(learning)
+    assert (native_card.queue, native_card.odid, native_card.odue) == (1, 1, home_due) and native_card.due < 0
+    records = {item['result']['id']: item['result']
+               for item in call(service, 'cards.getMany', ids=[str(learning), str(review)])['items']}
+    assert records[str(learning)]['scheduling']['queue'] == 'learning'
+    assert sorted((value['scheduling']['due']['kind'], value['scheduling']['due'].get('position'))
+                  for value in records.values()) == [('position', 0), ('position', 1)]
+    assert old(native, 'getDecks', cards=[learning, review]) == {'Filtered': [learning, review]}
+    col.sched.empty_filtered_deck(did)
+    due = call(service, 'cards.get', id=str(learning))['scheduling']['due']
+    assert due == {'kind': 'timestamp', 'at': timestamp(home_due)}
+    # Windows rejects negative fromtimestamp() input, so pre-1970 values must not depend on it.
+    assert timestamp(-100000) == '1969-12-30T20:13:20.000Z'
 
 
 def test_legacy_scheduling_metadata_and_reviews(native):

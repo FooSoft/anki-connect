@@ -17,6 +17,7 @@ TYPES = {0: 'new', 1: 'learning', 2: 'review', 3: 'relearning'}
 QUEUES = {0: 'new', 1: 'learning', 2: 'review', 3: 'dayLearning', 4: 'preview',
           -1: 'suspended', -2: 'buriedByScheduler', -3: 'buriedByUser'}
 RATINGS = ('again', 'hard', 'good', 'easy')
+FILTERED_POSITION_OFFSET = 100000
 KINDS = ('learning', 'review', 'relearning', 'filtered', 'manual', 'rescheduled')
 # Preserve Anki's legacy filename filter without its deprecated stripIllegal API.
 MEDIA_ILLEGAL_CHARACTERS = re.compile(r'[][><:"/?*^\\|\0\r\n]')
@@ -464,7 +465,10 @@ class Services:
         if queue is None or card.type not in TYPES:
             raise ApiError('unsupportedCapability', 'Unknown card scheduling state.')
         underlying = card.queue if card.queue >= 0 else card.type
-        if underlying == 0:
+        if card.odid and card.due < 0:
+            # Filtered builds replace due with -100000 + build order; the home due moves to odue.
+            due = {'kind': 'position', 'position': max(0, card.due + FILTERED_POSITION_OFFSET)}
+        elif underlying == 0:
             due = {'kind': 'position', 'position': max(0, card.due)}
         elif card.queue in (1, 4) or (card.queue < 0 and card.type in (1, 3) and card.due > 1000000000):
             due = {'kind': 'timestamp', 'at': timestamp(card.due)}

@@ -2,13 +2,16 @@
 import copy
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .contract import SCHEMA
 
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 
 def timestamp(seconds=None):
-    return datetime.fromtimestamp(time.time() if seconds is None else seconds, timezone.utc).isoformat(
+    # Epoch arithmetic avoids Windows' OSError for negative fromtimestamp() input.
+    return (EPOCH + timedelta(seconds=time.time() if seconds is None else seconds)).isoformat(
         timespec='milliseconds').replace('+00:00', 'Z')
 
 

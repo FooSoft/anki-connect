@@ -6361,7 +6361,10 @@ Exactly one variant below.
 
 ### Due
 
-Exactly one variant below.
+Exactly one variant below. Cards in a filtered deck whose native due was
+replaced by the filtered build order report that order as `position` (0 for the
+first card the deck gathered), regardless of queue; their home-deck due returns
+once the filtered deck is emptied.
 
 ```json
 {

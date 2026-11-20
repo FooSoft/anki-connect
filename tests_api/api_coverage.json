@@ -1079,6 +1079,22 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
+      "case": "test_filtered_build_order_is_not_reported_as_timestamp",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "cards.get",
+        "cards.getMany"
+      ],
+      "legacy": [
+        "addNote",
+        "answerCards",
+        "getDecks"
+      ],
+      "notes": "Real disposable collection with a native filtered deck; asserts filtered build order, restored home due, and platform-independent pre-1970 timestamps. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
       "case": "test_legacy_scheduling_metadata_and_reviews",
       "layer": "legacy-forwarder",
       "outcome": "success",
