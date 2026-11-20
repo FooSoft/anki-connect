@@ -684,3 +684,29 @@ def test_note_type_delete_unused_reports_items_and_removes_type(native):
     deleted = call(service, 'noteTypes.deleteUnused', noteTypes=[{'name': 'Disposable'}])
     assert deleted == {'items': [{'index': 0, 'result': {'changed': True}}]}
     assert service.col.models.get(int(model['id'])) is None
+
+
+def test_note_type_names_differing_only_in_case_are_duplicates(native):
+    # Anki would save the second name as "front+" or "card+" without an error.
+    owner, service = native
+    card = {'name': 'Card', 'questionHtml': '{{Front}}', 'answerHtml': '{{Front}}'}
+    for fields, templates in [([{'name': 'Front'}, {'name': 'front'}], [card]),
+                              ([{'name': 'Front'}, {'name': 'Maße'}, {'name': 'MASSE'}], [card]),
+                              ([{'name': 'Front'}], [card, {**card, 'name': 'CARD', 'questionHtml': '{{Front}}2'}])]:
+        with pytest.raises(ApiError) as error:
+            call(service, 'noteTypes.create', name='Cased', fields=fields, templates=templates)
+        assert error.value.kind == 'validationFailed'
+    assert service.col.models.by_name('Cased') is None
+    for edit in [{'op': 'addField', 'field': {'name': 'front'}},
+                 {'op': 'updateField', 'name': 'Back', 'patch': {'name': 'FRONT'}},
+                 {'op': 'addTemplate', 'template': {'name': 'card 1', 'questionHtml': '{{Back}}', 'answerHtml': '{{Front}}'}}]:
+        with pytest.raises(ApiError) as error:
+            call(service, 'noteTypes.editStructure', noteType={'name': 'Basic'}, edits=[edit])
+        assert error.value.kind == 'validationFailed'
+    basic = call(service, 'noteTypes.get', noteType={'name': 'Basic'})
+    assert [field['name'] for field in basic['fields']] == ['Front', 'Back']
+    assert [template['name'] for template in basic['templates']] == ['Card 1']
+    # Changing only the case of one field's own name is still allowed.
+    renamed = call(service, 'noteTypes.editStructure', noteType={'name': 'Basic'},
+                   edits=[{'op': 'updateField', 'name': 'Back', 'patch': {'name': 'BACK'}}])
+    assert [field['name'] for field in renamed['fields']] == ['Front', 'BACK']

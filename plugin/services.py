@@ -742,7 +742,7 @@ class Services:
             self.fill_template(template, data)
             self.col.models.add_template(model, template)
         names = [field['name'] for field in model['flds']]
-        if len(names) != len(set(names)) or len({t['name'] for t in model['tmpls']}) != len(templates):
+        if len({name.casefold() for name in names}) != len(names) or len({t['name'].casefold() for t in model['tmpls']}) != len(templates):
             raise ApiError('validationFailed', 'Duplicate field/template names.')
         model['sortf'] = names.index(sortField) if sortField else 0
         out = self.change(self.col.models.add_dict(model))
@@ -797,7 +797,7 @@ class Services:
                         raise ApiError('validationFailed', 'Move index out of range.')
                     values.remove(value)
                     values.insert(edit['index'], value)
-            if not values or len({value['name'] for value in values}) != len(values):
+            if not values or len({value['name'].casefold() for value in values}) != len(values):
                 raise ApiError('validationFailed', 'Invalid field/template structure.')
         self.change(self.col.models.update_dict(model))
         return self.noteTypes_get({'id': str(model['id'])})

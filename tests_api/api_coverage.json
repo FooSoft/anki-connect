@@ -585,6 +585,30 @@
     },
     {
       "source": "tests_api/test_runtime.py",
+      "case": "test_note_type_names_differing_only_in_case_are_duplicates",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "noteTypes.create",
+        "noteTypes.editStructure"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; field and template names that differ only in case (including Maße/MASSE) are rejected as validationFailed before Anki can save the repeat as name+, and nothing is written."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_note_type_names_differing_only_in_case_are_duplicates",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "noteTypes.editStructure",
+        "noteTypes.get"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts Basic keeps its field and template names after the rejected edits, and that renaming a field to a case variant of its own name is saved."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
       "case": "test_historical_reviews_transaction_and_sync_flags",
       "layer": "native-service",
       "outcome": "success",
