@@ -342,7 +342,9 @@ def test_http_body_limits_stream_large_legacy_media_and_reply_with_cors(monkeypa
         return chunk
     server_socket, peer = socket.socketpair()
     server_socket.setblocking(False)
-    peer.send(b'!')  # Keeps the socket readable for select; recv is in memory.
+    # EOF keeps select readable while recv supplies the in-memory request.
+    # An unread marker byte makes Windows reset the connection on close.
+    peer.shutdown(socket.SHUT_WR)
     transport = SimpleNamespace(fileno=server_socket.fileno, recv=recv,
                                 send=server_socket.send, close=server_socket.close)
     client = web.WebClient(transport, server.handlerWrapper)
