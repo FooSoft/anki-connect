@@ -9,22 +9,30 @@ from .protocol import Deferred, completed, ApiError, Dispatcher
 from .contract import SCHEMA
 
 
-class HttpError(ValueError):
-    def __init__(self, status):
-        self.status = status
+# Historical servers accepted any body size. Legacy media may be 64 MiB before
+# base64 encoding, so the legacy endpoint admits one such file with its envelope.
+LEGACY_MAX_REQUEST_BYTES = 134217728
+# Bytes read per poll; the timer interval otherwise throttles large uploads.
+MAX_READ_PER_ADVANCE = 16777216
+
+
+def is_rpc_path(path):
+    return path.split(b'?', 1)[0].rstrip(b'/') == b'/api/v1'
 
 
 class WebRequest:
-    def __init__(self, method, headers, body, path=b'/'):
+    def __init__(self, method, headers, body, path=b'/', too_large=False):
         self.method, self.headers, self.body, self.path = method, headers, body, path
+        self.too_large = too_large
 
 
 class WebClient:
     def __init__(self, sock, handler):
         self.sock, self.handler = sock, handler
-        self.readBuff = b''
+        self.readBuff = bytearray()
         self.writeBuff = b''
         self.pending = False
+        self.expected = None
         self.started = time.monotonic()
 
     def advance(self, recvSize=65536):
@@ -39,15 +47,27 @@ class WebClient:
         rlist, wlist = select.select([self.sock] if not self.pending and not self.writeBuff else [], [self.sock] if self.writeBuff else [], [], 0)[:2]
         if rlist:
             try:
-                msg = self.sock.recv(recvSize)
-                if not msg:
-                    self.close()
-                    return False
-                self.started = time.monotonic()
-                self.readBuff += msg
-                req, length = self.parseRequest(self.readBuff)
+                req = None
+                received = 0
+                while req is None and received < MAX_READ_PER_ADVANCE:
+                    try:
+                        msg = self.sock.recv(recvSize)
+                    except BlockingIOError:
+                        if not received:
+                            raise
+                        break
+                    if not msg:
+                        self.close()
+                        return False
+                    received += len(msg)
+                    self.started = time.monotonic()
+                    self.readBuff += msg
+                    # Parse once the announced body is complete, not for every chunk.
+                    if self.expected is None or len(self.readBuff) >= self.expected:
+                        req, length = self.parseRequest(bytes(self.readBuff))
                 if req is not None:
-                    self.readBuff = b''
+                    self.readBuff = bytearray()
+                    self.expected = None
                     self.pending = True
                     try:
                         reply = self.handler(req)
@@ -62,8 +82,6 @@ class WebClient:
                     (reply if isinstance(reply, Deferred) else completed(reply)).then(finish)
             except BlockingIOError:
                 pass
-            except HttpError as error:
-                self.writeBuff = ('HTTP/1.1 ' + error.status + '\r\nContent-Length: 0\r\n\r\n').encode()
             except (ValueError, UnicodeError):
                 self.writeBuff = b'HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n'
             except OSError:
@@ -89,7 +107,7 @@ class WebClient:
         if self.sock is not None:
             self.sock.close()
             self.sock = None
-        self.readBuff = self.writeBuff = b''
+        self.readBuff, self.writeBuff = bytearray(), b''
 
     def parseRequest(self, data):
         parts = data.split(b'\r\n\r\n', 1)
@@ -112,12 +130,15 @@ class WebClient:
         if b'transfer-encoding' in headers:
             raise ValueError('Chunked requests unsupported')
         size = int(headers.get(b'content-length', b'0'))
-        if size > SCHEMA['x-limits']['maxRequestBytes']:
-            raise HttpError('413 Payload Too Large')
+        offset = len(parts[0]) + 4
+        limit = SCHEMA['x-limits']['maxRequestBytes'] if is_rpc_path(path) else LEGACY_MAX_REQUEST_BYTES
+        if size > limit:
+            # Reply without reading the body, but with CORS headers for browsers.
+            return WebRequest(method.upper(), headers, b'', path, too_large=True), offset
         if size < 0:
             raise ValueError('Invalid body length')
-        offset = len(parts[0]) + 4
         if len(data) < offset + size:
+            self.expected = offset + size
             return None, 0
         return WebRequest(method.upper(), headers, data[offset:offset + size], path), offset + size
 
@@ -165,7 +186,13 @@ class WebServer:
             origin = req.headers.get(b'origin', b'').decode() or origin
             return response(None, empty=True)
         # Historical servers ignored the request target; only /api/v1 is reserved.
-        rpc = req.path.split(b'?', 1)[0].rstrip(b'/') == b'/api/v1'
+        rpc = is_rpc_path(req.path)
+        if getattr(req, 'too_large', False):
+            if rpc:
+                return response(None, '413 Payload Too Large', empty=True)
+            # Legacy clients commonly parse the body without checking the status.
+            return response(format_exception_reply(util.setting('apiVersion'), ValueError(
+                'request body exceeds {} bytes'.format(LEGACY_MAX_REQUEST_BYTES))), '413 Payload Too Large')
         if rpc and req.method != b'POST':
             return response(None, '405 Method Not Allowed', empty=True)
         try:

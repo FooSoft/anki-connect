@@ -125,8 +125,8 @@ actual HTTP origin, is exempt from the API key check, and never returns the key.
 
 JSON-RPC results and errors use HTTP 200, including parse errors. Transport
 rejections have empty bodies: 401 for an invalid key, 403 for a rejected origin,
-405 for a non-POST request, and 413 for an oversized body. Check the HTTP status
-before parsing JSON. OPTIONS replies support browser preflight for JSON and
+405 for a non-POST request, and 413 for an oversized body. Rejections carry CORS
+headers so browsers can read the status. Check the HTTP status before parsing JSON. OPTIONS replies support browser preflight for JSON and
 Authorization headers, including from origins awaiting permission. Preflight
 does not grant access: each POST still checks origin permission and authentication.
 
@@ -2104,6 +2104,8 @@ Reset cards as new using the native scheduler.
 ### `scheduling.setDueDate`
 
 Set due dates using Anki native days/range syntax.
+Unparseable `days`, such as `soon`, produce `invalidParams` item errors with
+Anki's message, and those cards are unchanged.
 
 **Scope:** collection. **Completion:** completed. **Undo:** `perItem`.
 

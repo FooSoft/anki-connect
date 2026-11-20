@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 
 from .protocol import ApiError, Deferred
-from .services import RATINGS, KINDS, PRESET_ENUMS, MEDIA_ILLEGAL_CHARACTERS, entity_id
+from .services import RATINGS, KINDS, PRESET_ENUMS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, entity_id
 
 
 def integer(value):
@@ -181,8 +181,19 @@ class Legacy:
     def s(self, method, **params):
         if self.service is None:
             self.service = self.runtime.service()
+        notes = [params['note']] if isinstance(params.get('note'), dict) else params.get('notes', [])
+        flags = [isinstance(note, dict) and note.get(LEGACY_SKIP_CLOZE) for note in notes]
+        if any(flags):
+            params = dict(params)
+            stripped = [{key: value for key, value in note.items() if key != LEGACY_SKIP_CLOZE} for note in notes]
+            params.update({'note': stripped[0]} if 'note' in params else {'notes': stripped})
         try:
-            return self.service.execute(method, self.runtime.dispatcher.params(method, params))
+            validated = self.runtime.dispatcher.params(method, params)
+            # Reattach legacy-only options after public schema validation.
+            for note, flag in zip([validated['note']] if 'note' in validated and any(flags) else validated.get('notes', []), flags):
+                if flag:
+                    note[LEGACY_SKIP_CLOZE] = True
+            return self.service.execute(method, validated)
         except ApiError as error:
             if error.kind == 'notFound':
                 # Resolve only on failure, so a missing entity keeps its legacy
@@ -264,6 +275,16 @@ class Legacy:
             if not cursor:
                 return result
 
+    def native_search(self, kind, query):
+        # Unlike paginated v1 searches, legacy results keep Anki's native order.
+        if self.service is None:
+            self.service = self.runtime.service()
+        col = self.service.col
+        try:
+            return [int(id) for id in (col.find_notes if kind == 'notes' else col.find_cards)(query)]
+        except Exception as error:
+            raise ApiError('invalidSearch', str(error)) from error
+
     def model(self, name=None, id=None):
         # Compatibility projections are snapshots, never a writable alternate service.
         if self.service is None:
@@ -298,6 +319,9 @@ class Legacy:
         duplicates = {'allow': options.get('allowDuplicate', False), 'scope': scope,
                       'includeChildren': scoped.get('checkChildren', False),
                       'acrossNoteTypes': scoped.get('checkAllModels', False)}
+        # The historical deck/all-model duplicate path checked only the first
+        # field, while the default path used Anki's full field check.
+        skip_cloze = scope == 'deck' or duplicates['acrossNoteTypes']
         if scope == 'deck':
             deck_name = scoped.get('deckName')
             duplicates['deck'] = self.ref(source['deckName'] if deck_name is None else deck_name)
@@ -314,6 +338,8 @@ class Legacy:
                 # Legacy creation lets Anki generate its fallback card. Rendering
                 # a blank template is not the same as a native add returning 0.
                 'rejectEmptyQuestions': False}
+        if skip_cloze:
+            data[LEGACY_SKIP_CLOZE] = True
         if pure:
             self.attachments(data['fields'], source, pure=True)
         return data
@@ -521,12 +547,19 @@ class Legacy:
                 value.then(translate)
                 value = pending
             def project(_):
-                return [] if p['query'] is None else [int(id) for id in self.all_pages('cards.search', query=p['query'])]
+                return [] if p['query'] is None else self.native_search('cards', p['query'])
             return value.map(project) if isinstance(value, Deferred) else project(value)
         if name in ('guiSelectNote', 'guiSelectCard'):
             if not gui.browser():
                 return False
-            call('browser.select', cardIds=[str(p.get('card', p.get('note')))])
+            try:
+                call('browser.select', cardIds=[str(p.get('card', p.get('note')))])
+            except Exception as error:
+                from anki.errors import NotFoundError
+                if not isinstance(error, NotFoundError) and getattr(error, 'kind', None) != 'notFound':
+                    raise
+                # Historically a missing card only cleared the selection.
+                call('browser.select', cardIds=[])
             return True
         if name == 'guiSelectedNotes':
             return [int(id) for id in call('browser.getSelection')['selectedNoteIds']]
@@ -542,6 +575,7 @@ class Legacy:
                 if note:
                     note.pop('duplicates', None)
                     note.pop('rejectEmptyQuestions', None)
+                    note.pop(LEGACY_SKIP_CLOZE, None)
                 return accepted('editors.openAdd', 0, lambda value: int(value['noteId'] or 0), **({'note': note} if note else {}))
             if note and any(p['note'].get(kind) for kind in ('audio', 'video', 'picture')):
                 return self.prepare_gui_media(note['fields'], p['note']).map(open_add)
@@ -726,7 +760,8 @@ class Legacy:
             return result
         if name == 'changeDeck':
             target = self.s('decks.create', name=p['deck'])
-            self.unwrap(self.s('cards.move', ids=self.ids(p['cards']), deck={'id': target['id']}))
+            # Historical bulk writes ignored card IDs that do not exist.
+            self.unwrap(self.s('cards.move', ids=self.ids(p['cards']), deck={'id': target['id']}), missing=True)
             return None
         if name == 'deleteDecks':
             if not p['cardsToo']:
@@ -904,7 +939,7 @@ class Legacy:
                    **({'noteIds': ids} if name == 'replaceTags' else {'allNotes': True}))
             return None
         if name in ('findNotes', 'findCards'):
-            return [] if p['query'] is None else [int(id) for id in self.all_pages('notes.search' if name == 'findNotes' else 'cards.search', query=p['query'])]
+            return [] if p['query'] is None else self.native_search('notes' if name == 'findNotes' else 'cards', p['query'])
         if name in ('notesInfo', 'cardsInfo', 'notesModTime', 'cardsModTime'):
             fields = p.get('fields') if name == 'cardsInfo' else None
             if fields is not None and (not isinstance(fields, list) or not all(isinstance(field, str) for field in fields)):
@@ -912,7 +947,7 @@ class Legacy:
             kind = 'notes' if name.startswith('notes') else 'cards'
             ids = p.get(kind)
             if name == 'notesInfo' and p['query'] is not None:
-                ids = self.all_pages('notes.search', query=p['query'])
+                ids = self.native_search('notes', p['query'])
             if ids is None:
                 raise ApiError('invalidParams', 'Must provide either "notes" or a "query"')
             result = []
@@ -934,7 +969,9 @@ class Legacy:
             self.unwrap(self.s('notes.delete', ids=self.ids(p['notes'])), missing=True)
             return None
         if name == 'removeEmptyNotes':
-            raise ApiError('compatibilityError', 'Use notes.findEmpty with explicit criteria, then notes.delete.')
+            # Historically this silently deleted every unused note type. Sync
+            # clients call it routinely, so it now succeeds without deleting.
+            return None
         if name == 'cardsToNotes':
             values = self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])), missing=True)
             return list(dict.fromkeys(int(value['noteId']) for value in values if value))
@@ -992,10 +1029,10 @@ class Legacy:
             return self.expert_card(p)
         if name in ('forgetCards', 'setDueDate', 'relearnCards', 'answerCards'):
             if name == 'forgetCards':
-                self.unwrap(self.s('scheduling.reset', cardIds=self.ids(p['cards'])))
+                self.unwrap(self.s('scheduling.reset', cardIds=self.ids(p['cards'])), missing=True)
                 return None
             if name == 'setDueDate':
-                self.unwrap(self.s('scheduling.setDueDate', cardIds=self.ids(p['cards']), days=p['days']))
+                self.unwrap(self.s('scheduling.setDueDate', cardIds=self.ids(p['cards']), days=p['days']), missing=True)
                 return True
             if name == 'relearnCards':
                 for id in p['cards']:
@@ -1005,17 +1042,19 @@ class Legacy:
                 answers = [{'cardId': id, 'ease': 1} for id in p['cards']]
             else:
                 answers = p['answers']
+            if any(answer['ease'] not in (1, 2, 3, 4) for answer in answers):
+                raise ApiError('invalidParams', 'Invalid ease.')
             result = []
             for answer in answers:
                 try:
-                    if answer['ease'] not in (1, 2, 3, 4):
-                        raise ApiError('invalidParams', 'Invalid ease.')
                     prediction = self.s('scheduling.predict', cardId=str(answer['cardId']))
                     self.s('scheduling.answer', cardId=str(answer['cardId']), rating=RATINGS[answer['ease'] - 1], stateToken=prediction['stateToken'])
                     result.append(True)
                 except Exception as error:
                     from anki.errors import NotFoundError
-                    if isinstance(error, NotFoundError) or isinstance(error, ApiError) and error.kind == 'notFound':
+                    # Missing and unanswerable cards fail individually, so one
+                    # suspended or on-screen card cannot abort a partial batch.
+                    if isinstance(error, NotFoundError) or isinstance(error, ApiError) and (error.kind == 'notFound' or name == 'answerCards' and error.kind == 'invalidState'):
                         result.append(False)
                     else:
                         raise

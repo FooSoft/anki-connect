@@ -311,6 +311,11 @@ def test_answer_many_and_filtered_home_history(native):
     call(service, 'scheduling.reset', cardIds=[note['cardIds'][0] for note in notes])
     call(service, 'scheduling.setDueDate', cardIds=[notes[0]['cardIds'][0]], days='2')
     call(service, 'scheduling.getDue', cardId=notes[0]['cardIds'][0])
+    before = service.col.get_card(int(notes[1]['cardIds'][0])).queue
+    # Unparseable days are a client error item, not an internal error.
+    outcome = call(service, 'scheduling.setDueDate', cardIds=[notes[1]['cardIds'][0]], days='soon')
+    assert outcome['items'][0]['error'] == ApiError('invalidParams', 'soon').record()
+    assert service.col.get_card(int(notes[1]['cardIds'][0])).queue == before
 
 
 def test_legacy_preset_changes_use_native_updates(native):
@@ -366,6 +371,7 @@ def admitted(native, monkeypatch):
     monkeypatch.setattr(aqt, 'mw', mw)
     monkeypatch.setattr(aqt.operations, 'on_op_finished', lambda mw, change, initiator: notifications.append(change))
     owner.runtime.schedule = timers.append
+    owner.runtime.schedule_later = timers.append
     owner.runtime.operations.schedule = timers.append
     owner.runtime.session
     def drain():

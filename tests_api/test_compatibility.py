@@ -124,6 +124,53 @@ def test_legacy_batch_duplicate_and_native_empty_question_fallback(native):
         {'type': 'emptyQuestions', 'message': 'All generated questions are empty.'}]
 
 
+@pytest.mark.parametrize('options', [{'duplicateScope': 'deck'},
+                                     {'duplicateScopeOptions': {'checkAllModels': True}}])
+def test_legacy_scoped_duplicate_checks_skip_native_cloze_validation(native, options):
+    # Saladict and Yomitan use these options. The historical first-field
+    # duplicate path never reported Anki's cloze-only validation failures.
+    owner, service = native
+    cloze = lambda text, extra='': {'modelName': 'Cloze', 'deckName': 'Default',
+                                    'fields': {'Text': text, 'Back Extra': extra}, 'options': options}
+    plain = cloze('no deletion')
+    assert old(native, 'canAddNoteWithErrorDetail', note=plain) == {'canAdd': True}
+    assert old(native, 'canAddNotes', notes=[plain]) == [True]
+    id = old(native, 'addNote', note=plain)
+    assert service.col.get_note(id).card_ids()
+    assert old(native, 'addNotes', notes=[cloze('another')])[0]
+    # Duplicate and empty first-field outcomes keep their legacy wording.
+    assert old(native, 'canAddNoteWithErrorDetail', note=cloze('no deletion')) == {
+        'canAdd': False, 'error': 'cannot create note because it is a duplicate'}
+    assert old(native, 'canAddNoteWithErrorDetail', note=cloze('')) == {
+        'canAdd': False, 'error': 'cannot create note because it is empty'}
+    # The default collection scope keeps Anki's complete field check.
+    default = {**cloze('default scope'), 'options': {}}
+    assert old(native, 'canAddNoteWithErrorDetail', note=default) == {
+        'canAdd': False, 'error': 'cannot create note for unknown reason'}
+    # The private option cannot be supplied through v1.
+    from plugin.services import LEGACY_SKIP_CLOZE
+    with pytest.raises(ApiError) as caught:
+        call(service, 'notes.validate', note={**note_input('v1'), LEGACY_SKIP_CLOZE: True})
+    assert caught.value.kind == 'invalidParams'
+
+
+def test_legacy_searches_keep_native_result_order(native):
+    # Raycast pages findCards results in the order returned; v1 sorts for cursors.
+    owner, service = native
+    old(native, 'createDeck', deck='Z')
+    first = old(native, 'addNote', note={**legacy_note('a'), 'deckName': 'Z'})
+    second = old(native, 'addNote', note=legacy_note('b'))
+    query = 'deck:Default or deck:Z'
+    cards = list(service.col.find_cards(query))
+    assert cards == sorted(cards, reverse=True)
+    assert old(native, 'findCards', query=query) == cards
+    assert old(native, 'findNotes', query=query) == list(service.col.find_notes(query)) == [second, first]
+    assert [note['noteId'] for note in old(native, 'notesInfo', query=query)] == [second, first]
+    with pytest.raises(ApiError) as caught:
+        old(native, 'findNotes', query='deck:(')
+    assert caught.value.kind == 'invalidSearch'
+
+
 @pytest.mark.parametrize('options,label', [
     ({'allowDuplicate': 'sometimes'}, 'allowDuplicate'),
     ({'duplicateScopeOptions': {'checkChildren': 'no children'}}, 'duplicateScopeOptions.checkChildren'),
@@ -491,8 +538,10 @@ def test_legacy_note_validation_updates_tags_and_deletion(native):
     old(native, 'deleteNotes', notes=[*ids, 999])
     old(native, 'clearUnusedTags')
     assert service.col.note_count() == 0 and old(native, 'getTags') == []
-    with pytest.raises(ApiError, match='explicit criteria'):
-        old(native, 'removeEmptyNotes')
+    # Obsidian-Anki-Sync calls this after every sync; it no longer deletes note types.
+    unused = len(service.col.models.all_names_and_ids())
+    assert old(native, 'removeEmptyNotes') is None
+    assert len(service.col.models.all_names_and_ids()) == unused
 
 
 def test_legacy_decks_configs_and_card_projections(native):
@@ -589,6 +638,36 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert old(native, 'getNumCardsReviewedToday') >= 1
     assert old(native, 'getNumCardsReviewedByDay')
     assert '<' in old(native, 'getCollectionStatsHTML')
+
+
+def test_legacy_card_batches_skip_missing_and_unanswerable_cards(native):
+    owner, service = native
+    old(native, 'createDeck', deck='Target')
+    cards = [service.col.get_note(old(native, 'addNote', note=legacy_note(front))).card_ids()[0]
+             for front in ('one', 'two', 'three')]
+    # Historical bulk writes ignored missing IDs instead of failing after writing.
+    assert old(native, 'changeDeck', cards=[cards[0], 999], deck='Target') is None
+    assert service.col.decks.name(service.col.get_card(cards[0]).did) == 'Target'
+    assert old(native, 'setDueDate', cards=[999, cards[1]], days='1') is True
+    assert service.col.get_card(cards[1]).queue == 2
+    with pytest.raises(ApiError, match='^soon$'):
+        old(native, 'setDueDate', cards=[cards[1]], days='soon')
+    assert old(native, 'forgetCards', cards=[cards[1], 999]) is None
+    assert service.col.get_card(cards[1]).type == 0
+    # One unanswerable card fails individually without aborting the batch.
+    old(native, 'suspend', cards=[cards[1]])
+    answers = [{'cardId': id, 'ease': 3} for id in cards]
+    assert old(native, 'answerCards', answers=answers) == [True, False, True]
+    assert [service.col.get_card(id).reps for id in cards] == [1, 0, 1]
+    # The card shown in the reviewer is left for the reviewer to answer.
+    owner.runtime.active_reviewer_card = cards[2]
+    assert old(native, 'answerCards', answers=[answers[0], answers[2]]) == [True, False]
+    assert [service.col.get_card(id).reps for id in cards] == [2, 0, 1]
+    owner.runtime.active_reviewer_card = None
+    # Invalid input is rejected before any card is answered.
+    with pytest.raises(ApiError, match='Invalid ease'):
+        old(native, 'answerCards', answers=[{'cardId': cards[0], 'ease': 3}, {'cardId': cards[2], 'ease': 5}])
+    assert [service.col.get_card(id).reps for id in cards] == [2, 0, 1]
 
 
 def test_legacy_media_and_packages(native, tmp_path):

@@ -118,6 +118,43 @@ def test_sync_respects_profile_media_setting(admitted, monkeypatch, requested, e
     assert not owner.runtime.lifecycle_active
 
 
+@pytest.mark.parametrize('failure', [None, 'network down'])
+def test_legacy_sync_replies_after_sync_and_queues_other_requests(admitted, monkeypatch, failure):
+    # ankimcp reports success from the reply; JL shows sync errors; yanki keeps going.
+    import aqt
+    from anki.sync import SyncAuth, SyncOutput
+
+    owner, service, drain, work, notifications = admitted
+    timers = owner.runtime.operations.schedule.__self__
+    syncs = []
+    def sync_collection(auth, media):
+        syncs.append(owner.runtime.lifecycle_active)
+        if failure:
+            raise Exception(failure)
+        return SyncOutput()
+    monkeypatch.setattr(service.col, 'sync_collection', sync_collection)
+    aqt.mw.pm.sync_auth = lambda: SyncAuth()
+    aqt.mw.pm.media_syncing_enabled = lambda: False
+    aqt.mw.pm.set_host_number = lambda value: None
+    aqt.mw._refresh_after_sync = lambda: None
+    aqt.mw.taskman.with_progress = aqt.mw.taskman.run_in_background
+    sync = owner.handler_async({'action': 'sync', 'version': 6})
+    # Sync starts on a later tick; neither new nor waiting requests may slip in first.
+    again = owner.handler_async({'action': 'sync', 'version': 6})
+    decks = owner.handler_async({'action': 'deckNames', 'version': 6})
+    version = owner.handler_async({'action': 'version', 'version': 6})
+    assert version.value == {'result': 6, 'error': None}
+    assert not owner.runtime.lifecycle_active and not work and len(timers) == 3
+    for _ in range(3):
+        timers.pop(0)()
+    assert owner.runtime.lifecycle_active and not (sync.done or again.done or decks.done)
+    drain()
+    expected = {'result': None, 'error': failure} if failure else {'result': None, 'error': None}
+    assert sync.value == again.value == expected and syncs == [True, True]
+    assert decks.value == {'result': ['Default'], 'error': None}
+    assert not owner.lifecycle_reserved and not owner.runtime.lifecycle_active
+
+
 def test_http_idle_timeout_tracks_progress_and_waits_for_accepted_work(monkeypatch):
     from plugin import web
 
@@ -265,10 +302,68 @@ def test_legacy_gui_admission_does_not_read_collection_during_native_work(admitt
     owner, service, drain, work, notifications = admitted
     pending = owner.runtime.dispatcher.invoke('decks.create', {'name': 'Queued'})
     calls = []
-    monkeypatch.setattr(owner.runtime.gui, 'execute', lambda *args, **kwargs: calls.append(args))
-    for action in ('guiCurrentCard', 'guiAddCards', 'reloadCollection'):
-        reply = owner.handler_async({'action': action, 'version': 6})
-        assert reply.done and reply.value['error'] == 'A collection operation is active.'
+    monkeypatch.setattr(owner.runtime.gui, 'execute', lambda *args, **kwargs: calls.append((args[0], pending.done)))
+    replies = [owner.handler_async({'action': action, 'version': 6})
+               for action in ('guiCurrentCard', 'guiAddCards', 'reloadCollection')]
+    # Legacy GUI actions wait for the active native work instead of failing.
+    assert not any(reply.done for reply in replies)
     assert not calls and len(work) == 1
     drain()
     assert pending.done and pending.error is None
+    assert all(reply.done for reply in replies)
+    assert calls and all(done for _, done in calls)
+
+
+@pytest.mark.parametrize('path,size,status', [
+    (b'/', 20 * 1048576, b'200 OK'),
+    (b'/', 128 * 1048576 + 1, b'413 Payload Too Large'),
+    (b'/api/v1', 16 * 1048576 + 1, b'413 Payload Too Large'),
+])
+def test_http_body_limits_stream_large_legacy_media_and_reply_with_cors(monkeypatch, path, size, status):
+    # asbplayer, Memento, and mokuro send base64 clips above v1's request limit.
+    import json
+    from plugin import util, web
+
+    monkeypatch.setattr(util, 'setting', lambda key: {**util.DEFAULT_CONFIG, 'apiKey': None}[key])
+    received = []
+    server = web.WebServer(lambda request: received.append(request) or completed(None),
+                           lambda request, context: pytest.fail('oversized RPC body was handled'))
+    envelope = b'{"action":"storeMediaFile","version":6,"params":{"filename":"clip.webm","data":"'
+    body = envelope + b'A' * (size - len(envelope) - 3) + b'"}}'
+    assert len(body) == size
+    incoming = bytearray(b'POST ' + path + b' HTTP/1.1\r\nOrigin: chrome-extension://asbplayer\r\n'
+                         b'Content-Length: ' + str(size).encode() + b'\r\n\r\n' + body)
+    def recv(limit):
+        # Every byte is already available, as with a fast local client.
+        if not incoming:
+            raise BlockingIOError
+        chunk = bytes(incoming[:limit])
+        del incoming[:limit]
+        return chunk
+    server_socket, peer = socket.socketpair()
+    server_socket.setblocking(False)
+    peer.send(b'!')  # Keeps the socket readable for select; recv is in memory.
+    transport = SimpleNamespace(fileno=server_socket.fileno, recv=recv,
+                                send=server_socket.send, close=server_socket.close)
+    client = web.WebClient(transport, server.handlerWrapper)
+    total = len(incoming)
+    try:
+        assert client.advance() and not received
+        if status == b'200 OK':
+            # A poll reads up to 16 MiB instead of one 64 KiB chunk per Qt timer tick.
+            assert total - len(incoming) == 16 * 1048576
+        while client.advance():
+            pass
+        reply = peer.recv(65536)
+        assert reply.startswith(b'HTTP/1.1 ' + status)
+        assert b'Access-Control-Allow-Origin: chrome-extension://asbplayer' in reply
+        if status == b'200 OK':
+            assert len(received) == 1 and received[0]['params']['data'] == body[len(envelope):-3].decode()
+        else:
+            assert not received
+            if path == b'/':
+                assert json.loads(reply.split(b'\r\n\r\n', 1)[1]) == {
+                    'result': None, 'error': 'request body exceeds 134217728 bytes'}
+    finally:
+        client.close()
+        peer.close()

@@ -48,6 +48,8 @@ class Runtime:
         from aqt.qt import QTimer
         self.owner = owner
         self.schedule = schedule or (lambda callback: QTimer.singleShot(0, callback))
+        # Polling delay for work that waits for active collection operations.
+        self.schedule_later = lambda callback: QTimer.singleShot(25, callback)
         self.operations = Operations(self.schedule)
         self.dispatcher = Dispatcher(self)
         self.gui = Gui(self)

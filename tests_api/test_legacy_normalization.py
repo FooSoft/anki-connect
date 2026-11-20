@@ -195,6 +195,102 @@ def test_normalized_ids_still_block_affected_editors(admitted, monkeypatch):
     assert service.col.get_note(other).tags == ['ok']
 
 
+def test_legacy_note_type_writes_only_block_editors_of_changed_fields(admitted, monkeypatch):
+    # logseq-anki-sync and Obsidian-Anki-Sync update templates on every sync,
+    # often while their own Browser preview remains open.
+    import aqt
+    owner, service, drain, work, _ = admitted
+    id = invoke(admitted, 'addNote', note=note())
+    card = service.col.get_note(id).card_ids()[0]
+    dialog = SimpleNamespace(editor=SimpleNamespace(note=service.col.get_note(id)))
+    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Browser': (None, dialog)})
+    model = invoke(admitted, 'createModel', modelName='Synced', inOrderFields=['Q', 'A'], css='.a{}',
+                   cardTemplates=[{'Name': 'One', 'Front': '{{Q}}', 'Back': '{{A}}'}])
+    for action, params in [
+            ('updateModelTemplates', {'model': {'name': 'Basic', 'templates': {'Card 1': {'Front': '{{Front}}!'}}}}),
+            ('updateModelStyling', {'model': {'name': 'Basic', 'css': '.card{}'}}),
+            ('modelTemplateAdd', {'modelName': 'Synced', 'template': {'Name': 'Two', 'Front': '{{A}}', 'Back': '{{Q}}'}}),
+            ('modelFieldSetFontSize', {'modelName': 'Basic', 'fieldName': 'Back', 'fontSize': 30}),
+            ('modelFieldAdd', {'modelName': 'Synced', 'fieldName': 'Extra'}),
+            ('setEaseFactors', {'cards': [card], 'easeFactors': [2600]}),
+            ('removeEmptyNotes', {})]:
+        assert invoke(admitted, action, **params) in (None, [True])
+    assert service.col.models.by_name('Basic')['tmpls'][0]['qfmt'] == '{{Front}}!'
+    assert [field['name'] for field in service.col.models.get(model['id'])['flds']] == ['Q', 'A', 'Extra']
+    assert service.col.models.by_name('Synced') is not None
+    # Field structure changes still conflict with editors of that note type.
+    for params in [{'modelName': 'Basic', 'fieldName': 'Extra'}, {'modelName': 'basic', 'fieldName': 'Extra'}]:
+        pending = owner.handler_async({'action': 'modelFieldAdd', 'version': 6, 'params': params})
+        drain()
+        assert pending.value['error'].startswith('Close the affected editor')
+        assert not work
+    assert len(service.col.models.by_name('Basic')['flds']) == 2
+    # Web editors do not expose their note type to Python.
+    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'NewAddCards': (None, SimpleNamespace(editor=SimpleNamespace(nid=None)))})
+    pending = owner.handler_async({'action': 'modelFieldAdd', 'version': 6, 'params': {'modelName': 'Synced', 'fieldName': 'More'}})
+    drain()
+    assert pending.value['error'].startswith('Close the affected editor')
+
+
+def test_legacy_writes_wait_for_open_editors_to_save(admitted, monkeypatch):
+    # Change notifications reload open editors from the collection, so typing
+    # not yet sent to Python would be lost to a template sync or a Yomitan add.
+    import aqt
+    import plugin
+    owner, service, drain, work, _ = admitted
+    saves = []
+    editor = SimpleNamespace(note=None, call_after_note_saved=lambda callback, keepFocus=False: saves.append((callback, keepFocus)))
+    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Browser': (None, SimpleNamespace(editor=editor)), 'AddCards': (None, None)})
+    for action, params in [('updateModelStyling', {'model': {'name': 'Basic', 'css': '.saved{}'}}),
+                           ('addNote', {'note': note()})]:
+        pending = owner.handler_async({'action': action, 'version': 6, 'params': params})
+        assert not pending.done and not work and len(saves) == 1 and saves[0][1] is True
+        saves.pop()[0]()
+        drain()
+        assert pending.value['error'] is None
+    assert service.col.models.by_name('Basic')['css'] == '.saved{}' and service.col.note_count() == 1
+    assert invoke(admitted, 'deckNames') == ['Default'] and not saves
+    monkeypatch.setattr(plugin, 'LEGACY_WAIT_SECONDS', 0)
+    pending = owner.handler_async({'action': 'addNote', 'version': 6, 'params': {'note': note('unsaved')}})
+    drain()
+    assert pending.value == {'result': None, 'error': 'An open editor did not save its note.'}
+    assert service.col.note_count() == 1
+
+
+def test_legacy_gui_actions_wait_for_collection_work(admitted, monkeypatch):
+    # mpvacious and GSM send guiBrowse "nid:1" while a previous write may still run.
+    import plugin
+    owner, service, drain, work, _ = admitted
+    id = invoke(admitted, 'addNote', note=note())
+    browsed = []
+    monkeypatch.setattr(owner.runtime.gui, 'execute', lambda method, params, **kwargs: browsed.append((method, params)) or {})
+    write = owner.handler_async({'action': 'updateNoteFields', 'version': 6, 'params': {
+        'note': {'id': id, 'fields': {'Front': 'updated'}}}})
+    browse = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': 'nid:1'}})
+    reload = owner.handler_async({'action': 'reloadCollection', 'version': 6})
+    assert owner.window()._background_op_count == 1 and not browsed
+    drain()
+    assert write.value == {'result': None, 'error': None}
+    assert browse.value == {'result': [], 'error': None}
+    assert reload.value == {'result': None, 'error': None}
+    assert [method for method, _ in browsed] == ['browser.open', 'collection.refresh']
+    # Browser results keep Anki's native order, like findCards.
+    invoke(admitted, 'createDeck', deck='Z')
+    invoke(admitted, 'addNote', note={**note('z'), 'deckName': 'Z'})
+    invoke(admitted, 'addNote', note=note('later'))  # Native order follows deck, not ID.
+    query = 'deck:Default or deck:Z'
+    browse = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': query}})
+    drain()
+    cards = list(service.col.find_cards(query))
+    assert cards != sorted(cards) and browse.value == {'result': cards, 'error': None}
+    # Work that outlasts the wait still fails instead of queueing indefinitely.
+    monkeypatch.setattr(plugin, 'LEGACY_WAIT_SECONDS', 0)
+    owner.window()._background_op_count = 1
+    late = owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': 'nid:1'}})
+    drain()
+    assert late.value == {'result': None, 'error': 'A collection operation is active.'}
+
+
 def test_normalized_nested_batches_keep_preflight_and_credentials(admitted, monkeypatch):
     owner, service, drain, work, _ = admitted
     monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', 'secret')

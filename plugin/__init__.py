@@ -37,6 +37,7 @@ if anki_version < required_anki_version:
 
 import inspect
 import json
+import time
 from aqt._macos_helper import macos_helper
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 from . import util, web
@@ -48,11 +49,30 @@ from .protocol import Deferred, completed
 from .web import format_success_reply, format_exception_reply
 
 
+# Legacy clients update note types on every sync, often while their own Browser
+# preview is open. Once open editors save, these writes leave nothing an editor
+# could overwrite: Anki itself permits template, styling, and card edits then.
+LEGACY_EDITOR_SAFE = frozenset((
+    'createModel', 'findAndReplaceInModels', 'updateModelStyling', 'updateModelTemplates',
+    'modelTemplateAdd', 'modelTemplateRemove', 'modelTemplateRename', 'modelTemplateReposition',
+    'modelFieldSetDescription', 'modelFieldSetFont', 'modelFieldSetFontSize',
+    'setEaseFactors', 'setSpecificValueOfCard', 'insertReviews', 'removeEmptyNotes'))
+# Legacy actions wait this long for active collection work before failing busy.
+LEGACY_WAIT_SECONDS = 30
+LEGACY_LIFECYCLE_EXEMPT = ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile')
+# Field edits change the shape of every note of a type; only its editors conflict.
+LEGACY_FIELD_EDITS = frozenset(('modelFieldAdd', 'modelFieldRemove', 'modelFieldRename', 'modelFieldReposition'))
+# Lifecycle actions start on a later tick; legacy admission is reserved until they finish.
+LEGACY_LIFECYCLE = ('sync', 'loadProfile')
+LEGACY_DIRECT = ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile', 'loadProfile', 'sync', 'reloadCollection')
+
+
 class AnkiConnect:
     """Compatibility facade; all actions translate to shared API services."""
     def __init__(self):
         self.log = None
         self.timer = None
+        self.lifecycle_reserved = 0
         self.runtime = Runtime(self)
         self.server = web.WebServer(self.handler_async, self.runtime.dispatcher.request)
 
@@ -122,12 +142,56 @@ class AnkiConnect:
         bound.apply_defaults()
         return name, Legacy.normalize_params(name, dict(bound.arguments))
 
+    @staticmethod
+    def waits_for_collection_work(name):
+        return (name.startswith('gui') and name != 'guiExitAnki') or name == 'reloadCollection'
+
+    def lifecycle_busy(self, name):
+        return (self.runtime.lifecycle_active or self.lifecycle_reserved > 0) and name not in LEGACY_LIFECYCLE_EXEMPT
+
+    def legacy_busy(self, name):
+        if self.lifecycle_busy(name):
+            return True
+        return self.waits_for_collection_work(name) and bool(getattr(self.window(), '_background_op_count', 0))
+
+    @staticmethod
+    def legacy_writes(name):
+        return any(target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite')
+                   for target in LEGACY_TARGETS.get(name, []))
+
+    def save_open_editors(self):
+        """Commit pending editor input before a write's change notification
+        makes open editors reload their notes from the collection."""
+        editors = [dialog.editor for _, dialog in aqt.dialogs._dialogs.values()
+                   if dialog is not None and callable(getattr(getattr(dialog, 'editor', None), 'call_after_note_saved', None))]
+        if not editors:
+            return None
+        pending = Deferred()
+        remaining = [len(editors)]
+        deadline = time.monotonic() + LEGACY_WAIT_SECONDS
+        def saved():
+            remaining[0] -= 1
+            if remaining[0] == 0:
+                pending.resolve(None)
+        def check():
+            if pending.done:
+                return
+            if time.monotonic() < deadline:
+                self.runtime.schedule_later(check)
+            else:
+                from .protocol import ApiError
+                pending.resolve(error=ApiError('busy', 'An open editor did not save its note.'))
+        for editor in editors:
+            editor.call_after_note_saved(saved, keepFocus=True)
+        if not pending.done:
+            self.runtime.schedule_later(check)
+        return pending
+
     def guard_legacy(self, name, params):
-        gui_action = name.startswith('gui') and name != 'guiExitAnki'
-        if (gui_action or name == 'reloadCollection') and getattr(self.window(), '_background_op_count', 0):
+        if self.waits_for_collection_work(name) and getattr(self.window(), '_background_op_count', 0):
             from .protocol import ApiError
             raise ApiError('busy', 'A collection operation is active.')
-        if self.runtime.lifecycle_active and name not in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile'):
+        if self.lifecycle_busy(name):
             from .protocol import ApiError
             raise ApiError('busy', 'Collection lifecycle operation is active.')
         # Editors are guarded by the existing note IDs a write names; new note objects have none.
@@ -138,6 +202,11 @@ class AnkiConnect:
         if note_id is not None:
             ids.append(str(note_id))
         converted = {'ids': ids, 'allNotes': name == 'replaceTagsInAllNotes'}
+        if name in LEGACY_EDITOR_SAFE:
+            return
+        if name in LEGACY_FIELD_EDITS:
+            self.runtime.gui.guard_note_type(params.get('modelName'))
+            return
         for target in LEGACY_TARGETS.get(name, []):
             if target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite'):
                 self.runtime.gui.guard(target, converted)
@@ -175,7 +244,7 @@ class AnkiConnect:
             reply.then(lambda source: self.logEvent('reply', source.value))
         return reply
 
-    def dispatch_legacy(self, request, barrier, depth):
+    def dispatch_legacy(self, request, barrier, depth, waited=False, saved=False):
         version = 4
         try:
             request = legacy_request(request)
@@ -186,7 +255,18 @@ class AnkiConnect:
             if name != 'requestPermission' and util.setting('apiKey') and request.get('key') != util.setting('apiKey'):
                 raise Exception('valid api key must be provided')
             name, params = self.resolve_action(name, request.get('params', {}))
+            if not waited and self.legacy_busy(name):
+                return self.after_collection_work(name, lambda: self.dispatch_legacy(request, barrier, depth, True, saved))
             self.guard_legacy(name, params)
+            direct = name.startswith('gui') or name in LEGACY_DIRECT
+            if not saved and name != 'multi' and not direct and self.legacy_writes(name):
+                saving = self.save_open_editors()
+                if saving is not None:
+                    # Saving lets other work run, so admission is checked again afterwards.
+                    reply = Deferred()
+                    saving.then(lambda source: reply.resolve(format_exception_reply(version, source.error)) if source.error else
+                                self.dispatch_legacy(request, barrier, depth, False, True).then(lambda final: reply.resolve(final.value)))
+                    return reply
             if name == 'multi':
                 actions = params['actions']
                 if depth == 0:
@@ -202,10 +282,13 @@ class AnkiConnect:
                     results.append(source.value)
                     self.runtime.schedule(lambda: step(index + 1))
                 step(0)
-            elif name.startswith('gui') or name in ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile', 'loadProfile', 'sync', 'reloadCollection'):
+            elif direct:
                 value = Legacy(self).call(name, params)
+                if isinstance(value, Accepted) and name in LEGACY_LIFECYCLE:
+                    self.reserve_lifecycle(value.pending)
+                # Historical sync replied after syncing, so standalone sync waits too.
                 def admitted(value):
-                    return value.pending.map(value.project) if isinstance(value, Accepted) and barrier else value.value if isinstance(value, Accepted) else value
+                    return value.pending.map(value.project) if isinstance(value, Accepted) and (barrier or name == 'sync') else value.value if isinstance(value, Accepted) else value
                 pending = value.map(admitted) if isinstance(value, Deferred) else completed(value).map(admitted)
             else:
                 pending = self.runtime.background(lambda service: Legacy(self, service).call(name, params))
@@ -214,6 +297,26 @@ class AnkiConnect:
             return reply
         except Exception as error:
             return completed(format_exception_reply(version, error))
+
+    def reserve_lifecycle(self, pending):
+        self.lifecycle_reserved += 1
+        def release(source):
+            self.lifecycle_reserved -= 1
+        pending.then(release)
+
+    def after_collection_work(self, name, retry):
+        """Queue a legacy action behind active collection or lifecycle work, as
+        historical synchronous calls could not interleave with earlier work."""
+        pending = Deferred()
+        deadline = time.monotonic() + LEGACY_WAIT_SECONDS
+        def check():
+            # Admission rechecks every guard once collection work has finished.
+            if self.legacy_busy(name) and time.monotonic() < deadline:
+                self.runtime.schedule_later(check)
+            else:
+                retry().then(lambda source: pending.resolve(source.value, source.error))
+        self.runtime.schedule_later(check)
+        return pending
 
     def permission(self, origin, allowed):
         results = {'permission': 'denied'}

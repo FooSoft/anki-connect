@@ -605,3 +605,22 @@ class Gui:
                 affected = bool(note_id) and (str(note_id) in ids or params.get('allNotes', False))
             if affected:
                 raise ApiError('editorConflict', 'Close the affected editor before this API write, even if its content is saved.')
+
+    def guard_note_type(self, name):
+        """Reject only editors that may show a note of the named note type."""
+        import aqt
+        for _, dialog in aqt.dialogs._dialogs.values():
+            if dialog is None or not hasattr(dialog, 'editor'):
+                continue
+            editor = dialog.editor
+            note = getattr(editor, 'note', None)
+            if note is not None:
+                try:
+                    affected = note.note_type()['name'].casefold() == str(name).casefold()
+                except Exception:
+                    affected = True
+            else:
+                # Web editors keep their note type in JavaScript; assume a conflict.
+                affected = not hasattr(editor, 'note') or getattr(editor, 'nid', None) is not None
+            if affected:
+                raise ApiError('editorConflict', 'Close the affected editor before this API write, even if its content is saved.')

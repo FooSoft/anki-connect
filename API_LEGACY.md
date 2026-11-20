@@ -157,16 +157,32 @@ now fails explicitly or follows corrected native behavior:
 
 - Arbitrary card database writes are restricted. Use supported flags, moves,
   scheduling commands, or validated metadata instead.
-- `removeEmptyNotes` returns a compatibility error. Use v1 `notes.findEmpty` with
-  an explicit criterion and delete specific note IDs after reviewing the result.
+- `removeEmptyNotes` succeeds without deleting anything. It historically deleted
+  every unused note type. Use v1 `notes.findEmpty` with an explicit criterion and
+  delete specific note IDs after reviewing the result.
 - Unsupported preset changes fail instead of being silently ignored.
-- Affected open editors must be closed before collection writes, even when saved.
+- Open editors showing an affected note must be closed before note writes, even
+  when saved. Field additions, removals, renames, and moves conflict only with
+  editors of that note type; other note-type, template, styling, and card
+  scheduling writes are not blocked by editors. Before any legacy write, open
+  editors save pending input, because the write's change notification makes them
+  reload their notes. An editor that does not save within 30 seconds fails the
+  write with `An open editor did not save its note.`
 - `relearnCards` performs real failed reviews and requires compatible review cards.
   It changes lapse counts and history.
 - Field and template names that Anki treats as repeats within a note type, such as
   `front` beside `Front`, fail instead of being saved with a `+` suffix. This affects
   `createModel`, `modelFieldAdd`, `modelFieldRename`, `modelTemplateAdd`, and
   `modelTemplateRename`; see [noteTypes.create](API_V1.md#notetypescreate) for the rules.
+
+Legacy requests arriving during collection lifecycle work, such as a sync,
+profile switch, or import, wait for it to finish, including a `sync` or
+`loadProfile` that has been accepted but not yet started; `gui*` actions and
+`reloadCollection` also wait for active collection work, including a previous
+request's write. After 30 seconds they fail with
+`Collection lifecycle operation is active.` or `A collection operation is active.`
+`version`, `requestPermission`, `apiReflect`, `getProfiles`, and
+`getActiveProfile` never wait.
 
 The action entries describe their results and completion timing. **Accepted**
 means work has started; later failure or cancellation is visible in Anki, rather
@@ -180,8 +196,10 @@ to children. It provides no database or media transaction. Profile switching is
 allowed; subsequent actions use the destination after a successful switch.
 Nesting is limited to 16 levels. Legacy batches have no action-count limit, so
 clients such as Obsidian_to_Anki can submit a whole vault's nested sync requests.
-The HTTP request size limit still applies; v1 batch limits do not apply to legacy
-`multi` requests.
+Legacy request bodies are limited to 128 MiB, which fits a 64 MiB media file in
+base64. API v1 requests remain limited to 16 MiB. Oversized requests receive HTTP
+413 with CORS headers; legacy replies also carry an `error` body. V1 batch limits
+do not apply to legacy `multi` requests.
 `guiExitAnki` must be the last executable item, including nested items.
 
 Each action below links to its v1 equivalent. Native tests cover both protocols;
@@ -219,7 +237,8 @@ or the collection (any other value). For deck scope,
 `duplicateScopeOptions.deckName` chooses the duplicate-check deck; when omitted
 or null, the creation deck is used. A named deck that does not exist cannot
 contain duplicates and is not created. `checkChildren` and `checkAllModels` default
-to false.
+to false. As historically, deck-scope and `checkAllModels` checks skip Anki's cloze
+validation, so cloze notes without a deletion are not rejected on those paths.
 
 The optional `audio`, `video`, and `picture` properties accept one media object or
 an array. Each object needs `filename` and a nonempty `data`, `path`, or `url`. When multiple sources are supplied, the first nonempty source wins in that order.
@@ -523,8 +542,8 @@ better performance.
 
 **Returns:** Numeric card ID array.
 
-Returns all matching IDs across internal pages and releases the search snapshot
-when complete.
+Returns all matching IDs in Anki's native search order, as historical clients that
+page through results expect. V1 searches sort IDs for cursor pagination.
 
 **Completion:** completed.
 
@@ -654,7 +673,7 @@ Forget cards, making the cards new again.
 
 **Parameters:** `forgetCards(cards)`
 
-**Returns:** null.
+**Returns:** null. Missing card IDs are ignored.
 
 **Completion:** completed.
 
@@ -706,11 +725,11 @@ Perform an Again answer on each supplied card using the native scheduler. All ca
 
 ### `answerCards`
 
-Answer cards using ease `1` (Again), `2` (Hard), `3` (Good), or `4` (Easy). Returns one boolean per answer. For the active GUI card, the answer side must be shown and native reviewer states are used.
+Answer cards using ease `1` (Again), `2` (Hard), `3` (Good), or `4` (Easy). Returns one boolean per answer. Cards that cannot be answered, such as missing, suspended, or buried cards or the card shown in the active reviewer, are false and stay unchanged.
 
 **Parameters:** `answerCards(answers)`
 
-**Returns:** Boolean array; missing cards are false; invalid ease/state produces legacy error.
+**Returns:** Boolean array; an invalid ease produces a legacy error before any card is answered.
 
 **Completion:** final answers.
 
@@ -745,7 +764,7 @@ Set native due dates using Anki’s days syntax: `0` means today, `1!` means tom
 
 **Parameters:** `setDueDate(cards, days)`
 
-**Returns:** true on successful completion; item failure becomes legacy error.
+**Returns:** true on successful completion. Missing card IDs are ignored; invalid `days` return Anki's native message.
 
 **Completion:** completed.
 
@@ -874,7 +893,7 @@ Moves cards with the given IDs to a different deck, creating the deck if it does
 
 **Parameters:** `changeDeck(cards, deck)`
 
-**Returns:** null; missing card item errors become a legacy error.
+**Returns:** null. Missing card IDs are ignored.
 
 **Completion:** completed.
 
@@ -1130,7 +1149,7 @@ Open the browser and optionally search with Anki syntax. `reorderCards` is an ob
 
 **Parameters:** `guiBrowse(query=None, reorderCards=None)`
 
-**Returns:** Numeric card IDs from the provided query after exhausting search pages.
+**Returns:** Numeric card IDs from the provided query in Anki's native search order.
 
 **Completion:** browser ready.
 
@@ -1164,7 +1183,7 @@ Returns `true` if the *Card Browser* is open, `false` otherwise.
 
 **Parameters:** `guiSelectCard(card)`
 
-**Returns:** Boolean; false if browser closed.
+**Returns:** Boolean; false if browser closed. A card that is missing or not in the current results clears the selection and returns true.
 
 **Completion:** selection final.
 
@@ -1619,7 +1638,7 @@ Select a card in an already open browser. Despite the historical name, `note` is
 
 **Parameters:** `guiSelectNote(note)`
 
-**Returns:** Boolean; false if browser closed.
+**Returns:** Boolean; false if browser closed. A card that is missing or not in the current results clears the selection and returns true.
 
 **Completion:** selection final.
 
@@ -1876,15 +1895,15 @@ List supported legacy actions. `scopes` currently supports `"actions"`. Omit `ac
 
 ### `sync`
 
-Start one coordinated AnkiWeb sync using the active profile’s credentials and media-sync setting. A standalone reply acknowledges acceptance; `multi` waits for completion.
+Run one coordinated AnkiWeb sync using the active profile’s credentials and media-sync setting. The reply is sent after the sync finishes, as historical versions did.
 
 **Parameters:** `sync()`
 
-**Returns:** null when accepted.
+**Returns:** null after a successful sync; sync failures and a cancelled full-sync choice produce a legacy error.
 
-**Completion:** accepted; multi awaits final.
+**Completion:** final.
 
-**Behavior:** one sync workflow; no preliminary blocking sync. Later failures are tracked internally, not returned retroactively.
+**Behavior:** one sync workflow; no preliminary blocking sync. If Anki requires a full sync, it asks the user to choose a direction before replying. Other legacy requests wait for the sync, then fail busy after 30 seconds.
 
 **v1 equivalent:** [collection.sync](API_V1.md#collectionsync).
 
@@ -3301,7 +3320,7 @@ Returns an array of note IDs for a given query. Query syntax is [documented here
 
 **Parameters:** `findNotes(query=None)`
 
-**Returns:** Array of numeric note IDs.
+**Returns:** Array of numeric note IDs in Anki's native search order.
 
 **Completion:** completed.
 
@@ -3402,15 +3421,15 @@ Deletes notes with the given ids. If a note has several cards associated with it
 
 ### `removeEmptyNotes`
 
-Return a compatibility error without deleting notes or unused note types. Use v1 `notes.findEmpty` with an explicit criterion, then delete reviewed IDs.
+Succeed without deleting notes or unused note types. Historical versions deleted every unused note type here, which sync clients called routinely. Use v1 `notes.findEmpty` with an explicit criterion, then delete reviewed IDs.
 
 **Parameters:** `removeEmptyNotes()`
 
-**Returns:** Legacy error.
+**Returns:** null.
 
 **Completion:** completed.
 
-**Behavior:** always compatibilityError; unused note types and notes remain intact.
+**Behavior:** no-op; unused note types and notes remain intact.
 
 **v1 equivalent:** [notes.findEmpty](API_V1.md#notesfindempty), [noteTypes.deleteUnused](API_V1.md#notetypesdeleteunused).
 

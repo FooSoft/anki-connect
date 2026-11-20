@@ -20,6 +20,9 @@ RATINGS = ('again', 'hard', 'good', 'easy')
 FILTERED_POSITION_OFFSET = 100000
 KINDS = ('learning', 'review', 'relearning', 'filtered', 'manual', 'rescheduled')
 # Preserve Anki's legacy filename filter without its deprecated stripIllegal API.
+# Internal legacy note option. Public v1 schemas reject it, so only the legacy
+# adapter can attach it after schema validation.
+LEGACY_SKIP_CLOZE = 'x-legacySkipClozeChecks'
 MEDIA_ILLEGAL_CHARACTERS = re.compile(r'[][><:"/?*^\\|\0\r\n]')
 FIELD_KEYS = {'fontFamily': 'font', 'fontSize': 'size', 'description': 'description',
               'sticky': 'sticky', 'rtl': 'rtl', 'plainText': 'plainText',
@@ -274,11 +277,14 @@ class Services:
             note=note._to_backend_note(), card_ord=template['ord'], template=to_json_bytes(template),
             fill_empty=False, partial_render=True).is_empty for template in templates)
 
-    def validation(self, note, deck, policy, reject_empty):
+    def validation(self, note, deck, policy, reject_empty, cloze_checks=True):
         result = int(note.fields_check())
         reasons = {1: 'emptyFirstField', 3: 'missingCloze', 4: 'notClozeNoteType', 5: 'notClozeField'}
         issues = []
-        if result in reasons:
+        if not cloze_checks and result in (3, 4, 5):
+            # Legacy deck/all-model duplicate checks never ran Anki's cloze checks.
+            pass
+        elif result in reasons:
             issues.append({'type': reasons[result], 'message': 'Anki field validation: ' + reasons[result]})
         elif result not in (0, 2):
             raise ApiError('unsupportedCapability', 'Unknown native field validation result.')
@@ -311,14 +317,16 @@ class Services:
 
     def notes_validate(self, note):
         native, deck = self.prepare_note(note)
-        return self.validation(native, deck, note.get('duplicates'), note.get('rejectEmptyQuestions', True))
+        return self.validation(native, deck, note.get('duplicates'), note.get('rejectEmptyQuestions', True),
+                               note.get(LEGACY_SKIP_CLOZE) is not True)
 
     def notes_validateMany(self, notes):
         return self.many(notes, self.notes_validate)
 
     def notes_create(self, **data):
         note, deck = self.prepare_note(data)
-        validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True))
+        validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True),
+                                     data.get(LEGACY_SKIP_CLOZE) is not True)
         if not validation['valid']:
             raise ApiError('validationFailed', 'Note cannot be created.', validation)
         self.change(self.col.add_note(note, deck['id']))
@@ -342,7 +350,8 @@ class Services:
         for index, data in enumerate(notes):
             try:
                 note, deck = self.prepare_note(data)
-                validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True))
+                validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True),
+                                             data.get(LEGACY_SKIP_CLOZE) is not True)
                 policy = data.get('duplicates', {})
                 if not policy.get('allow', False):
                     for old_note, old_deck in seen:
@@ -659,8 +668,12 @@ class Services:
 
     def scheduling_setDueDate(self, cardIds, days):
         def set_due(id):
+            from anki.errors import InvalidInput
             card = self.card(id)
-            self.change(self.col.sched.set_due_date([card.id], days, config_key=None))
+            try:
+                self.change(self.col.sched.set_due_date([card.id], days, config_key=None))
+            except InvalidInput as error:
+                raise ApiError('invalidParams', str(error)) from error
             return {'changed': True}
         return self.many(cardIds, set_due, True)
 

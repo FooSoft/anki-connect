@@ -62,8 +62,10 @@ Legacy `multi` waits for each final outcome, including nested batches. It prefli
 the full request tree for malformed containers, nesting depth and final exit
 ordering. Neither command form creates a transaction across items. Exit begins
 only after outstanding socket replies drain.
-Legacy batches preserve unbounded action counts for whole-vault Obsidian syncs;
-the HTTP request size limit still applies. The v1 batch count limit is separate.
+Legacy batches preserve unbounded action counts for whole-vault Obsidian syncs.
+Request bodies are limited to 128 MiB at the legacy endpoint, which fits base64
+media up to the 64 MiB media limit, and 16 MiB at `/api/v1`. Each poll reads
+available bytes in bulk. The v1 batch count limit is separate.
 Legacy envelopes and arguments are normalized before admission guards: harmless
 surplus parameters, null optional defaults, decimal strings, boolean spellings,
 and single-item lists are handled at the compatibility boundary. Note fields,
@@ -76,10 +78,18 @@ Sessions change on collection identity changes, profile unload, temporary collec
 close/full sync and adapter-controlled reopen. Tokens, cursors, editor registrations
 and custom editor history are invalidated. Collection calls pin their admission
 session and recheck it before execution; lifecycle transitions reject competing work.
-Queued GUI calls recheck active collection work when they start.
+Queued GUI calls recheck active collection work when they start. Legacy requests
+wait up to 30 seconds for lifecycle work, reserved from the admission of a legacy
+`sync` or `loadProfile` until it finishes, and legacy GUI actions also wait for
+active collection work, matching historical synchronous ordering. Standalone legacy
+`sync` replies after the sync finishes.
 
 Affected open editors conservatively block writes, including clean/saved editors
-and potentially pending webview changes. Close affected editors to proceed. Add
+and potentially pending webview changes. Close affected editors to proceed. Legacy
+note-type writes conflict only when field edits change a note type shown in an
+editor; template, styling, and card scheduling writes are not blocked by editors.
+Because change notifications reload open editors, legacy writes first ask each
+open editor to save through `call_after_note_saved` and recheck admission. Add
 drafts have explicit update methods and reject content replacement/type changes
 when a draft already contains unsaved content. This release does not claim fully
 synchronized dirty-state detection for every editor variant.

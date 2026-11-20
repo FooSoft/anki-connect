@@ -1069,6 +1069,7 @@
         "getNoteTags",
         "getTags",
         "notesModTime",
+        "removeEmptyNotes",
         "removeTags",
         "replaceTags",
         "replaceTagsInAllNotes",
@@ -1080,14 +1081,107 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
-      "case": "test_legacy_note_validation_updates_tags_and_deletion",
+      "case": "test_legacy_scoped_duplicate_checks_skip_native_cloze_validation",
       "layer": "legacy-forwarder",
-      "outcome": "failure",
+      "outcome": "success",
       "v1": [],
       "legacy": [
-        "removeEmptyNotes"
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail",
+        "canAddNotes"
       ],
-      "notes": "The action deliberately rejects implicit empty-note deletion with compatibilityError; asserts that documented rejection."
+      "notes": "Deck-scope and checkAllModels duplicate checks create real cloze notes without deletions, as Saladict and Yomitan expect; duplicate and empty wording and default-scope native validation are asserted, and v1 rejects the private flag."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_searches_keep_native_result_order",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "findCards",
+        "findNotes",
+        "notesInfo"
+      ],
+      "notes": "Legacy searches return Anki native search order across decks; invalid searches still fail with invalidSearch."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_card_batches_skip_missing_and_unanswerable_cards",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "answerCards",
+        "changeDeck",
+        "forgetCards",
+        "setDueDate",
+        "suspend"
+      ],
+      "notes": "Missing card IDs are ignored with native effects on present cards; suspended cards and the active reviewer card answer false without aborting the batch; invalid ease and days fail before scheduling changes."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_legacy_note_type_writes_only_block_editors_of_changed_fields",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "modelFieldAdd",
+        "updateModelTemplates"
+      ],
+      "notes": "Template writes proceed with unrelated editors open; field edits conflict only with editors of the changed note type or web editors with unknown types."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_legacy_writes_wait_for_open_editors_to_save",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "deckNames",
+        "updateModelStyling"
+      ],
+      "notes": "Writes run only after every open editor's save callback; reads do not wait; an editor that never saves fails the write busy without effects."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_legacy_gui_actions_wait_for_collection_work",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "guiBrowse",
+        "reloadCollection",
+        "updateNoteFields"
+      ],
+      "notes": "GUI actions and reloadCollection wait for a preceding native write, then execute; guiBrowse returns native search order; work outlasting the wait still fails busy."
+    },
+    {
+      "source": "tests_api/test_boundaries.py",
+      "case": "test_legacy_sync_replies_after_sync_and_queues_other_requests",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "deckNames",
+        "sync",
+        "version"
+      ],
+      "notes": "Controlled collection sync without network: the standalone reply waits for completion and reports sync failures; an accepted sync reserves the lifecycle before its asynchronous start, so a second sync and collection reads wait instead of failing busy or running first, while version replies immediately."
+    },
+    {
+      "source": "tests_api/test_boundaries.py",
+      "case": "test_http_body_limits_stream_large_legacy_media_and_reply_with_cors",
+      "layer": "http-gui",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "storeMediaFile"
+      ],
+      "notes": "Socket transport accepts a 20 MiB legacy media body read in bulk; oversized legacy and v1 bodies receive 413 with CORS headers. The handler is controlled; native media storage is not exercised."
     },
     {
       "source": "tests_api/test_compatibility.py",
@@ -1291,9 +1385,10 @@
         "editors.openNote"
       ],
       "legacy": [
-        "guiEditNote"
+        "guiEditNote",
+        "updateModelStyling"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. A legacy styling write first saves unsent custom-editor webview input, which survives the editor reload. Silent-card audio checks call plumbing only; audible output remains deferred."
     },
     {
       "source": "tools/smoke_gui.py",

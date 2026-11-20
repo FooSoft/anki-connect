@@ -239,6 +239,10 @@ try:
         assert old('guiSelectNote', note=int(selected_card))
         assert call('browser.getSelection')['selectedNoteIds'] == [note['noteId']]
         assert call('browser.getSelection')['selectedCardIds'] == [selected_card]
+        # Historical selection of a missing card clears the selection and succeeds.
+        assert old('guiSelectCard', card=999) is True
+        assert call('browser.getSelection')['selectedCardIds'] == []
+        assert old('guiSelectNote', note=int(selected_card))
         print('PASS browser search/selection', flush=True)
         call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Second GUI question'})
         browser = owner.runtime.gui.browser()
@@ -405,6 +409,28 @@ try:
         assert old('guiEditNote', http_v2=True, note=int(note['noteId'])) is None
         assert owner.runtime.gui.editors
         print('PASS custom editor save', flush=True)
+        # Note-type writes reload open editors; the legacy facade saves them first.
+        dialog.editor.web.eval('setFields(["Front", "Back"], ["Unsaved GUI question", "GUI answer"]);')
+        name = aqt.mw.col.get_note(int(note['noteId'])).note_type()['name']
+        assert old('updateModelStyling', model={'name': name, 'css': '.card { color: navy; }'}) is None
+        assert aqt.mw.col.get_note(int(note['noteId']))['Front'] == 'Unsaved GUI question'
+        assert aqt.mw.col.models.by_name(name)['css'] == '.card { color: navy; }'
+        wait_until(lambda: aqt.mw._background_op_count == 0)
+        assert dialog.editor.note['Front'] == 'Unsaved GUI question'
+        executed = []
+        def record_op(changes, handler):
+            executed.append(handler)
+        aqt.gui_hooks.operation_did_execute.append(record_op)
+        mod = aqt.mw.col.get_note(int(note['noteId'])).mod
+        try:
+            assert old('updateModelStyling', model={'name': name, 'css': '.card { color: teal; }'}) is None
+            wait_until(lambda: aqt.mw._background_op_count == 0)
+        finally:
+            aqt.gui_hooks.operation_did_execute.remove(record_op)
+        # A clean editor's save is a no-op rather than an extra note update.
+        assert aqt.mw.col.get_note(int(note['noteId'])).mod == mod
+        assert dialog.editor not in executed, executed
+        print('PASS legacy note-type write saves open editor first', flush=True)
         aqt.dialogs.closeAll(onsuccess=lambda: None)
         wait_until(aqt.dialogs.allClosed)
     if scenario == 'reviewer':
