@@ -102,7 +102,7 @@ def test_legacy_note_errors_keep_client_compatible_wording(native, failure, mess
         assert str(caught.value) == 'Note cannot be created.'
 
 
-def test_legacy_batch_duplicate_and_native_empty_question_fallback(native):
+def test_legacy_batch_duplicate_details_and_v1_empty_question_policy(native):
     owner, service = native
     with pytest.raises(ApiError) as caught:
         old(native, 'addNotes', notes=[legacy_note('batch'), legacy_note('batch')])
@@ -111,14 +111,7 @@ def test_legacy_batch_duplicate_and_native_empty_question_fallback(native):
     model = service.col.models.by_name('Basic')
     model['tmpls'][0]['qfmt'] = '{{Back}}'
     service.col.models.save(model)
-    source = legacy_note('nonempty first field')
-    source['fields']['Back'] = ''
-    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': True}
-    id = old(native, 'addNote', note=source)
-    assert type(id) is int and service.col.note_count() == 1
-    assert service.col.get_note(id).card_ids()
-    assert service.empty_questions(service.col.get_note(id))
-    # v1 retains its explicit question-render validation policy.
+    # Legacy creation falls back to a card (test_yomitan); v1 keeps explicit validation.
     probe = {**note_input('different first field'), 'fields': {'Front': 'different', 'Back': ''}}
     assert call(service, 'notes.validate', note=probe)['issues'] == [
         {'type': 'emptyQuestions', 'message': 'All generated questions are empty.'}]
@@ -816,10 +809,11 @@ def test_legacy_model_conversion_maps_lone_template_by_position(native):
     assert len(service.col.get_note(both).card_ids()) == 2
 
 
-@pytest.mark.parametrize('tags', [['', 'Pharmacy', 'ObsidianAnkiSync', 'replaceblock'], ['']])
-def test_legacy_empty_tags_creation_and_updates(native, tags):
+def test_legacy_empty_tags_creation_and_tag_edits(native):
+    # Tag updates through updateNote/updateNoteTags/updateNoteModel: test_legacy_normalization.
     import copy
     owner, service = native
+    tags = ['', 'Pharmacy', 'ObsidianAnkiSync', 'replaceblock']
     expected = set(tags) - {''}
     source = {**legacy_note('empty tags'), 'tags': tags, 'options': {'allowDuplicate': True}}
     original = copy.deepcopy(source)
@@ -830,16 +824,6 @@ def test_legacy_empty_tags_creation_and_updates(native, tags):
     for id in ids:
         assert set(service.col.get_note(id).tags) == expected
     id = ids[0]
-    for action, params in [
-        ('updateNote', {'note': {'id': id, 'tags': tags}}),
-        ('updateNoteTags', {'note': id, 'tags': tags}),
-        ('updateNoteModel', {'note': {'id': id, 'modelName': 'Basic', 'fields': {'Front': 'updated'}, 'tags': tags}}),
-    ]:
-        service.col.tags.bulk_add([id], 'old')
-        before = copy.deepcopy(params)
-        assert old(native, action, **params) is None
-        assert params == before
-        assert set(service.col.get_note(id).tags) == expected
     assert old(native, 'addTags', notes=[id], tags=['', 'added']) is None
     assert set(service.col.get_note(id).tags) == expected | {'added'}
     assert old(native, 'removeTags', notes=[id], tags=['', 'added']) is None

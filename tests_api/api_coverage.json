@@ -211,7 +211,7 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
-      "case": "test_legacy_empty_tags_creation_and_updates",
+      "case": "test_legacy_empty_tags_creation_and_tag_edits",
       "layer": "legacy-forwarder",
       "outcome": "success",
       "v1": [],
@@ -220,13 +220,11 @@
         "addNotes",
         "canAddNoteWithErrorDetail",
         "canAddNotes",
-        "updateNote",
         "updateNoteTags",
-        "updateNoteModel",
         "addTags",
         "removeTags"
       ],
-      "notes": "Real disposable collection; mixed and all-empty tag lists exercise eligibility, creation, replacement, addition and removal. Asserts native persisted tags, unchanged input, rejection of non-string tags and strict v1 validation."
+      "notes": "Real disposable collection; mixed empty tag lists exercise eligibility, creation, addition and removal. Asserts native persisted tags, unchanged input, rejection of non-string tags and strict v1 validation."
     },
     {
       "source": "tests_api/test_obsidian.py",
@@ -488,22 +486,6 @@
       ],
       "legacy": [],
       "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
-    },
-    {
-      "source": "tests_api/test_runtime.py",
-      "case": "test_legacy_forwards",
-      "layer": "legacy-forwarder",
-      "outcome": "success",
-      "v1": [],
-      "legacy": [
-        "addNote",
-        "canAddNote",
-        "cardsInfo",
-        "createDeck",
-        "findCards",
-        "notesInfo"
-      ],
-      "notes": "Calls Legacy.call directly with a real collection; bypasses HTTP and the public legacy dispatcher."
     },
     {
       "source": "tests_api/test_runtime.py",
@@ -895,17 +877,6 @@
       ],
       "legacy": [],
       "notes": "Invalid params and ignored notification; runtime invocation is not reached."
-    },
-    {
-      "source": "tests_api/test_runtime.py",
-      "case": "test_http_routing_auth_cors_and_notifications",
-      "layer": "validation-only",
-      "outcome": "not-executed",
-      "v1": [
-        "collection.get"
-      ],
-      "legacy": [],
-      "notes": "HTTP auth/CORS/notification checks with fake dispatch callback; collection.get implementation is not executed."
     },
     {
       "source": "tests_api/test_runtime.py",
@@ -1604,7 +1575,7 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
-      "case": "test_legacy_batch_duplicate_and_native_empty_question_fallback",
+      "case": "test_legacy_batch_duplicate_details_and_v1_empty_question_policy",
       "layer": "legacy-forwarder",
       "outcome": "failure",
       "v1": [
@@ -1913,18 +1884,6 @@
         "setEaseFactors"
       ],
       "notes": "Disposable native collection with controlled admission; checks historical attachment error embedding, media source precedence/collision behavior, or ordered partial scheduling effects. No external network or GUI execution."
-    },
-    {
-      "source": "tests_api/test_compatibility.py",
-      "case": "test_legacy_batch_duplicate_and_native_empty_question_fallback",
-      "layer": "legacy-forwarder",
-      "outcome": "success",
-      "v1": [],
-      "legacy": [
-        "addNote",
-        "canAddNoteWithErrorDetail"
-      ],
-      "notes": "Legacy nonempty-first-field notes with blank question templates retain native fallback cards. Native card persistence and rendered emptiness asserted; HTTP and admission bypassed."
     },
     {
       "source": "tests_api/test_yomitan.py",

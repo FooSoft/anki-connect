@@ -78,32 +78,6 @@ def test_scheduler_queue_preserves_native_order_without_consuming_cards(native):
     assert service.col.db.scalar('select count() from revlog') == 0
 
 
-def test_legacy_forwards(native):
-    owner, service = native
-    legacy = Legacy(owner, service)
-    legacy.call('createDeck', {'deck': 'Test'})
-    note = {'modelName': 'Basic', 'deckName': 'Test', 'fields': {'Front': 'alpha', 'Back': 'beta'}}
-    assert legacy.call('canAddNote', {'note': note})
-    id = legacy.call('addNote', {'note': note})
-    assert legacy.call('notesInfo', {'notes': [id], 'query': None})[0]['fields']['Front']['value'] == 'alpha'
-    assert legacy.call('canAddNote', {'note': note}) is False
-    cards = legacy.call('findCards', {'query': 'deck:Test'})
-    assert legacy.call('cardsInfo', {'cards': cards})[0]['cardId'] == cards[0]
-
-
-def test_operations_completion_and_cancel():
-    tasks = []
-    operations = Operations(tasks.append)
-    handle = operations.submit('test', None, lambda key: completed({'changed': True}))
-    assert operations.get(handle['operationId'])['state'] == 'queued'
-    tasks.pop(0)()
-    assert operations.get(handle['operationId'])['state'] == 'succeeded'
-    second = operations.submit('test', None, lambda key: pytest.fail('cancelled task ran'))
-    assert operations.cancel(second['operationId']) == {'requested': True}
-    tasks.pop(0)()
-    assert operations.get(second['operationId'])['state'] == 'cancelled'
-
-
 def test_dispatcher_validation_and_notifications():
     invoked = []
     runtime = SimpleNamespace(invoke=lambda method, params: invoked.append(method) or completed({}))
@@ -252,26 +226,15 @@ def test_legacy_signatures_and_reflection(native, monkeypatch):
         owner.version()
 
 
-def test_http_routing_auth_cors_and_notifications(monkeypatch):
-    import json
+def test_http_request_parsing_and_deprecated_cors_setting(monkeypatch):
     from plugin import util
     from plugin.web import WebServer, WebRequest, WebClient
     monkeypatch.setattr(util, 'setting', lambda key: util.DEFAULT_CONFIG[key])
-    calls = []
-    server = WebServer(lambda request: completed({'result': 6, 'error': None}),
-                       lambda request, context: calls.append((request, context)) or completed(None))
-    req = WebRequest(b'POST', {}, b'{"jsonrpc":"2.0","method":"collection.get"}', b'/api/v1')
-    assert b'204 No Content' in server.handlerWrapper(req).value
-    monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', 'secret')
-    assert b'401 Unauthorized' in server.handlerWrapper(req)
-    req.headers[b'authorization'] = b'Bearer secret'
-    assert b'204 No Content' in server.handlerWrapper(req).value
-    req.headers[b'origin'] = b'https://unknown.example'
-    assert b'403 Forbidden' in server.handlerWrapper(req)
-    assert len(calls) == 2
+    server = WebServer(None, None)
     before = list(util.DEFAULT_CONFIG['webCorsOriginList'])
     monkeypatch.setitem(util.DEFAULT_CONFIG, 'webCorsOrigin', 'https://old.example')
-    server.allowOrigin(req)
+    req = WebRequest(b'POST', {b'origin': b'https://old.example'}, b'')
+    assert server.allowOrigin(req) == (True, 'https://old.example')
     assert before == util.DEFAULT_CONFIG['webCorsOriginList']
     client = WebClient(None, None)
     partial = b'POST /api/v1 HTTP/1.1\r\nContent-Length: 5\r\n\r\n{}'

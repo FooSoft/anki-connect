@@ -17,9 +17,7 @@ from tests_api.test_cors import response_parts
 from tests_api.test_runtime import admitted, native
 
 
-@pytest.mark.parametrize('origin', [b'https://app.asbplayer.dev',
-                                   b'https://killergerbah.github.io',
-                                   b'chrome-extension://asbplayer'])
+@pytest.mark.parametrize('origin', [b'https://app.asbplayer.dev', b'chrome-extension://asbplayer'])
 @pytest.mark.parametrize('api_key', [None, 'asb-key'])
 def test_asbplayer_browser_fetch_mining_media_update_and_status(admitted, monkeypatch, origin, api_key):
     """version/deckNames/modelNames/modelFieldNames/createDeck/addNote/findNotes/

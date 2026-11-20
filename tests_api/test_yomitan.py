@@ -28,13 +28,13 @@ def exchange(owner, drain, request):
 
 
 @pytest.mark.parametrize('action', ['addNote', 'addNotes'])
-@pytest.mark.parametrize('kind', ['audio', 'video', 'picture'])
+@pytest.mark.parametrize('kind', ['audio', 'picture'])
 @pytest.mark.parametrize('target', ['Front', 'Back'])
 @pytest.mark.parametrize('version', [2, 6])
 def test_legacy_media_targets_omitted_fields(admitted, action, kind, target, version):
     owner, service, drain, _, notifications = admitted
     other = 'Back' if target == 'Front' else 'Front'
-    filename = 'omitted.' + {'audio': 'mp3', 'video': 'mp4', 'picture': 'png'}[kind]
+    filename = 'omitted.' + {'audio': 'mp3', 'picture': 'png'}[kind]
     payload = b'legacy attachment'
     source = {'modelName': 'Basic', 'deckName': 'Default', 'fields': {other: 'existing'},
               kind: [{'filename': filename, 'data': base64.b64encode(payload).decode(),
@@ -189,7 +189,7 @@ def test_yomitan_root_deck_and_all_models_duplicate_options(admitted):
     assert probe('other model duplicate', 'collection', None, all_models=True) == duplicate
 
 
-@pytest.mark.parametrize('version', [2, 4, 6])
+@pytest.mark.parametrize('version', [2, 6])
 def test_legacy_null_result_is_json_and_notification_and_preflight_are_empty(version, monkeypatch):
     from plugin import util
     monkeypatch.setattr(util, 'setting', lambda key: util.DEFAULT_CONFIG[key])

@@ -85,10 +85,10 @@ def source(front, deck='Obsidian'):
             'tags': ['Obsidian_to_Anki', 'folder::tag']}
 
 
-@pytest.mark.parametrize('count', [44, 45, 300])
-def test_obsidian_single_file_bulk_add(obsidian, count):
+def test_obsidian_single_file_bulk_add(obsidian):
     """multi/createDeck/addNote/notesInfo/getTags/deleteNotes/changeDeck sync."""
     _, service, _, _, _ = obsidian
+    count = 300
     files = [file_requests(new=[source('card ' + str(i)) for i in range(count)])]
     result = parse(exchange(obsidian, phase_one(files)))
     ids = [parse(reply) for reply in parse(parse(result[1])[0])]

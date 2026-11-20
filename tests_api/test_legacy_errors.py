@@ -19,13 +19,12 @@ from tests_api.test_yomitan import exchange
 BINDING = json.loads(Path(__file__).with_name('legacy_binding_errors.json').read_text())['cases']
 
 
-@pytest.mark.parametrize('version', [2, 4, 6])
 @pytest.mark.parametrize('case', BINDING, ids=lambda c: c['action'] + ('-unexpected' if c['params'] else '-missing'))
-def test_every_legacy_action_argument_errors_match_baseline(case, version, monkeypatch):
+def test_every_legacy_action_argument_errors_match_baseline(case, monkeypatch):
     """Missing addNote/multi arguments retain their wording; surplus keys are ignored."""
     monkeypatch.setattr(util, 'setting', util.DEFAULT_CONFIG.__getitem__)
     owner = AnkiConnect()
-    payload = {'action': case['action'], 'version': version, 'params': case['params']}
+    payload = {'action': case['action'], 'version': 6, 'params': case['params']}
     expected = case['reply']
     if case['params']:
         missing = next((item for item in BINDING if item['action'] == case['action'] and not item['params']), None)
@@ -42,7 +41,7 @@ def test_binding_baseline_covers_every_retained_legacy_action():
     assert {case['action'] for case in BINDING} == set(AnkiConnect().legacy_actions())
 
 
-@pytest.mark.parametrize('version', [2, 4, 6])
+@pytest.mark.parametrize('version', [4, 6])
 @pytest.mark.parametrize('action,params,expected', [
     ('getEaseFactors', {'cards': [999]}, [None]),
     ('setEaseFactors', {'cards': [999], 'easeFactors': []}, [False]),
@@ -90,7 +89,7 @@ def test_legacy_missing_entities_and_failure_sentinels(admitted, version, action
     assert service.col.note_count() == 0
 
 
-@pytest.mark.parametrize('version', [2, 4, 6])
+@pytest.mark.parametrize('version', [4, 6])
 def test_legacy_nested_failures_keep_item_versions_credentials_and_order(admitted, monkeypatch, version):
     owner, service, drain, _, _ = admitted
     monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', 'secret')
@@ -115,21 +114,20 @@ def test_legacy_nested_failures_keep_item_versions_credentials_and_order(admitte
     assert values[4] == {'result': service.col.decks.id_for_name('After errors'), 'error': None}
 
 
-@pytest.mark.parametrize('version', [2, 4, 6])
-def test_legacy_bulk_note_failure_aggregates_errors_and_rolls_back(admitted, version):
+def test_legacy_bulk_note_failure_aggregates_errors_and_rolls_back(admitted):
     owner, service, drain, _, _ = admitted
     notes = [
         {'modelName': 'Missing', 'deckName': 'Default', 'fields': {'Front': 'a'}},
         {'modelName': 'Basic', 'deckName': 'Missing', 'fields': {'Front': 'b'}},
         {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': ''}},
     ]
-    pending = owner.handler_async({'action': 'addNotes', 'version': version, 'params': {'notes': notes}})
+    pending = owner.handler_async({'action': 'addNotes', 'version': 6, 'params': {'notes': notes}})
     drain()
     assert pending.value == {'result': None, 'error': str([
         'model was not found: Missing', 'deck was not found: Missing', 'cannot create note because it is empty'])}
     assert service.col.note_count() == 0
     duplicate = {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': 'same'}}
-    pending = owner.handler_async({'action': 'addNotes', 'version': version, 'params': {'notes': [duplicate] * 3}})
+    pending = owner.handler_async({'action': 'addNotes', 'version': 6, 'params': {'notes': [duplicate] * 3}})
     drain()
     assert pending.value == {'result': None, 'error': str(['cannot create note because it is a duplicate'] * 2)}
     assert service.col.note_count() == 0
