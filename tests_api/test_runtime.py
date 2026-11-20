@@ -6,7 +6,7 @@ from anki.collection import Collection
 from plugin import AnkiConnect
 from plugin.contract import SCHEMA
 from plugin.protocol import Dispatcher, ApiError, Operations, completed
-from plugin.services import Services
+from plugin.services import Services, structure_name_key
 from plugin.legacy import Legacy
 
 
@@ -710,3 +710,35 @@ def test_note_type_names_differing_only_in_case_are_duplicates(native):
     renamed = call(service, 'noteTypes.editStructure', noteType={'name': 'Basic'},
                    edits=[{'op': 'updateField', 'name': 'Back', 'patch': {'name': 'BACK'}}])
     assert [field['name'] for field in renamed['fields']] == ['Front', 'BACK']
+
+
+def test_note_type_name_identity_matches_anki(native):
+    # Anki saves a repeated name with "+" appended instead of failing.
+    owner, service = native
+    models = service.col.models
+    cases = [(True, 'Front', 'front'), (True, 'Maße', 'MASSE'), (True, '\u00e9', 'e\u0301'),
+             (True, 'Front', ' Front\u00a0'), (True, 'Front', 'Fr:o{n}t"'), (True, 'Front', '# ^/Front'),
+             (True, 'Front', 'Front#'), (True, 'Front', 'Fr ont'), (True, '\u0130', 'i'),
+             (False, 'Card', 'card'), (False, '\u00e9', 'e\u0301'), (False, 'Card', 'Card '), (False, 'Card', 'Ca:rd')]
+    for index, (is_field, first, second) in enumerate(cases):
+        model = models.new('Identity ' + str(index))
+        for name in [first, second] if is_field else ['Z']:
+            models.add_field(model, models.new_field(name))
+        for position, name in enumerate(['Z'] if is_field else [first, second]):
+            template = models.new_template(name)
+            template['qfmt'], template['afmt'] = ('{{Z}}' if is_field else '{{Z}}' + str(position)), '{{FrontSide}}'
+            models.add_template(model, template)
+        if is_field:
+            models.add_field(model, models.new_field('Z'))
+        saved = models.get(models.add_dict(model).id)['flds' if is_field else 'tmpls']
+        anki_repeats = saved[1]['name'].endswith('+')
+        assert anki_repeats == (structure_name_key(first, is_field) == structure_name_key(second, is_field)), (first, second)
+    for edit, message in [({'op': 'addField', 'field': {'name': ' #back'}}, 'Duplicate field name: " #back" is the same as "Back" in Anki.'),
+                          ({'op': 'removeTemplate', 'name': 'Card 1'}, 'A note type must keep at least one template.')]:
+        with pytest.raises(ApiError) as error:
+            call(service, 'noteTypes.editStructure', noteType={'name': 'Basic'}, edits=[edit])
+        assert (error.value.kind, str(error.value)) == ('validationFailed', message)
+    with pytest.raises(ApiError) as error:
+        call(service, 'noteTypes.create', name='Spaced', fields=[{'name': 'Front'}, {'name': 'Front '}],
+             templates=[{'name': 'Card', 'questionHtml': '{{Front}}', 'answerHtml': '{{Front}}'}])
+    assert str(error.value) == 'Duplicate field name: "Front " is the same as "Front" in Anki.'

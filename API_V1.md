@@ -2690,6 +2690,8 @@ Create a normal or cloze note type.
 
 **Scope:** collection. **Completion:** completed. **Undo:** `single`.
 
+Field and template names must be unique by Anki's own comparison: Unicode NFC-normalized and case-insensitive; field names also ignore surrounding whitespace, the characters :{}" and leading #, / or ^. Repeats fail with validationFailed instead of being saved with a "+" suffix.
+
 **Parameters**
 
 | Property | Type | Required | Details |
@@ -2784,7 +2786,7 @@ Apply ordered structural edits and persist once using native note-type updates.
 
 **Scope:** collection. **Completion:** completed. **Undo:** `single`.
 
-Carry original field/template ordinals to preserve card identity. Added entries have no original ordinal. Validate all edits on a copy before saving; reject last field/template removal and invalid cloze structures.
+Carry original field/template ordinals to preserve card identity. Added entries have no original ordinal. Validate all edits on a copy before saving; reject last field/template removal and invalid cloze structures. Field and template names must remain unique by Anki's own comparison: Unicode NFC-normalized and case-insensitive; field names also ignore surrounding whitespace, the characters :{}" and leading #, / or ^. Repeats fail with validationFailed instead of being saved with a "+" suffix. Renaming an entry to a variant of its own name is allowed.
 
 Structure edits can affect existing notes and cards. Indexes are zero-based.
 

@@ -26,6 +26,8 @@ FIELD_KEYS = {'fontFamily': 'font', 'fontSize': 'size', 'description': 'descript
               'collapsed': 'collapsed', 'excludeFromSearch': 'excludeFromSearch'}
 TEMPLATE_KEYS = {'questionHtml': 'qfmt', 'answerHtml': 'afmt', 'browserQuestionHtml': 'bqfmt',
                  'browserAnswerHtml': 'bafmt', 'browserFontFamily': 'bfont', 'browserFontSize': 'bsize'}
+FIELD_NAME_REMOVED_CHARACTERS = re.compile(r'[:{}"]')
+FIELD_NAME_LEADING_CHARACTERS = re.compile(r'^[\s#/^]+')
 PRESET_KEYS = {
     'learnStepsMinutes': 'learn_steps', 'relearnStepsMinutes': 'relearn_steps',
     'fsrsParameters4': 'fsrs_params_4', 'fsrsParameters5': 'fsrs_params_5', 'fsrsParameters6': 'fsrs_params_6',
@@ -101,6 +103,24 @@ def template_fields(text, names):
     if stack:
         raise ApiError('validationFailed', 'Unclosed template conditional.')
     return fields
+
+
+def structure_name_key(name, is_field):
+    """Mirror the name identity Anki uses when it appends "+" to repeated field/template names."""
+    name = unicodedata.normalize('NFC', name)
+    if is_field:
+        name = FIELD_NAME_LEADING_CHARACTERS.sub('', FIELD_NAME_REMOVED_CHARACTERS.sub('', name)).rstrip()
+    return name.casefold()
+
+
+def require_unique_names(values, is_field):
+    seen = {}
+    for value in values:
+        key = structure_name_key(value['name'], is_field)
+        if key in seen:
+            kind = 'field' if is_field else 'template'
+            raise ApiError('validationFailed', f'Duplicate {kind} name: "{value["name"]}" is the same as "{seen[key]}" in Anki.')
+        seen[key] = value['name']
 
 
 class Services:
@@ -741,9 +761,9 @@ class Services:
             template = self.col.models.new_template(data['name'])
             self.fill_template(template, data)
             self.col.models.add_template(model, template)
+        require_unique_names(model['flds'], True)
+        require_unique_names(model['tmpls'], False)
         names = [field['name'] for field in model['flds']]
-        if len({name.casefold() for name in names}) != len(names) or len({t['name'].casefold() for t in model['tmpls']}) != len(templates):
-            raise ApiError('validationFailed', 'Duplicate field/template names.')
         model['sortf'] = names.index(sortField) if sortField else 0
         out = self.change(self.col.models.add_dict(model))
         return self.noteTypes_get({'id': str(out.id)})
@@ -797,8 +817,9 @@ class Services:
                         raise ApiError('validationFailed', 'Move index out of range.')
                     values.remove(value)
                     values.insert(edit['index'], value)
-            if not values or len({value['name'].casefold() for value in values}) != len(values):
-                raise ApiError('validationFailed', 'Invalid field/template structure.')
+            if not values:
+                raise ApiError('validationFailed', 'A note type must keep at least one ' + ('field.' if is_field else 'template.'))
+            require_unique_names(values, is_field)
         self.change(self.col.models.update_dict(model))
         return self.noteTypes_get({'id': str(model['id'])})
 

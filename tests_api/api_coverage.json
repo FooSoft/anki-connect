@@ -609,6 +609,18 @@
     },
     {
       "source": "tests_api/test_runtime.py",
+      "case": "test_note_type_name_identity_matches_anki",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "noteTypes.create",
+        "noteTypes.editStructure"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; compares the duplicate-name key with the names Anki itself saves with \"+\" (case, NFC, field whitespace and special characters, and non-duplicates), then asserts the duplicate and last-template messages."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
       "case": "test_historical_reviews_transaction_and_sync_flags",
       "layer": "native-service",
       "outcome": "success",
@@ -1549,6 +1561,21 @@
         "updateNoteTags"
       ],
       "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_rejects_names_anki_would_repeat",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "createModel",
+        "modelFieldAdd",
+        "modelFieldRename",
+        "modelTemplateAdd",
+        "modelTemplateRename"
+      ],
+      "notes": "Real disposable collection through Legacy.call; names Anki would save with \"+\" return the duplicate message and leave the stock note types and model list unchanged."
     },
     {
       "source": "tests_api/test_compatibility.py",

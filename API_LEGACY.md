@@ -163,6 +163,10 @@ now fails explicitly or follows corrected native behavior:
 - Affected open editors must be closed before collection writes, even when saved.
 - `relearnCards` performs real failed reviews and requires compatible review cards.
   It changes lapse counts and history.
+- Field and template names that Anki treats as repeats within a note type, such as
+  `front` beside `Front`, fail instead of being saved with a `+` suffix. This affects
+  `createModel`, `modelFieldAdd`, `modelFieldRename`, `modelTemplateAdd`, and
+  `modelTemplateRename`; see [noteTypes.create](API_V1.md#notetypescreate) for the rules.
 
 The action entries describe their results and completion timing. **Accepted**
 means work has started; later failure or cancellation is visible in Anki, rather
@@ -2283,6 +2287,8 @@ used in the model. There are optional fields `css` and `isCloze`. If not specifi
 Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
 card names will be `Card 1`, `Card 2`, and so on.
 
+Field names and template names that Anki treats as repeats, such as `Front` and `front`, return an error.
+
 **Parameters:** `createModel(modelName, inOrderFields, cardTemplates, css=None, isCloze=False)`
 
 **Returns:** Legacy note-type dictionary projected from baseline adapter snapshot.
@@ -2455,7 +2461,7 @@ Find and replace string in existing model by model name. Customise to replace in
 
 ### `modelTemplateRename`
 
-Renames a template in an existing model.
+Renames a template in an existing model. A new name that Anki treats as a repeat of another template's name returns an error.
 
 **Parameters:** `modelTemplateRename(modelName, oldTemplateName, newTemplateName)`
 
@@ -2509,7 +2515,7 @@ The value of `index` starts at 0. For example, an index of `0` puts the template
 
 ### `modelTemplateAdd`
 
-Add a template, or update it when a template with that name already exists. Template records use `Name`, `Front`, and `Back`.
+Add a template, or update it when a template with exactly that name already exists. Template records use `Name`, `Front`, and `Back`. A name that differs from an existing template only in case, such as `card 1` beside `Card 1`, returns an error.
 
 **Parameters:** `modelTemplateAdd(modelName, template)`
 
@@ -2565,7 +2571,7 @@ Removes a template from an existing model.
 
 ### `modelFieldRename`
 
-Rename the field name of a given model.
+Rename the field name of a given model. A new name that Anki treats as a repeat of another field's name, such as `front` beside `Front`, returns an error; changing only the case of the field's own name is allowed.
 
 **Parameters:** `modelFieldRename(modelName, oldFieldName, newFieldName)`
 
@@ -2622,6 +2628,8 @@ The value of `index` starts at 0. For example, an index of `0` puts the field in
 Creates a new field within a given model.
 
 Optionally, the `index` value can be provided, which works exactly the same as the index in `modelFieldReposition`. By default, the field is added to the end of the field list.
+
+If a field with exactly that name exists, it is not added again and is only moved when `index` is given. A name that Anki treats as a repeat of an existing field, such as `front` or `Front ` beside `Front`, returns an error.
 
 **Parameters:** `modelFieldAdd(modelName, fieldName, index=None)`
 

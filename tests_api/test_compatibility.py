@@ -180,6 +180,27 @@ def test_legacy_shared_errors_keep_historical_wording(native, action, params, me
     assert str(caught.value) == message
 
 
+@pytest.mark.parametrize('action,params,message', [
+    ('createModel', {'modelName': 'New', 'inOrderFields': ['Front', 'front'],
+                     'cardTemplates': [{'Front': '{{Front}}', 'Back': '{{Front}}'}]},
+     'Duplicate field name: "front" is the same as "Front" in Anki.'),
+    ('modelFieldAdd', {'modelName': 'Basic', 'fieldName': 'Front '}, 'Duplicate field name: "Front " is the same as "Front" in Anki.'),
+    ('modelFieldRename', {'modelName': 'Basic', 'oldFieldName': 'Back', 'newFieldName': 'front'},
+     'Duplicate field name: "front" is the same as "Front" in Anki.'),
+    ('modelTemplateAdd', {'modelName': 'Basic', 'template': {'Name': 'card 1', 'Front': '{{Back}}', 'Back': '{{Front}}'}},
+     'Duplicate template name: "card 1" is the same as "Card 1" in Anki.'),
+    ('modelTemplateRename', {'modelName': 'Basic (and reversed card)', 'oldTemplateName': 'Card 2', 'newTemplateName': 'CARD 1'},
+     'Duplicate template name: "CARD 1" is the same as "Card 1" in Anki.'),
+])
+def test_legacy_rejects_names_anki_would_repeat(native, action, params, message):
+    with pytest.raises(ApiError) as caught:
+        old(native, action, **params)
+    assert str(caught.value) == message
+    assert old(native, 'modelFieldNames', modelName='Basic') == ['Front', 'Back']
+    assert list(old(native, 'modelTemplates', modelName='Basic')) == ['Card 1']
+    assert old(native, 'modelNames').count('New') == 0
+
+
 def test_legacy_model_conversion_missing_target_error(native):
     id = old(native, 'addNote', note=legacy_note('convert'))
     with pytest.raises(ApiError) as caught:
