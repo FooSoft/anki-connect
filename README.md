@@ -139,4 +139,5 @@ to select Anki versions. The runners cache dependencies and interpreters in
 coverage, and syntax checks in your current Python environment; select an
 environment with `make check PYTHON=/path/to/python`. Use `make contract` to
 regenerate the bundled contract. The Make targets use the scripts in `tools/`,
-which can also be run directly without Make.
+which can also be run directly without Make. GitHub Actions runs the same suite;
+see [CONTRIBUTING.md](CONTRIBUTING.md) for the CI matrix.

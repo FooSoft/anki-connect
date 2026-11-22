@@ -32,6 +32,14 @@ certificate validation, and uv uses the system certificate store; HTTPS
 verification and wheel SHA-256 checks remain enabled. Run UI tests in an interactive
 desktop session. Sync testing requires a disposable account.
 
+GitHub Actions runs `.github/workflows/test.yml` on every push and pull request:
+the latest stable Anki on Linux (under Xvfb, with UI scenarios) and on Windows. A weekly
+schedule runs the full Linux matrix, one job per release. To test other versions,
+run the workflow manually from the Actions tab with space-separated versions or `all`.
+When a release needs new system libraries, add them to the workflow's apt step. To
+reproduce CI in Docker, pass `--shm-size=2g`; WebEngine scenarios intermittently
+time out with Docker's default 64 MB `/dev/shm`.
+
 The ZIP builder checks the generated contract and packages the add-on entry point
 and manifest at the archive root. It preserves the checkout and excludes caches,
 per-installation `meta.json`, and `user_files/` from the archive.

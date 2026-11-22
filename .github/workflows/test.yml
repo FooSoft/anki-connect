@@ -1,0 +1,111 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly run of the full compatibility matrix.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Anki versions separated by spaces, "all" for the full matrix, or empty for the latest'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  ANKI_TEST_CACHE: ${{ github.workspace }}/.test-cache
+  PYTHONUNBUFFERED: '1'
+  # Early Anki refuses to start without a UTF-8 locale.
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+
+jobs:
+  select:
+    name: Select Anki versions
+    runs-on: ubuntu-24.04
+    outputs:
+      versions: ${{ steps.select.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - id: select
+        env:
+          REQUESTED: ${{ github.event_name == 'schedule' && 'all' || inputs.versions }}
+        run: |
+          case "$REQUESTED" in
+            all) set -- --all ;;
+            '') set -- ;;
+            *) read -ra requested <<< "$REQUESTED"; set -- "${requested[@]}" ;;
+          esac
+          versions="$(python tools/anki_env.py select "$@" | python -c 'import json, sys; print(json.dumps(sys.stdin.read().split()))')"
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
+          echo "Selected: $versions"
+
+  linux:
+    name: Linux / Anki ${{ matrix.version }}
+    needs: select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.select.outputs.versions) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install Qt system libraries and Xvfb
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            xvfb xauth libglib2.0-0t64 libegl1 libgl1 libopengl0 libgbm1 libdrm2 \
+            libfontconfig1 libfreetype6 libdbus-1-3 libnss3 libasound2t64 libpulse0 \
+            libcups2t64 libgssapi-krb5-2 libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxcb-xfixes0 \
+            libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxinerama1 libxrandr2 \
+            libxtst6 libxkbfile1 libxshmfence1 libwayland-client0 libwayland-cursor0 \
+            libwayland-egl1 libwayland-server0 libpulse-mainloop-glib0 \
+            libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libgstreamer-gl1.0-0 \
+            libatomic1 libxss1
+      # Full-matrix environments exceed the repository cache quota; cache single-version runs only.
+      - name: Cache Anki environment
+        if: strategy.job-total == 1
+        uses: actions/cache@v6
+        with:
+          path: .test-cache
+          key: anki-${{ runner.os }}-${{ matrix.version }}-${{ hashFiles('tools/anki_matrix.json', 'tools/anki_env.py', 'tools/bootstrap_test_uv.py', 'tools/*.lock') }}
+      - name: Test Anki ${{ matrix.version }}
+        run: xvfb-run -a -s '-screen 0 1280x1024x24' ./tools/test.sh "${{ matrix.version }}"
+
+  windows:
+    name: Windows / Anki latest
+    if: github.event_name != 'schedule' && inputs.versions == ''
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Cache Anki environment
+        uses: actions/cache@v6
+        with:
+          path: .test-cache
+          key: anki-${{ runner.os }}-latest-${{ hashFiles('tools/anki_matrix.json', 'tools/anki_env.py', 'tools/bootstrap_test_uv.py') }}
+      - name: Test latest Anki
+        shell: pwsh
+        env:
+          ANKI_TEST_BOOTSTRAP_PYTHON: python
+        run: .\tools\test.ps1

@@ -37,6 +37,8 @@ documenting a change.
   generated from `tests_api/api_coverage.json` by `tools/check_api_coverage.py --write`.
 - `Makefile`: development entry points; run `make help` for available commands.
 - `tools/test.sh` and `tools/test.ps1`: cached Anki version matrix for both APIs on Unix and Windows.
+- `.github/workflows/test.yml`: GitHub Actions CI; latest release on Linux and Windows per
+  push, full Linux matrix weekly or on manual dispatch.
 - `tools/smoke_gui.py`: GUI scenarios with disposable profiles.
 - `tools/link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
