@@ -452,10 +452,12 @@ try:
             use_editor(True)
             web_id = int(call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
                               fields={'Front': 'Web question', 'Back': 'Web answer'})['noteId'])
-            def shows(*fields):
+            def shows(*fields, tag=''):
+                # getNoteInfo omits tags; the field and tag pushes reload the page separately.
                 return ('(() => { try { const info = getNoteInfo(); return String(info.id) === "%d" && '
-                        'JSON.stringify(info.fields) === %s; } catch { return false; } })()'
-                        % (web_id, json.dumps(json.dumps(list(fields), separators=(',', ':')))))
+                        'JSON.stringify(info.fields) === %s && '
+                        'document.querySelector(".tag-editor").innerText.split(/\\s+/).includes(%s); } catch { return false; } })()'
+                        % (web_id, json.dumps(json.dumps(list(fields), separators=(',', ':'))), json.dumps(tag)))
             done = {'result': None, 'error': None}
             with emacs_http() as http:
                 http(v6('guiBrowse', query='nid:%d' % web_id))
@@ -465,9 +467,9 @@ try:
                 assert http(v6('updateNoteFields', note={'id': web_id, 'fields': {'Back': 'Pushed web answer'}})) == done
                 assert http(v6('addTags', notes=[web_id], tags='emacs')) == done
                 assert aqt.mw.col.get_note(web_id).fields == ['Typed web question', 'Pushed web answer']
-                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Typed web question', 'Pushed web answer')))
+                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Typed web question', 'Pushed web answer', tag='emacs')))
                 result(owner.runtime.gui.javascript(browser.editor, staged_fields(web_id, ['Retyped web question', 'Pushed web answer'])))
-                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Retyped web question', 'Pushed web answer')))
+                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Retyped web question', 'Pushed web answer', tag='emacs')))
                 save_editor(browser.editor)
                 wait_until(idle)
                 saved = aqt.mw.col.get_note(web_id)
