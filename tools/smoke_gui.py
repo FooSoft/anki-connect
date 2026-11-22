@@ -8,6 +8,7 @@ No sync credentials are used. Profiles/files remain in the OS temp directory for
 Processes exit after checks to isolate native Qt/WebEngine teardown; application
 shutdown is verified separately by the exit scenario.
 """
+import contextlib
 import os
 import sys
 import tempfile
@@ -189,6 +190,40 @@ def old(action, *, http_v2=False, **params):
                 raise
             # Like call(), retry only this rejection before GUI execution.
             pump()
+def v6(action, **params):
+    return {'action': action, 'version': 6, 'params': params}
+@contextlib.contextmanager
+def emacs_http():
+    """Serve real HTTP and yield a sender like Emacs clients' curl and url.el: one
+    origin-less POST per request, sent as soon as the previous reply arrives."""
+    import json
+    import threading
+    import urllib.request
+    from plugin import util
+    setting = util.setting
+    util.setting = lambda name: 0 if name == 'webBindPort' else setting(name)
+    owner.startWebServer()
+    port = owner.server.sock.getsockname()[1]
+    def send(request):
+        replies = []
+        def post():
+            try:
+                with urllib.request.urlopen('http://127.0.0.1:%d' % port, json.dumps(request).encode(), timeout=30) as response:
+                    replies.append(json.load(response))
+            except BaseException as error:
+                replies.append(error)
+        thread = threading.Thread(target=post, daemon=True)
+        thread.start()
+        wait_until(lambda: bool(replies), timeout=35, description='Emacs HTTP request')
+        thread.join(timeout=1)
+        assert not isinstance(replies[0], BaseException), replies
+        return replies[0]
+    try:
+        yield send
+    finally:
+        owner.server.close()
+        owner.timer.stop()
+        util.setting = setting
 def supports(step, *methods):
     """Whether this release offers every method; otherwise report why step is skipped."""
     for method in methods:
@@ -349,6 +384,102 @@ try:
         assert call('browser.getSelection')['selectedCardIds'] == []
         assert old('guiSelectNote', note=int(selected_card))
         print('PASS browser search/selection', flush=True)
+        # anki-editor (Emacs) pushes the note shown in the Browser while its preview is open.
+        browser = owner.runtime.gui.browser()
+        wait_until(lambda: getattr(browser.editor.note, 'id', None) == int(note['noteId']),
+                   description='Browser editor shows the selected note')
+        if hasattr(browser, 'onTogglePreview'):
+            browser.onTogglePreview()
+            wait_until(lambda: getattr(browser, '_previewer', None) or getattr(browser, '_previewWindow', None),
+                       description='Browser preview opens')
+            # Push while the preview shows the note. Closing it later logs a native JS error
+            # in 2.1.45-2.1.49, which look up 'previewButton' but name the button 'preview'.
+            preview = getattr(browser._previewer, '_web', None) if hasattr(browser, '_previewer') else getattr(browser, '_previewWeb', None)
+            if preview is not None:
+                wait_until(page_ready(preview, 'typeof _showQuestion === "function" && !!document.getElementById("qa")'),
+                           description='Browser preview page loads')
+        result(owner.runtime.gui.javascript(browser.editor, staged_fields(note['noteId'], ['GUI question', 'Typed GUI answer']),
+                                            ready=SAVE_READY))
+        assert old('updateNoteFields', note={'id': int(note['noteId']), 'fields': {'Front': 'Pushed GUI question'}}) is None
+        assert old('multi', actions=[{'action': 'addTags', 'params': {'notes': [int(note['noteId'])], 'tags': 'emacs'}}]) == [None]
+        pushed = aqt.mw.col.get_note(int(note['noteId']))
+        # The Browser saved typing before the push, then reloaded the pushed note.
+        assert (pushed.fields, pushed.tags) == (['Pushed GUI question', 'Typed GUI answer'], ['emacs']), pushed.fields
+        wait_until(lambda: browser.editor.note is None or browser.editor.note['Front'] == 'Pushed GUI question',
+                   description='Browser editor reloads the pushed note')
+        save_editor(browser.editor)
+        wait_until(idle)
+        saved = aqt.mw.col.get_note(int(note['noteId']))
+        assert (saved.fields, saved.tags) == (pushed.fields, pushed.tags), (saved.fields, saved.tags)
+        if hasattr(browser, 'onTogglePreview'):
+            browser.onTogglePreview()
+            wait_until(lambda: not (getattr(browser, '_previewer', None) or getattr(browser, '_previewWindow', None)),
+                       description='Browser preview closes')
+            wait_until(idle)
+        print('PASS legacy push to note shown in Browser preview', flush=True)
+        # anki-editor 0.3.4's gui-browse, push and delete commands for a note shown in the Browser.
+        emacs = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
+                     fields={'Front': 'Org question', 'Back': 'Org answer'})
+        emacs_id, emacs_cards = int(emacs['noteId']), sorted(int(id) for id in emacs['cardIds'])
+        with emacs_http() as http:
+            for _ in range(2):
+                assert http(v6('guiBrowse', query='nid:%d' % emacs_id)) == {'result': emacs_cards, 'error': None}
+            browser = owner.runtime.gui.browser()
+            wait_until(lambda: getattr(browser.editor.note, 'id', None) == emacs_id,
+                       description='Browser editor shows the browsed note')
+            info = http(v6('multi', actions=[v6('notesInfo', notes=[emacs_id])]))['result'][0]['result'][0]
+            org = {'id': emacs_id, 'deckName': 'Org::Moved', 'modelName': 'Basic', 'options': {'allowDuplicate': False},
+                   'fields': {'Front': 'Org question', 'Back': 'Edited in Org'}, 'tags': ['org']}
+            done = {'result': [{'result': None, 'error': None}], 'error': None}
+            assert http(v6('multi', actions=[v6('updateNote', note=org)])) == done
+            assert http(v6('multi', actions=[v6('changeDeck', deck='Org::Moved', cards=info['cards'])])) == done
+            pushed = aqt.mw.col.get_note(emacs_id)
+            assert (pushed['Back'], pushed.tags) == ('Edited in Org', ['org'])
+            assert {aqt.mw.col.decks.name(card.did) for card in pushed.cards()} == {'Org::Moved'}
+            wait_until(lambda: browser.editor.note is None or browser.editor.note['Back'] == 'Edited in Org',
+                       description='Browser editor reloads the note pushed from Org')
+            assert http(v6('deleteNotes', notes=[emacs_id])) == {'result': None, 'error': None}
+            assert not aqt.mw.col.find_notes('nid:%d' % emacs_id)
+            wait_until(lambda: getattr(browser.editor.note, 'id', None) != emacs_id,
+                       description='Browser editor drops the note deleted from Org')
+            wait_until(idle)
+            print('PASS Emacs browse, push, move and delete of note shown in Browser', flush=True)
+        if editor_variants() != [False]:
+            # The 26.08 web editor reloads pushed fields and tags in its page, but cannot load a deleted note.
+            import json
+            aqt.dialogs.closeAll(onsuccess=lambda: None)
+            wait_until(aqt.dialogs.allClosed)
+            use_editor(True)
+            web_id = int(call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
+                              fields={'Front': 'Web question', 'Back': 'Web answer'})['noteId'])
+            def shows(*fields):
+                return ('(() => { try { const info = getNoteInfo(); return String(info.id) === "%d" && '
+                        'JSON.stringify(info.fields) === %s; } catch { return false; } })()'
+                        % (web_id, json.dumps(json.dumps(list(fields), separators=(',', ':')))))
+            done = {'result': None, 'error': None}
+            with emacs_http() as http:
+                http(v6('guiBrowse', query='nid:%d' % web_id))
+                browser = owner.runtime.gui.browser()
+                result(owner.runtime.gui.javascript(browser.editor, staged_fields(web_id, ['Typed web question', 'Web answer']),
+                                                    ready=shows('Web question', 'Web answer')))
+                assert http(v6('updateNoteFields', note={'id': web_id, 'fields': {'Back': 'Pushed web answer'}})) == done
+                assert http(v6('addTags', notes=[web_id], tags='emacs')) == done
+                assert aqt.mw.col.get_note(web_id).fields == ['Typed web question', 'Pushed web answer']
+                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Typed web question', 'Pushed web answer')))
+                result(owner.runtime.gui.javascript(browser.editor, staged_fields(web_id, ['Retyped web question', 'Pushed web answer'])))
+                result(owner.runtime.gui.javascript(browser.editor, 'return true;', ready=shows('Retyped web question', 'Pushed web answer')))
+                save_editor(browser.editor)
+                wait_until(idle)
+                saved = aqt.mw.col.get_note(web_id)
+                assert (saved.fields, saved.tags) == (['Retyped web question', 'Pushed web answer'], ['emacs']), saved.fields
+                refused = http(v6('deleteNotes', notes=[web_id]))
+                assert refused['error'].startswith('Close the affected editor'), refused
+                assert aqt.mw.col.find_notes('nid:%d' % web_id)
+            aqt.dialogs.closeAll(onsuccess=lambda: None)
+            wait_until(aqt.dialogs.allClosed)
+            use_editor(False)
+            call('browser.open', query='nid:' + note['noteId'])
+            print('PASS Emacs push to note shown in the 26.08 web editor', flush=True)
         call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Second GUI question'})
         browser = owner.runtime.gui.browser()
         expected_cards = set(aqt.mw.col.find_cards(''))
@@ -542,6 +673,19 @@ try:
         assert aqt.mw.col.get_note(int(note['noteId'])).mod == mod
         assert dialog.editor not in executed, executed
         print('PASS legacy note-type write saves open editor first', flush=True)
+        # Deleting the shown note through the API closes the dialog's own preview.
+        doomed = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
+                      fields={'Front': 'Doomed GUI question', 'Back': 'GUI answer'})
+        assert old('guiEditNote', note=int(doomed['noteId'])) is None
+        wait_until(lambda: dialog.editor.note is not None and dialog.editor.note.id == int(doomed['noteId']),
+                   description='custom editor shows the new note')
+        previewer = dialog.show_preview()
+        wait_until(lambda: previewer.isVisible(), description='custom preview opens')
+        assert old('deleteNotes', notes=[int(doomed['noteId'])]) is None
+        wait_until(lambda: not previewer._open, description='custom preview closes after deletion')
+        wait_until(lambda: dialog.editor.note is not None and dialog.editor.note.id == int(note['noteId']),
+                   description='custom editor returns to the previous note')
+        print('PASS deleting the shown note closes the custom preview', flush=True)
         aqt.dialogs.closeAll(onsuccess=lambda: None)
         wait_until(aqt.dialogs.allClosed)
     if scenario == 'reviewer':
@@ -607,6 +751,28 @@ try:
             assert old('guiDeckBrowser') is None
             assert aqt.mw.state == 'deckBrowser'
             call('application.navigate', view='deckBrowser')
+        # Emacs reviewers send each step once the previous reply arrives: anki.el reads the
+        # card straight after guiDeckReview, anki-study.el snapshots it in a multi with {}
+        # params and rates once guiShowAnswer replies, then reads the next card at once.
+        for index in range(2):
+            call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Emacs review ' + str(index)})
+        wait_until(idle)
+        with emacs_http() as http:
+            assert http({'action': 'guiDeckReview', 'version': 5, 'params': {'name': 'Default'}}) == {'result': True, 'error': None}
+            current = http({'action': 'guiCurrentCard', 'version': 5})['result']
+            assert current and current['buttons'] and len(current['nextReviews']) == len(current['buttons']), current
+            snapshot = http(v6('multi', actions=[v6('guiReviewActive'), v6('guiCurrentCard')]))
+            assert snapshot == {'result': [{'result': True, 'error': None}, {'result': current, 'error': None}], 'error': None}
+            assert http(v6('guiShowAnswer')) == {'result': True, 'error': None}
+            assert http(v6('guiAnswerCard', ease=current['buttons'][-1])) == {'result': True, 'error': None}
+            following = http(v6('guiCurrentCard'))
+            assert following['error'] is None and following['result']['cardId'] != current['cardId'], following
+            assert aqt.mw.col.db.scalar('select ease from revlog where cid=? order by id desc limit 1',
+                                        current['cardId']) == current['buttons'][-1]
+            wait_until(idle)
+            assert old('guiDeckBrowser') is None
+            assert http(v6('guiCurrentCard')) == {'result': None, 'error': 'Gui review is not currently active.'}
+            print('PASS Emacs reviewer requests without waits', flush=True)
     if scenario == 'imports' and supports('imports', 'application.importFile'):
         from aqt.import_export.import_dialog import ImportDialog
         csv = base / 'sample.csv'

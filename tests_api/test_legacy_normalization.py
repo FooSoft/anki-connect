@@ -176,23 +176,62 @@ def test_normalized_ids_still_block_affected_editors(admitted, monkeypatch):
     import aqt
     owner, service, drain, work, _ = admitted
     id = invoke(admitted, 'addNote', note=note())
-    dialog = SimpleNamespace(editor=SimpleNamespace(note=service.col.get_note(id)))
-    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Edit': (None, dialog)})
-    for action, params in [('updateNoteFields', {'note': {'id': ' 00' + str(id), 'fields': {'front': 'bad'}}}),
-                           ('addTags', {'notes': str(id), 'tags': 'bad'}), ('deleteNotes', {'notes': str(id)}),
-                           ('updateNoteTags', {'note': id, 'tags': 'bad'}),
-                           ('replaceTagsInAllNotes', {'tag_to_replace': 'x', 'replace_with_tag': 'bad'})]:
+    saves = []
+    def save(callback, keepFocus=False):
+        saves.append(service.col.get_note(id).fields[:])
+        callback()
+    # 26.08 web editors keep only the note ID and cannot load a deleted or converted note.
+    editor = SimpleNamespace(nid=id, reload_note=lambda: None, call_after_note_saved=save, addMode=False)
+    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Browser': (None, SimpleNamespace(editor=editor))})
+    adding = SimpleNamespace(nid=id, reload_note=lambda: None, call_after_note_saved=save, addMode=True)
+    for editors, action, params in [
+            ({}, 'deleteNotes', {'notes': str(id)}),
+            ({}, 'updateNoteModel', {'note': {'id': ' 00' + str(id), 'modelName': 'Basic (and reversed card)',
+                                              'fields': {'Front': 'bad'}}}),
+            ({'AddCards': (None, SimpleNamespace(editor=adding))}, 'addTags', {'notes': str(id), 'tags': 'bad'})]:
+        monkeypatch.setitem(aqt.dialogs._dialogs, 'AddCards', editors.get('AddCards', (None, None)))
         pending = owner.handler_async({'action': action, 'version': '6', 'params': params})
         drain()
         assert pending.value['error'].startswith('Close the affected editor')
         assert not work
+    monkeypatch.delitem(aqt.dialogs._dialogs, 'AddCards')
     assert service.col.get_note(id).fields == ['question', 'answer']
     assert service.col.get_note(id).tags == []
+    assert service.col.get_note(id).note_type()['name'] == 'Basic'
+    # The web editor reloads field and tag writes, which run after it saves.
+    assert invoke(admitted, 'updateNoteFields', note={'id': ' 00' + str(id), 'fields': {'front': 'pushed'}}) is None
+    assert invoke(admitted, 'addTags', notes=str(id), tags='emacs') is None
+    assert invoke(admitted, 'replaceTagsInAllNotes', tag_to_replace='emacs', replace_with_tag='org') is None
+    assert saves == [['question', 'answer'], ['pushed', 'answer'], ['pushed', 'answer']]
+    assert (service.col.get_note(id).fields, service.col.get_note(id).tags) == (['pushed', 'answer'], ['org'])
     # New notes and other notes do not touch the open editor.
     other = invoke(admitted, 'addNote', note=note('other'))
     invoke(admitted, 'addNotes', notes=[note('third')])
     assert invoke(admitted, 'updateNoteTags', note=other, tags='ok') is None
     assert service.col.get_note(other).tags == ['ok']
+
+
+def test_legacy_note_writes_save_then_pass_reloading_editors(admitted, monkeypatch):
+    # anki-editor (Emacs) pushes notes still shown in the Browser and its preview.
+    # The Browser saves its editor first and reloads the note after the write.
+    import aqt
+    owner, service, drain, work, _ = admitted
+    id = invoke(admitted, 'addNote', note=note())
+    saves = []
+    def save(callback, keepFocus=False):
+        saves.append(service.col.get_note(id).fields[:])
+        callback()
+    editor = SimpleNamespace(note=service.col.get_note(id), call_after_note_saved=save)
+    monkeypatch.setattr(aqt.dialogs, '_dialogs', {'Browser': (None, SimpleNamespace(editor=editor))})
+    assert invoke(admitted, 'updateNoteFields', note={'id': ' 00' + str(id), 'fields': {'front': 'pushed'}}) is None
+    assert invoke(admitted, 'multi', actions=[
+        {'action': 'updateNote', 'params': {'note': {'id': id, 'fields': {'Back': 'pushed answer'}, 'tags': ['emacs']}}},
+        {'action': 'addTags', 'params': {'notes': [id], 'tags': 'added'}},
+        {'action': 'removeTags', 'params': {'notes': [id], 'tags': 'emacs'}}]) == [None, None, None]
+    # Each write ran after the editor saved, never before.
+    assert saves == [['question', 'answer'], ['pushed', 'answer'], ['pushed', 'pushed answer'], ['pushed', 'pushed answer']]
+    assert service.col.get_note(id).fields == ['pushed', 'pushed answer']
+    assert service.col.get_note(id).tags == ['added']
 
 
 def test_legacy_note_type_writes_only_block_editors_of_changed_fields(admitted, monkeypatch):

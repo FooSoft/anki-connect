@@ -221,7 +221,8 @@ class AnkiConnect:
             return
         for target in LEGACY_TARGETS.get(name, []):
             if target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite'):
-                self.runtime.gui.guard(target, converted)
+                # Legacy writes save open editors first; see save_open_editors.
+                self.runtime.gui.guard(target, converted, saved=True)
 
     def validate_multi(self, actions, depth=0, state=None):
         """Preflight the entire tree before admitting any executable action."""

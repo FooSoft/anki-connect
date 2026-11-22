@@ -107,7 +107,11 @@ and potentially pending webview changes. Close affected editors to proceed. Lega
 note-type writes conflict only when field edits change a note type shown in an
 editor; template, styling, and card scheduling writes are not blocked by editors.
 Because change notifications reload open editors, legacy writes first ask each
-open editor to save through `call_after_note_saved` and recheck admission. Add
+open editor to save through `call_after_note_saved` and recheck admission. Legacy
+note and tag writes then pass classic editors, whose hosts reload the changed note.
+The 26.08 web editors reload field and tag changes from the notification in their
+page outside Add mode, but still conflict with deletion and note-type conversion,
+which their page cannot load. Add
 drafts have explicit update methods and reject content replacement/type changes
 when a draft already contains unsaved content. This release does not claim fully
 synchronized dirty-state detection for every editor variant.

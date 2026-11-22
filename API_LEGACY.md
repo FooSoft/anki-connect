@@ -161,13 +161,16 @@ now fails explicitly or follows corrected native behavior:
   every unused note type. Use v1 `notes.findEmpty` with an explicit criterion and
   delete specific note IDs after reviewing the result.
 - Unsupported preset changes fail instead of being silently ignored.
-- Open editors showing an affected note must be closed before note writes, even
-  when saved. Field additions, removals, renames, and moves conflict only with
-  editors of that note type; other note-type, template, styling, and card
-  scheduling writes are not blocked by editors. Before any legacy write, open
-  editors save pending input, because the write's change notification makes them
-  reload their notes. An editor that does not save within 30 seconds fails the
-  write with `An open editor did not save its note.`
+- Before any legacy write, open editors save pending input, because the write's
+  change notification makes them reload their notes. An editor that does not save
+  within 30 seconds fails the write with `An open editor did not save its note.`
+  Note and tag writes then proceed while the Browser (including its preview), Edit
+  Current, or `guiEditNote` shows the note, and those editors reload it. The
+  experimental web editor of Anki 26.08 reloads field and tag writes in its page
+  too, but must be closed before the note it shows is deleted or converted to
+  another note type. Field additions, removals, renames,
+  and moves conflict only with editors of that note type; other note-type,
+  template, styling, and card scheduling writes are not blocked by editors.
 - `relearnCards` performs real failed reviews and requires compatible review cards.
   It changes lapse counts and history.
 - Field and template names that Anki treats as repeats within a note type, such as
@@ -975,7 +978,7 @@ Gets the configuration group object for the given deck.
 
 ### `saveDeckConfig`
 
-Patch a legacy preset dictionary identified by `config.id`. Supply changed settings; omitted settings are preserved. Unsupported changes fail. Obsolete keys that Anki ignores (`new.separate`, `rev.fuzz`, `rev.minSpace`, and the third `new.ints` entry) are accepted and ignored, so configs copied from older examples still save. Client `mod` and `usn` metadata are not writable. Returns a boolean.
+Patch a legacy preset dictionary identified by `config.id`. Supply changed settings; omitted settings are preserved. Unsupported changes fail. Obsolete keys that Anki ignores (`new.separate`, `rev.fuzz`, `rev.minSpace`, and the third `new.ints` entry) are accepted and ignored, so configs copied from older examples still save. Client `mod` and `usn` metadata are not writable and may be omitted. Returns a boolean.
 
 **Parameters:** `saveDeckConfig(config)`
 
@@ -1272,6 +1275,8 @@ Open or activate the configured Add editor and optionally populate a note draft.
 ### `guiEditNote`
 
 Open the custom editor for a note, with card preview, browser access, and navigation through editor history.
+
+The custom editor's card preview closes when its note or cards are deleted elsewhere, including through the API.
 
 **Parameters:** `guiEditNote(note)`
 
@@ -2993,7 +2998,7 @@ For an existing duplicate, the result entry is:
 
 ### `updateNoteFields`
 
-Update supplied fields of the note identified by `note.id`, with optional inline media. Field names use the shared legacy matching rules; unknown names are ignored. Attachments can target fields omitted from the text patch and append to their existing contents. An affected open editor causes an error rather than a silent overwrite.
+Update supplied fields of the note identified by `note.id`, with optional inline media. Field names use the shared legacy matching rules; unknown names are ignored. Attachments can target fields omitted from the text patch and append to their existing contents. Open editors save pending input first; a Browser or Edit Current editor showing the note then reloads it, while an experimental web editor showing the note causes an error rather than a silent overwrite.
 
 **Parameters:** `updateNoteFields(note)`
 
@@ -3001,7 +3006,7 @@ Update supplied fields of the note identified by `note.id`, with optional inline
 
 **Completion:** completed.
 
-**Behavior:** post-write notification and undo; editorConflict replaces silent overwrite.
+**Behavior:** post-write notification and undo; saved editors reload the note, and editorConflict replaces silent overwrite in editors that cannot.
 
 **v1 equivalent:** [notes.update](API_V1.md#notesupdate), [media.store](API_V1.md#mediastore).
 

@@ -644,8 +644,11 @@ class Gui:
         self.mw.taskman.with_progress(lambda: compat.sync_collection(col, auth, includeMedia), synced)
         return pending
 
-    def guard(self, method, params):
-        """Reject affected open editors, including changes still pending in JS."""
+    def guard(self, method, params, saved=False):
+        """Reject affected open editors, including changes still pending in JS.
+
+        With saved, the caller saves open editors before writing, so note and tag
+        writes skip editors whose hosts reload the changed note afterwards."""
         import aqt
         if method.startswith(('scheduling.', 'cards.')):
             return
@@ -659,6 +662,7 @@ class Gui:
             ids = params.get('ids', params.get('noteIds', [params.get('id')]))
             if method.startswith(('notes.', 'tags.')):
                 affected = bool(note_id) and (str(note_id) in ids or params.get('allNotes', False))
+                affected = affected and not (saved and compat.reloads_changed_notes(editor, method))
             if affected:
                 raise ApiError('editorConflict', 'Close the affected editor before this API write, even if its content is saved.')
 

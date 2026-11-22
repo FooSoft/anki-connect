@@ -53,6 +53,21 @@ class DecentPreviewer(aqt.browser.previewer.MultiCardPreviewer):
         super().__init__(parent=None, mw=aqt.mw, on_close=lambda: None) # noqa
         self.adapter = adapter
         self.last_card_id = 0
+        gui_hooks.operation_did_execute.append(self.on_operation_did_execute)
+
+    # Unlike the Browser's previewer, no host refreshes this one; close it rather
+    # than render a card deleted elsewhere, e.g. through the API.
+    def on_operation_did_execute(self, changes, handler):
+        if not self._open or not (changes.card or changes.note_text):
+            return
+        ids = [card.id for card in getattr(self.adapter, "cards", [self.card()])]
+        if self.mw.col.db.scalar(
+                "select count() from cards where id in " + ids2str(ids)) != len(ids):
+            self.close()
+
+    def _on_close(self):
+        gui_hooks.operation_did_execute.remove(self.on_operation_did_execute)
+        super()._on_close()
 
     def card(self):
         return self.adapter.get_current_card()

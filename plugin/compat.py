@@ -347,6 +347,20 @@ def saves_editor(editor):
     return callable(getattr(editor, 'call_after_note_saved', None) or getattr(editor, 'saveNow', None))
 
 
+def reloads_changed_notes(editor, method):
+    """Whether a saved editor shows the result of a note write afterwards.
+
+    Browser, Edit Current, and custom editor hosts reload a classic editor's Python
+    note from change notifications (from the reset hook before 2.1.45) and drop
+    deleted notes. The web editors of 26.08 keep only a note ID; outside Add mode
+    their page reloads field and tag changes from the same notifications, but a
+    deleted or converted note fails to load there."""
+    if getattr(editor, 'note', None) is not None:
+        return True
+    return (method in ('notes.update', 'tags.add', 'tags.remove', 'tags.replace')
+            and hasattr(editor, 'reload_note') and not getattr(editor, 'addMode', False))
+
+
 def binding_error(error, function):
     """Name methods by their qualified name in argument errors, as Python 3.10+ does."""
     message = str(error)

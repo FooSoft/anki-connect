@@ -140,9 +140,26 @@
       "legacy": [
         "updateNoteFields",
         "addTags",
-        "deleteNotes"
+        "deleteNotes",
+        "replaceTagsInAllNotes",
+        "updateNoteModel"
       ],
-      "notes": "A controlled editor registration with a real native note verifies that scalar/padded string IDs still trigger the affected-editor guard before queuing work; fields and tags remain unchanged. No real widget completion is claimed."
+      "notes": "A controlled 26.08 web-editor registration with a real native note verifies that scalar/padded string IDs still trigger the affected-editor guard for deletion, note-type conversion, and Add-mode editors before queuing work, leaving the note unchanged; saved field and tag writes then pass and are asserted natively. Real reload is checked by the browser GUI scenario."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_legacy_note_writes_save_then_pass_reloading_editors",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addTags",
+        "multi",
+        "removeTags",
+        "updateNote",
+        "updateNoteFields"
+      ],
+      "notes": "A controlled classic Browser editor showing the note saves before each legacy field/tag write, including padded IDs and multi items, and no longer blocks it; native fields and tags are asserted. Real reload is checked by the browser GUI scenario."
     },
     {
       "source": "tests_api/test_legacy_normalization.py",
@@ -1340,12 +1357,19 @@
         "scheduling.setDueDate"
       ],
       "legacy": [
+        "addTags",
+        "changeDeck",
+        "deleteNotes",
         "guiBrowse",
         "guiSelectCard",
         "guiSelectNote",
-        "guiSelectedNotes"
+        "guiSelectedNotes",
+        "multi",
+        "notesInfo",
+        "updateNote",
+        "updateNoteFields"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Repositioning with an open browser verifies shifted positions and native card-change notifications before replies; after closing the browser, a single undo restores the positions."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. With the Browser editor and preview showing a note that has unsaved typing, legacy field and tag pushes save the typing first, the editor reloads the pushed note, and a later editor save keeps it. Repositioning with an open browser verifies shifted positions and native card-change notifications before replies; after closing the browser, a single undo restores the positions. Emacs anki-editor requests over real origin-less HTTP browse the note twice, push fields and tags, move its cards and delete it while the Browser editor shows it; the editor reloads and then drops the deleted note. With the 26.08 web editor, pushed fields and tags reload in its page, later typing keeps them, and deletion is refused."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -1353,13 +1377,15 @@
       "layer": "real-gui",
       "outcome": "success",
       "v1": [
-        "editors.openNote"
+        "editors.openNote",
+        "notes.create"
       ],
       "legacy": [
+        "deleteNotes",
         "guiEditNote",
         "updateModelStyling"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. A legacy styling write first saves unsent custom-editor webview input, which survives the editor reload. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. A legacy styling write first saves unsent custom-editor webview input, which survives the editor reload. Deleting the shown note through legacy deleteNotes closes the custom editor's card preview and returns the editor to the previous note. Silent-card audio checks call plumbing only; audible output remains deferred."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -1386,9 +1412,10 @@
         "guiReviewActive",
         "guiShowAnswer",
         "guiShowQuestion",
-        "guiStartCardTimer"
+        "guiStartCardTimer",
+        "multi"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred. Emacs reviewer clients over real HTTP send version-5 deck review and card reads, a multi snapshot, show answer and answer without waits; the next read returns the following card, and reads after leaving review report the inactive error."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -2233,6 +2260,72 @@
       ],
       "legacy": [],
       "notes": "Randomization preserves the position range, step size and shared sibling positions, with native undo restoring the original positions."
+    },
+    {
+      "source": "tests_api/test_emacs.py",
+      "case": "test_anki_editor_push_create_update_move_media_and_delete",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "changeDeck",
+        "createDeck",
+        "deleteNotes",
+        "findNotes",
+        "multi",
+        "notesInfo",
+        "retrieveMediaFile",
+        "storeMediaFile",
+        "updateNote"
+      ],
+      "notes": "anki-editor 0.3.4 version-6 multi phases over HTTP against a native collection: create, duplicate rejection, notesInfo, media check and upload, updateNote keeping the deck until changeDeck moves cards, deletion, and a stale note ID yielding an empty record and a per-item update error."
+    },
+    {
+      "source": "tests_api/test_emacs.py",
+      "case": "test_version_5_multi_items_without_version_reply_bare",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addTags",
+        "createDeck",
+        "findCards",
+        "multi",
+        "notesInfo",
+        "removeTags",
+        "suspend",
+        "unsuspend",
+        "updateNoteFields"
+      ],
+      "notes": "Version-5 multi with versionless items as sent by inline-anki and anki-editor 0.3.3 returns bare item results and enveloped item errors; updateNoteFields ignores tags, space-separated tag strings apply, and suspension reaches native card queues."
+    },
+    {
+      "source": "tests_api/test_emacs.py",
+      "case": "test_tag_strings_and_ids_passed_through",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "createDeck",
+        "notesInfo",
+        "updateNote"
+      ],
+      "notes": "Tag strings, empty tag strings, deck duplicate scope and string note IDs as passed through by Emacs helpers produce the expected native notes."
+    },
+    {
+      "source": "tests_api/test_emacs.py",
+      "case": "test_deck_config_round_trip_without_mod_and_usn",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "getDeckConfig",
+        "saveDeckConfig"
+      ],
+      "notes": "A getDeckConfig/saveDeckConfig round trip without mod and usn, as sent by emacs-anki, saves on every release; 2.1.24-2.1.44 backends otherwise reject the missing fields."
     }
   ],
   "unreferenced": {

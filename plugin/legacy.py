@@ -243,7 +243,9 @@ class Legacy:
                 if not isinstance(config, dict) or int(config['id']) not in known:
                     return False
                 self.preset_patch(config, raw=True)
-                decks.updateConf(copy.deepcopy(config))
+                # Clients round-trip configs without mod/usn, which 2.1.24-2.1.44 backends require.
+                stored = known[int(config['id'])]
+                decks.updateConf({**{key: stored[key] for key in ('mod', 'usn') if key in stored}, **copy.deepcopy(config)})
         except Exception:
             return False
         self.service.change(None)
