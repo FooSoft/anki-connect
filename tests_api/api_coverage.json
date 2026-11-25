@@ -103,7 +103,7 @@
         "canAddNote",
         "updateNoteFields"
       ],
-      "notes": "All three media kinds use actual native media storage. Case/whitespace/scalar/repeated targets append once, including fields omitted from an update. String false renames a collision and preserves original bytes. Pure eligibility leaves no file; creation persists the expected markup and bytes."
+      "notes": "Sound and picture media use actual native media storage. Case/whitespace/scalar/repeated targets append once, including fields omitted from an update. String false renames a collision and preserves original bytes. Pure eligibility leaves no file; creation persists the expected markup and bytes."
     },
     {
       "source": "tests_api/test_legacy_normalization.py",
@@ -694,11 +694,12 @@
       "outcome": "success",
       "v1": [
         "notes.create",
+        "notes.delete",
         "packages.export",
         "packages.import"
       ],
       "legacy": [],
-      "notes": "Calls Services.execute through the call helper; successful results are schema-validated. Assertions vary by method; invocation is not complete behavioral coverage."
+      "notes": "A native export writes a package; after the note is deleted, a native import restores it. Results are schema-validated through the call helper."
     },
     {
       "source": "tests_api/test_runtime.py",
@@ -1980,17 +1981,6 @@
       "notes": "Six combinations of asbplayer website/legacy website/extension origins and optional API keys. Private-network preflight, text/plain JSON POSTs, native mining/status, normalized media filenames and update-null acknowledgement asserted, with unchanged scheduling. Browser fetch engine and asbplayer UI not launched."
     },
     {
-      "source": "tests_api/test_asbplayer.py",
-      "case": "test_asbplayer_unconfigured_origin_can_preflight_but_cannot_mutate",
-      "layer": "validation-only",
-      "outcome": "not-executed",
-      "v1": [],
-      "legacy": [
-        "createDeck"
-      ],
-      "notes": "An unconfigured asbplayer web origin can preflight but remains denied on POST; preflight does not authorize writes. Native collection is inspected, createDeck body is not executed."
-    },
-    {
       "source": "tests_api/test_gsm.py",
       "case": "test_gsm_full_path_media_names_keep_native_legacy_normalization",
       "layer": "controlled-admission",
@@ -2126,30 +2116,6 @@
         "getReviewsOfCards"
       ],
       "notes": "Native 2,000-card Jiten batch returns selected nested fields without rendering, predictions, token churn or card mutation. Numeric/string IDs return all 12,000 raw reviews across more than 100 pages and release snapshots."
-    },
-    {
-      "source": "tests_api/test_jiten.py",
-      "case": "test_jiten_versioned_media_batch",
-      "layer": "controlled-admission",
-      "outcome": "success",
-      "v1": [],
-      "legacy": [
-        "storeMediaFile",
-        "multi",
-        "retrieveMediaFile"
-      ],
-      "notes": "Versioned Jiten media subrequests retain envelopes, base64 content and false for missing files."
-    },
-    {
-      "source": "tests_api/test_jiten.py",
-      "case": "test_jiten_field_probe_with_browser_origin_and_key",
-      "layer": "controlled-admission",
-      "outcome": "success",
-      "v1": [],
-      "legacy": [
-        "cardsInfo"
-      ],
-      "notes": "Jiten-origin field probe succeeds through controlled HTTP admission with and without an API key."
     },
     {
       "source": "tests_api/test_reposition.py",

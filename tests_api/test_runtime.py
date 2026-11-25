@@ -354,10 +354,13 @@ def test_legacy_preset_changes_use_native_updates(native):
 
 def test_packages_native_export_import(native, tmp_path):
     owner, service = native
-    call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'package'})
+    note = call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'package'})
     path = str(tmp_path / 'test.apkg')
     assert call(service, 'packages.export', deck={'name': 'Default'}, path=path)['path'] == path
+    assert Path(path).stat().st_size > 0
+    call(service, 'notes.delete', ids=[note['noteId']])
     assert call(service, 'packages.import', path=path) == {'completed': True}
+    assert [service.col.get_note(id)['Front'] for id in service.col.find_notes('')] == ['package']
 
 
 @pytest.fixture

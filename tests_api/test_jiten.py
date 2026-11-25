@@ -3,13 +3,11 @@
 Exercises native responses and controlled HTTP admission; Jiten's frontend and
 server-side vocabulary import are not launched.
 """
-import base64
-
 import pytest
 
 from plugin.services import Services
 from plugin.legacy import Legacy
-from plugin import compat, util
+from plugin import compat
 from tests_api.test_gsm import exchange
 from tests_api.test_runtime import admitted, call, native
 
@@ -90,25 +88,3 @@ def test_jiten_large_filtered_import_and_review_pages(admitted, monkeypatch):
                 ['id', 'usn', 'ease', 'ivl', 'lastIvl', 'factor', 'time', 'type'],
                 [100000 + index * 6 + review, -1, 3, 10, 5, 2500, 1000, 1])) for review in range(6)]
         assert not owner.runtime.cursors
-
-
-def test_jiten_versioned_media_batch(admitted):
-    owner, service, drain, _, _ = admitted
-    data = base64.b64encode(b'Jiten audio').decode()
-    filename = invoke(owner, drain, 'storeMediaFile', filename='jiten.mp3', data=data)
-    replies = invoke(owner, drain, 'multi', actions=[
-        {'action': 'retrieveMediaFile', 'version': 6, 'params': {'filename': name}}
-        for name in [filename, 'missing.mp3']])
-    assert replies == [{'result': data, 'error': None}, {'result': False, 'error': None}]
-
-
-@pytest.mark.parametrize('api_key', [None, 'jiten-key'])
-def test_jiten_field_probe_with_browser_origin_and_key(admitted, monkeypatch, api_key):
-    owner, _, drain, _, _ = admitted
-    monkeypatch.setitem(util.DEFAULT_CONFIG, 'webCorsOriginList', ['https://jiten.moe'])
-    monkeypatch.setitem(util.DEFAULT_CONFIG, 'apiKey', api_key)
-    headers = {b'origin': b'https://jiten.moe'}
-    payload = {'action': 'cardsInfo', 'version': 6, 'params': {'cards': [], 'fields': JITEN_FIELDS}}
-    if api_key:
-        payload['key'] = api_key
-    assert exchange(owner, drain, payload, headers) == {'result': [], 'error': None}

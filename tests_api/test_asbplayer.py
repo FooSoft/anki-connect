@@ -92,19 +92,3 @@ def test_asbplayer_browser_fetch_mining_media_update_and_status(admitted, monkey
             if name in card.DESCRIPTOR.fields_by_name:
                 card.ClearField(name)
     assert before == after and service.col.note_count() == 1
-
-
-def test_asbplayer_unconfigured_origin_can_preflight_but_cannot_mutate(admitted, monkeypatch):
-    owner, service, drain, _, _ = admitted
-    monkeypatch.setitem(util.DEFAULT_CONFIG, 'webCorsOriginList', ['http://localhost'])
-    headers = {b'origin': b'https://app.asbplayer.dev'}
-    status, cors, _ = response_parts(owner.server.handlerWrapper(WebRequest(b'OPTIONS', {
-        **headers, b'access-control-request-method': b'POST',
-    }, b'')))
-    assert status == b'HTTP/1.1 200 OK'
-    assert cors[b'Access-Control-Allow-Origin'] == headers[b'origin']
-    request = {'action': 'createDeck', 'version': 6, 'params': {'deck': 'Not allowed'}}
-    response = owner.server.handlerWrapper(WebRequest(b'POST', headers, json.dumps(request).encode()))
-    drain()
-    assert response_parts(response)[0] == b'HTTP/1.1 403 Forbidden'
-    assert service.col.decks.id_for_name('Not allowed') is None

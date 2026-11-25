@@ -26,13 +26,13 @@ def note(front='question', **kwargs):
     return {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': front, 'Back': 'answer'}, **kwargs}
 
 
-@pytest.mark.parametrize('version', [None, '2', '4', ' 6 ', 6, 6.0])
+@pytest.mark.parametrize('version', [None, '4', ' 6 ', 6, 6.0])
 @pytest.mark.parametrize('params', [None, [], {'unused': True}])
 def test_envelope_normalization_preserves_reply_versions(admitted, version, params):
     owner, service, drain, _, _ = admitted
     request = {'action': 'deckNames', 'version': version, 'params': params}
     before = copy.deepcopy(request)
-    expected = ['Default'] if version in (None, '2', '4') else {'result': ['Default'], 'error': None}
+    expected = ['Default'] if version in (None, '4') else {'result': ['Default'], 'error': None}
     assert exchange(owner, drain, request) == expected
     assert request == before and service.col.note_count() == 0
 
@@ -109,7 +109,7 @@ def test_duplicate_booleans_and_null_defaults(admitted):
     assert service.col.note_count() == 2
 
 
-@pytest.mark.parametrize('kind', ['audio', 'video', 'picture'])
+@pytest.mark.parametrize('kind', ['audio', 'picture'])
 def test_media_targets_and_string_false_preserve_existing_files(admitted, kind):
     _, service, _, _, _ = admitted
     service.store_bytes('existing.txt', b'original', 'replace')

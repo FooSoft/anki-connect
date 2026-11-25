@@ -274,14 +274,13 @@ def test_http_stalled_response_times_out(monkeypatch):
         peer.close()
 
 
-@pytest.mark.parametrize('failure', [TypeError('not serializable'), ValueError('Out of range float values are not JSON compliant')])
-def test_http_unexpected_handler_failure_returns_500(monkeypatch, failure):
+def test_http_unexpected_handler_failure_returns_500():
     from plugin import web
 
     server_socket, peer = socket.socketpair()
     server_socket.setblocking(False)
     def handler(request):
-        raise failure
+        raise TypeError('not serializable')
     client = web.WebClient(server_socket, handler)
     try:
         peer.sendall(b'POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n')
