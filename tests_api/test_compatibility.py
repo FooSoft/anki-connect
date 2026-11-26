@@ -104,6 +104,18 @@ def test_legacy_note_errors_keep_client_compatible_wording(native, failure, mess
         assert str(caught.value) == 'Note cannot be created.'
 
 
+def test_legacy_empty_note_error_names_unknown_fields(native):
+    owner, service = native
+    source = {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Question': 'a', 'back': 'b'}}
+    message = 'cannot create note because it is empty (unknown fields for model "Basic": "Question")'
+    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': False, 'error': message}
+    for action, params in [('addNote', {'note': source}), ('addNotes', {'notes': [legacy_note('new'), source]})]:
+        with pytest.raises(ApiError) as caught:
+            old(native, action, **params)
+        assert str(caught.value) == (str([message]) if action == 'addNotes' else message)
+    assert service.col.note_count() == 0
+
+
 def test_legacy_batch_duplicate_details_and_v1_empty_question_policy(native):
     owner, service = native
     with pytest.raises(ApiError) as caught:
@@ -125,8 +137,9 @@ def test_legacy_scoped_duplicate_checks_skip_native_cloze_validation(native, opt
     # Saladict and Yomitan use these options. The historical first-field
     # duplicate path never reported Anki's cloze-only validation failures.
     owner, service = native
-    cloze = lambda text, extra='': {'modelName': 'Cloze', 'deckName': 'Default',
-                                    'fields': {'Text': text, 'Back Extra': extra}, 'options': options}
+    # Only Text is shared by every Cloze version; 2.1.15 calls Back Extra "Extra".
+    cloze = lambda text: {'modelName': 'Cloze', 'deckName': 'Default',
+                          'fields': {'Text': text}, 'options': options}
     plain = cloze('no deletion')
     assert old(native, 'canAddNoteWithErrorDetail', note=plain) == {'canAdd': True}
     assert old(native, 'canAddNotes', notes=[plain]) == [True]
@@ -213,6 +226,8 @@ def test_legacy_duplicate_option_errors(native, options, label):
     ('updateNoteModel', {'note': {}}, 'Note ID is required'),
     ('updateNoteModel', {'note': {'id': 999}}, 'Model name is required'),
     ('updateNoteModel', {'note': {'id': 999, 'modelName': 'Basic'}}, 'Fields must be provided as a dictionary'),
+    ('addNote', {'note': {'deckName': 'Default', 'fields': {'Front': 'a'}}}, 'Model name is required'),
+    ('addNote', {'note': {'modelName': 'Basic', 'fields': {'Front': 'a'}}}, 'Deck name is required'),
     ('notesInfo', {}, 'Must provide either "notes" or a "query"'),
     ('deleteDecks', {'decks': ['Default']},
      "Since Anki 2.1.28 it's not possible to delete decks without deleting cards as well"),
@@ -656,10 +671,15 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert old(native, 'areDue', cards=[card]) == [True]
     assert old(native, 'getIntervals', cards=[card]) == [0]
     assert old(native, 'suspend', cards=[card])
+    assert old(native, 'areDue', cards=[card]) == [False]
     assert old(native, 'suspended', card=card)
     assert old(native, 'areSuspended', cards=[card, 999]) == [True, None]
     assert old(native, 'unsuspend', cards=[card]) is None
     assert not old(native, 'suspended', card=card)
+    service.col.db.execute('update cards set queue = -3 where id = ?', card)
+    assert old(native, 'areDue', cards=[card]) == [False]
+    service.col.db.execute('update cards set queue = 0 where id = ?', card)
+    assert old(native, 'areDue', cards=[card]) == [True]
     assert old(native, 'setEaseFactors', cards=[card], easeFactors=[2400]) == [True]
     assert old(native, 'getEaseFactors', cards=[card]) == [2400]
     assert old(native, 'setSpecificValueOfCard', card=card, keys=['flags'], newValues=[4]) == [True]

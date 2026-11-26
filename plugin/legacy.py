@@ -8,6 +8,8 @@ from . import compat
 from .protocol import ApiError, Deferred, epoch_seconds
 from .services import RATINGS, KINDS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, entity_id, preset_enum_value, PRESET_ENUMS, native_preset_enum
 
+EMPTY_NOTE = 'cannot create note because it is empty'
+
 
 def integer(value):
     """Accept decimal strings without rounding numbers or interpreting truthiness."""
@@ -300,7 +302,7 @@ class Legacy:
     @staticmethod
     def validation_error(validation):
         messages = {
-            'emptyFirstField': 'cannot create note because it is empty',
+            'emptyFirstField': EMPTY_NOTE,
             'duplicate': 'cannot create note because it is a duplicate',
             'emptyQuestions': 'The field values you have provided would make an empty question on all cards.',
             'missingCloze': 'cannot create note for unknown reason',
@@ -374,7 +376,30 @@ class Legacy:
         # Use Anki's whitespace-separated tag convention for both input forms.
         return list(dict.fromkeys(tag for entry in entries if entry is not None for tag in entry.split()))
 
+    @staticmethod
+    def require_note_names(source):
+        for key, label in (('modelName', 'Model'), ('deckName', 'Deck')):
+            if isinstance(source, dict) and key not in source:
+                raise ApiError('invalidParams', label + ' name is required')
+
+    def note_error(self, validation, source):
+        message = self.validation_error(validation)
+        if message != EMPTY_NOTE or not isinstance(source.get('fields'), dict):
+            return message
+        # Unmatched field names are dropped, which usually leaves the note empty.
+        try:
+            model = self.model(source['modelName'])
+        except ApiError:
+            return message
+        names = [field['name'] for field in model['flds']]
+        unknown = [key for key in source['fields'] if self.field_name(key, names) is None]
+        if not unknown:
+            return message
+        return '{} (unknown fields for model "{}": {})'.format(
+            message, model['name'], ', '.join('"{}"'.format(key) for key in unknown))
+
     def created_note(self, source, pure=False):
+        self.require_note_names(source)
         source = self.normalize_note(source)
         model = self.model(source['modelName'])
         self.resolve(self.ref(source['deckName']), 'deck')
@@ -500,7 +525,7 @@ class Legacy:
         try:
             result = self.s('notes.validate', note=self.created_note(source, pure=True))
             if not result['valid']:
-                return {'canAdd': False, 'error': self.validation_error(result)}
+                return {'canAdd': False, 'error': self.note_error(result, source)}
             return {'canAdd': True}
         except Exception as error:
             return {'canAdd': False, 'error': str(error)}
@@ -508,8 +533,10 @@ class Legacy:
     def add_notes(self, sources, atomic):
         prepared = [self.created_note(source, pure=True) for source in sources]
         validation = self.unwrap(self.s('notes.validateMany', notes=prepared))
-        if any(not value['valid'] for value in validation):
-            raise ApiError('validationFailed', self.validation_error({'items': validation}), {'items': validation})
+        invalid = [index for index, value in enumerate(validation) if not value['valid']]
+        if invalid:
+            raise ApiError('validationFailed', self.note_error(validation[invalid[0]], sources[invalid[0]]),
+                           {'items': validation})
         # Acquire every attachment before installing any file. Back up only
         # destinations this request owns; never scan or restore unrelated media.
         staged = [self.stage_media(source) for source in sources]
@@ -640,6 +667,7 @@ class Legacy:
             return accepted('editors.openNote', None, lambda value: None, noteId=str(p['note']))
         if name == 'guiAddCards':
             if p['note']:
+                self.require_note_names(p['note'])
                 self.s('decks.get', deck=self.ref(p['note']['deckName']))
             note = self.created_note(p['note']) if p['note'] else None
             session = runtime.session
@@ -922,7 +950,9 @@ class Legacy:
                         errors[index] = str(error)
                 _, failures = self.service.prepare_notes(prepared)
                 for failure in failures:
-                    errors[indices[failure['index']]] = self.validation_error({'items': [failure]}) or failure['error']['message']
+                    index = indices[failure['index']]
+                    errors[index] = (self.note_error({'items': [failure]}, p['notes'][index])
+                                     or failure['error']['message'])
                 if errors:
                     raise ApiError('validationFailed', str([errors[index] for index in sorted(errors)]), {'items': failures})
             try:
@@ -1066,8 +1096,12 @@ class Legacy:
             return result[0] if name == 'suspended' else result
         if name == 'areDue':
             result = []
-            for id in p['cards']:
-                if self.all_pages('cards.search', query='cid:{} is:new'.format(id)):
+            cards = self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])), missing=True)
+            for id, card in zip(p['cards'], cards):
+                # Anki does not show suspended or buried cards, even new ones.
+                if card and card['scheduling']['queue'] in ('suspended', 'buriedByScheduler', 'buriedByUser'):
+                    result.append(False)
+                elif self.all_pages('cards.search', query='cid:{} is:new'.format(id)):
                     result.append(True)
                 else:
                     # Historical queries depend on the latest review, including

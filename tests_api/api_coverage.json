@@ -1603,6 +1603,19 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_empty_note_error_names_unknown_fields",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail"
+      ],
+      "notes": "Real disposable collection; an empty note with unmatched field names keeps the historical empty prefix, names the unknown fields, and creates no notes."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
       "case": "test_legacy_batch_duplicate_details_and_v1_empty_question_policy",
       "layer": "legacy-forwarder",
       "outcome": "failure",

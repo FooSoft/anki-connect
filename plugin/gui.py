@@ -59,7 +59,9 @@ class Gui:
         # Existing browsers must save their current note before changing search.
         initial = not already_open and query is not None and compat.browser_opens_with_search()
         browser = aqt.dialogs.open('Browser', self.mw, **({'search': (query,)} if initial else {}))
+        # Anki raises reopened dialogs itself but only shows new ones.
         browser.activateWindow()
+        browser.raise_()
         # Before 2.1.45 searching and sorting save the editor and then change rows
         # asynchronously; these browsers save once and change rows synchronously.
         table = getattr(browser, 'table', None) is not None
@@ -208,6 +210,7 @@ class Gui:
             variant = 'NewAddCards' if compat.svelte_editor_enabled(self.mw.col) else 'AddCards'
             dialog = existing or aqt.dialogs.open(variant, self.mw)
             dialog.activateWindow()
+            dialog.raise_()
             if not note:
                 if not existing and not hasattr(dialog.editor, 'note'):
                     dialog.load_new_note()

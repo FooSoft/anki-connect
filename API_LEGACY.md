@@ -257,7 +257,11 @@ Eligibility checks do not download or write files.
 Legacy note validation and creation preserve the historical error strings:
 `cannot create note because it is a duplicate` for duplicates and
 `cannot create note because it is empty` for an empty first field. Clients such
-as Yomitan use the duplicate wording to recognize existing notes. Missing models
+as Yomitan use the duplicate wording to recognize existing notes. When supplied
+field names match no field in the model, the empty message keeps this prefix and
+appends them, for example `cannot create note because it is empty (unknown fields
+for model "Basic": "Question")`. A note without `modelName` or `deckName` reports
+`Model name is required` or `Deck name is required`. Missing models
 and decks report `model was not found: NAME` and `deck was not found: NAME`.
 The v1 API retains its structured validation issues.
 
@@ -480,7 +484,7 @@ exist returns `null`.
 
 ### `areDue`
 
-Return the historical due result using the latest review timestamp and interval. New cards return true.
+Return the historical due result using the latest review timestamp and interval. New cards return true; suspended and buried cards return false.
 
 **Parameters:** `areDue(cards)`
 
@@ -488,7 +492,7 @@ Return the historical due result using the latest review timestamp and interval.
 
 **Completion:** completed.
 
-**Behavior:** Retains historical review-history timing, including true for suspended new cards. Use v1 scheduling.getDue for native queue timing.
+**Behavior:** Retains historical review-history timing for cards that are not suspended or buried. Use v1 scheduling.getDue for native queue timing.
 
 **v1 equivalent:** [scheduling.getDue](API_V1.md#schedulinggetdue).
 
