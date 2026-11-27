@@ -36,6 +36,10 @@ GitHub Actions runs `.github/workflows/test.yml` on every push and pull request:
 the latest stable Anki on Linux (under Xvfb, with UI scenarios) and on Windows. A weekly
 schedule runs the full Linux matrix, one job per release. To test other versions,
 run the workflow manually from the Actions tab with space-separated versions or `all`.
+Each push is tested separately; a later push does not cancel it. The latest stable
+release's Linux job measures coverage. Passing pushes to `master` publish its HTML report and the README badge
+data to GitHub Pages (Settings → Pages → Source: GitHub Actions); the push mirror
+would prune a dedicated badge branch.
 When a release needs new system libraries, add them to the workflow's apt step. To
 reproduce CI in Docker, pass `--shm-size=2g`; WebEngine scenarios intermittently
 time out with Docker's default 64 MB `/dev/shm`.

@@ -1,5 +1,8 @@
 # Anki-Connect
 
+[![Tests](https://github.com/FooSoft/anki-connect/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/FooSoft/anki-connect/actions/workflows/test.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Ffoosoft.github.io%2Fanki-connect%2Fbadge.json)](https://foosoft.github.io/anki-connect/)
+
 Anki-Connect lets applications search, create, and update notes and cards in a
 running Anki Desktop collection through a local HTTP API.
 
@@ -130,6 +133,8 @@ including GUI scenarios. To skip GUI scenarios, use `make test-unit` or
 `.\tools\test.ps1 -NoUI`.
 To test the full compatibility matrix, use `make test TEST_ARGS=--all-versions`,
 `./tools/test.sh --all-versions`, or `.\tools\test.ps1 -AllVersions`.
+To measure `plugin/` line and branch coverage, use `make test TEST_ARGS=--coverage`
+or `./tools/test.sh --coverage`; open `coverage-report/html/index.html` afterwards.
 On Linux without a display, set `QT_QPA_PLATFORM=offscreen`; the runner then
 hides any desktop session from Qt and uses software Qt Quick rendering.
 

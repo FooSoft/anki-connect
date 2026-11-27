@@ -78,6 +78,8 @@ deferred in the coverage inventory with a reason and a practical alternative.
 Run `make test` for the latest cached Anki version, including UI scenarios by default.
 Use `make test TEST_ARGS=--all-versions` for the full version matrix.
 On Windows, run `.\tools\test.ps1`; `-AllVersions` selects the full matrix and `-NoUI` skips UI scenarios.
+`./tools/test.sh --coverage` measures `plugin/` coverage (settings in `pyproject.toml`) into `coverage-report/`;
+CI publishes the latest release's report and badge data to GitHub Pages from `master`.
 Use `make test-unit` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.4`, `aqt==26.9.4`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.

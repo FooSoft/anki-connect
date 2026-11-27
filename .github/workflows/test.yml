@@ -17,7 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  # Each pushed commit gets its own group so a later push never cancels its tests.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}${{ github.event_name == 'push' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: true
 
 env:
@@ -33,6 +34,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       versions: ${{ steps.select.outputs.versions }}
+      latest: ${{ steps.select.outputs.latest }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -49,6 +51,7 @@ jobs:
           esac
           versions="$(python tools/anki_env.py select "$@" | python -c 'import json, sys; print(json.dumps(sys.stdin.read().split()))')"
           echo "versions=$versions" >> "$GITHUB_OUTPUT"
+          echo "latest=$(python tools/anki_env.py select)" >> "$GITHUB_OUTPUT"
           echo "Selected: $versions"
 
   linux:
@@ -87,7 +90,59 @@ jobs:
           path: .test-cache
           key: anki-${{ runner.os }}-${{ matrix.version }}-${{ hashFiles('tools/anki_matrix.json', 'tools/anki_env.py', 'tools/bootstrap_test_uv.py', 'tools/*.lock') }}
       - name: Test Anki ${{ matrix.version }}
-        run: xvfb-run -a -s '-screen 0 1280x1024x24' ./tools/test.sh "${{ matrix.version }}"
+        env:
+          # Coverage is measured for the latest stable release only.
+          COVERAGE: ${{ matrix.version == needs.select.outputs.latest && '--coverage' || '' }}
+        run: xvfb-run -a -s '-screen 0 1280x1024x24' ./tools/test.sh $COVERAGE "${{ matrix.version }}"
+      - name: Upload coverage report
+        if: ${{ !cancelled() && matrix.version == needs.select.outputs.latest }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: |
+            coverage-report/html
+            coverage-report/coverage.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  coverage:
+    name: Publish coverage report and badge
+    needs: linux
+    # Pages serves the report and badge data; a branch would be pruned by the push mirror.
+    if: github.repository == 'FooSoft/anki-connect' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-report
+          path: coverage-report
+      - name: Build site
+        run: |
+          mv coverage-report/html site
+          python3 - <<'EOF'
+          import json
+          percent = json.load(open('coverage-report/coverage.json'))['totals']['percent_covered']
+          color = next(color for limit, color in ((90, 'brightgreen'), (80, 'green'), (70, 'yellowgreen'),
+                                                  (60, 'yellow'), (50, 'orange'), (0, 'red')) if percent >= limit)
+          badge = {'schemaVersion': 1, 'label': 'coverage', 'message': f'{percent:.0f}%', 'color': color}
+          json.dump(badge, open('site/badge.json', 'w'))
+          print(badge)
+          EOF
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v5
 
   windows:
     name: Windows / Anki latest
