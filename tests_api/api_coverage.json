@@ -1258,6 +1258,68 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_specific_value_rejections_leave_card_unchanged",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "setSpecificValueOfCard"
+      ],
+      "notes": "Real disposable collection; invalid shapes and protected keys without warning_check return false, while duplicate, unknown, mixed and untranslatable protected keys raise compatibilityError, all leaving every stored card column unchanged. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_specific_value_native_failures_leave_card_unchanged",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "setSpecificValueOfCard"
+      ],
+      "notes": "Real disposable collection; out-of-range ease, invalid flags, missing or filtered target decks, invalid due positions and non-object custom data return per-card [false, message] results without changing the card. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_specific_value_writes_supported_card_values",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "setSpecificValueOfCard"
+      ],
+      "notes": "Real disposable collection; asserts persisted ease, interval, repetitions, lapses, flags, deck moves and custom data (or its pre-2.1.55 capability failure), including normalized string IDs, scalar key/value arrays and string warning_check, without touching another card. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_specific_value_due_sets_only_the_given_new_card_position",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "answerCards",
+        "setSpecificValueOfCard",
+        "suspend"
+      ],
+      "notes": "Real disposable collection with a native filtered deck; due writes set only the given new card position, including suspended and buried cards, without shifting siblings or colliding cards or changing Browser reposition options; filtered and learning cards are refused unchanged. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_specific_value_card_writes_notify_the_gui",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "setSpecificValueOfCard"
+      ],
+      "notes": "Version-6 HTTP due and ease writes with controlled Qt admission and a real collection deliver a change notification, including on Anki 2.1.45 whose update_card wrapper discards the backend changes."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
       "case": "test_legacy_media_and_packages",
       "layer": "legacy-forwarder",
       "outcome": "success",

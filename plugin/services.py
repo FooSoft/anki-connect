@@ -1235,7 +1235,7 @@ class Services:
             if key == 'sm2EasePermille' and not 1300 <= value <= 65535:
                 raise ApiError('validationFailed', 'SM-2 ease must be between 1300 and 65535 permille.')
             setattr(card, mapping[key], value)
-        self.change(self.col.update_card(card))
+        self.change(compat.update_card(self.col, card))
         return self.card_record(self.card(cardId))
 
     def advanced_reviews_import(self, reviews):

@@ -1237,14 +1237,29 @@ class Legacy:
         if len(set(p['keys'])) != len(p['keys']):
             raise ApiError('compatibilityError', 'Duplicate card keys.')
         mapping = {'factor': 'sm2EasePermille', 'ivl': 'intervalDays', 'reps': 'repetitions', 'lapses': 'lapses', 'custom_data': 'customData'}
-        if any(key not in {*mapping, 'did', 'flags'} for key in p['keys']):
+        if any(key not in {*mapping, 'did', 'flags', 'due'} for key in p['keys']):
             raise ApiError('compatibilityError', 'Use native scheduling commands for protected state.')
-        if any(key in p['keys'] for key in ('did', 'flags')) and len(p['keys']) != 1:
-            raise ApiError('compatibilityError', 'Separate deck/flag edits from metadata edits.')
+        if any(key in p['keys'] for key in ('did', 'flags', 'due')) and len(p['keys']) != 1:
+            raise ApiError('compatibilityError', 'Separate deck/flag/due edits from metadata edits.')
+        values = dict(zip(p['keys'], p['newValues']))
         try:
-            self.s('cards.get', id=str(p['card']))
-            values = dict(zip(p['keys'], p['newValues']))
-            if 'did' in values:
+            record = self.s('cards.get', id=str(p['card']))
+        except Exception as error:
+            return [[False, str(error)]]
+        # A new card's due is its queue position, also while suspended or buried;
+        # other types store days or timestamps.
+        if 'due' in values and (record['scheduling']['type'] != 'new' or record['homeDeck']):
+            raise ApiError('compatibilityError', 'Raw due writes only set new card positions outside filtered decks; use setDueDate.')
+        try:
+            if 'due' in values:
+                # Write only this position, as historically: native repositioning
+                # would also overwrite the Browser's remembered reposition options.
+                if type(values['due']) is not int or not 0 <= values['due'] <= 2147483647:
+                    raise ApiError('invalidParams', 'New card positions must be integers from 0 to 2147483647.')
+                card = self.service.card(str(p['card']))
+                card.due = values['due']
+                self.service.change(compat.update_card(self.service.col, card))
+            elif 'did' in values:
                 self.unwrap(self.s('cards.move', ids=[str(p['card'])], deck={'id': str(values['did'])}))
             elif 'flags' in values:
                 self.unwrap(self.s('cards.setFlags', ids=[str(p['card'])], flag=values['flags']))

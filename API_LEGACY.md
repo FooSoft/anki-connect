@@ -340,7 +340,7 @@ Set SM-2 ease factors in permille, one value per card. Returns a boolean array i
 
 ### `setSpecificValueOfCard`
 
-Update supported card properties. `card` is a scalar ID; `keys` and `newValues` must be equal-length arrays with no duplicate keys. Supported keys are `flags`, `did`, `factor`, `ivl`, `reps`, `lapses`, and `custom_data`. `did`, `ivl`, `reps`, and `lapses` require `warning_check=true`. Flags and deck moves cannot be combined with each other or metadata patches. Raw ownership, queue, type, due, and sync metadata writes are rejected.
+Update supported card properties. `card` is a scalar ID; `keys` and `newValues` must be equal-length arrays with no duplicate keys. Supported keys are `flags`, `did`, `due`, `factor`, `ivl`, `reps`, `lapses`, and `custom_data`. `did`, `ivl`, `reps`, and `lapses` require `warning_check=true`. `due` sets the queue position of a new card outside a filtered deck, including suspended and buried cards, without shifting other cards or changing the Browser's reposition options; use v1 `scheduling.repositionNewCards` for native repositioning. Other cards return compatibilityError, so use `setDueDate` for them. Flags, deck moves, and due positions cannot be combined with each other or metadata patches. Raw ownership, queue, type, and sync metadata writes are rejected.
 
 **Parameters:** `setSpecificValueOfCard(card, keys, newValues, warning_check=False)`
 
@@ -364,7 +364,7 @@ Update supported card properties. `card` is a scalar ID; `keys` and `newValues` 
       "flags"
     ],
     "newValues": [
-      "1"
+      1
     ]
   }
 }

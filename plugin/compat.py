@@ -938,6 +938,14 @@ def reports_changes():
     return hasattr(anki.collection, 'OpChanges')
 
 
+def update_card(col, card):
+    """Save a card with an undo entry and return its changes."""
+    if reports_changes() and not hasattr(col, 'update_cards'):
+        # Anki 2.1.45's wrapper discards the OpChanges its backend returns.
+        return col._backend.update_card(card=card._to_backend_card(), skip_undo_entry=False)
+    return col.update_card(card)
+
+
 def _require_row(col, table, id):
     # Before 2.1.28 loading a missing note or card failed while unpacking its row.
     if not col.db.scalar('select 1 from %s where id=?' % table, id):

@@ -3,6 +3,7 @@ import base64
 import datetime
 import hashlib
 import inspect
+import json
 from pathlib import Path
 import time
 
@@ -684,6 +685,9 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert old(native, 'getEaseFactors', cards=[card]) == [2400]
     assert old(native, 'setSpecificValueOfCard', card=card, keys=['flags'], newValues=[4]) == [True]
     assert service.col.get_card(card).flags & 7 == 4
+    # Historical scripts reorder new cards by writing the due position directly.
+    assert old(native, 'setSpecificValueOfCard', card=card, keys=['due'], newValues=[42]) == [True]
+    assert service.col.get_card(card).due == 42
     assert old(native, 'answerCards', answers=[{'cardId': card, 'ease': 3}, {'cardId': 999, 'ease': 3}]) == [True, False]
     assert old(native, 'getReviewsOfCards', cards=[card])[str(card)]
     rows = old(native, 'cardReviews', deck='Default', startID=0)
@@ -692,6 +696,10 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert len(old(native, 'getIntervals', cards=[card], complete=True)[0]) == 1
     old(native, 'setDueDate', cards=[card], days='0')
     assert service.col.get_card(card).queue == 2
+    due = service.col.get_card(card).due
+    with pytest.raises(ApiError) as caught:
+        old(native, 'setSpecificValueOfCard', card=card, keys=['due'], newValues=[42])
+    assert caught.value.kind == 'compatibilityError' and service.col.get_card(card).due == due
     lapses = service.col.get_card(card).lapses
     old(native, 'relearnCards', cards=[card])
     assert service.col.get_card(card).lapses == lapses + 1
@@ -706,6 +714,164 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert old(native, 'getNumCardsReviewedToday') >= 1
     assert old(native, 'getNumCardsReviewedByDay')
     assert '<' in old(native, 'getCollectionStatsHTML')
+
+
+def card_columns(col, id):
+    card = col.get_card(id)
+    return (card.did, card.due, card.odue, card.odid, card.factor, card.ivl, card.reps, card.lapses,
+            card.flags, card.queue, card.type, card.left, getattr(card, 'custom_data', None))
+
+
+@pytest.mark.parametrize('params,expected', [
+    ({'card': ['CARD'], 'keys': ['factor'], 'newValues': [2000]}, False),
+    ({'card': 'abc', 'keys': ['factor'], 'newValues': [2000]}, False),
+    ({'keys': ['factor', 'reps'], 'newValues': [2000]}, False),
+    # Protected keys need warning_check, including the historical README sample.
+    ({'keys': ['ivl'], 'newValues': [5]}, False),
+    ({'keys': ['did'], 'newValues': [1]}, False),
+    ({'keys': ['flags', 'odue'], 'newValues': ['1', '-100']}, False),
+    ({'keys': ['factor', 'factor'], 'newValues': [2000, 2100]}, 'compatibilityError'),
+    ({'keys': ['data'], 'newValues': ['x']}, 'compatibilityError'),
+    ({'keys': ['missing'], 'newValues': [1]}, 'compatibilityError'),
+    ({'keys': ['flags', 'factor'], 'newValues': [1, 2000]}, 'compatibilityError'),
+    ({'keys': ['due', 'factor'], 'newValues': [5, 2000]}, 'compatibilityError'),
+    ({'keys': ['did', 'flags'], 'newValues': [1, 1], 'warning_check': True}, 'compatibilityError'),
+] + [({'keys': [key], 'newValues': [value], 'warning_check': True}, 'compatibilityError')
+     for key, value in (('queue', 2), ('type', 2), ('odue', -100), ('odid', 1), ('left', 1), ('mod', 1),
+                        ('usn', 1), ('id', 1), ('nid', 1), ('ord', 1))])
+def test_legacy_specific_value_rejections_leave_card_unchanged(native, params, expected):
+    owner, service = native
+    card = service.col.get_note(old(native, 'addNote', note=legacy_note('reject'))).card_ids()[0]
+    before = card_columns(service.col, card)
+    params = {'card': card, **params}
+    if params['card'] == ['CARD']:
+        params['card'] = [card]
+    if expected is False:
+        assert old(native, 'setSpecificValueOfCard', **params) is False
+    else:
+        with pytest.raises(ApiError) as caught:
+            old(native, 'setSpecificValueOfCard', **params)
+        assert caught.value.kind == expected
+    assert card_columns(service.col, card) == before
+
+
+@pytest.mark.parametrize('key,value,message', [
+    ('factor', 1000, 'SM-2 ease'),
+    ('flags', 8, None),
+    ('flags', '1', None),
+    ('did', 999, 'not found'),
+    ('did', 'FILTERED', None),
+    ('due', -1, None),
+    ('due', 'first', None),
+    ('custom_data', '[1]', None),
+])
+def test_legacy_specific_value_native_failures_leave_card_unchanged(native, key, value, message):
+    owner, service = native
+    col = service.col
+    card = col.get_note(old(native, 'addNote', note=legacy_note('fail'))).card_ids()[0]
+    if value == 'FILTERED':
+        value = col.decks.new_filtered('Filtered')
+    before = card_columns(col, card)
+    result = old(native, 'setSpecificValueOfCard', card=card, keys=[key], newValues=[value], warning_check=True)
+    assert len(result) == 1 and result[0][0] is False and isinstance(result[0][1], str)
+    if message:
+        assert message in result[0][1]
+    assert card_columns(col, card) == before
+
+
+def test_legacy_specific_value_writes_supported_card_values(native):
+    owner, service = native
+    col = service.col
+    def specific(card, keys, values, **extra):
+        return old(native, 'setSpecificValueOfCard', card=card, keys=keys, newValues=values, **extra)
+    card = col.get_note(old(native, 'addNote', note=legacy_note('values'))).card_ids()[0]
+    other = col.get_note(old(native, 'addNote', note=legacy_note('other'))).card_ids()[0]
+    untouched = card_columns(col, other)
+    assert specific(card, ['factor'], [2100]) == [True]
+    assert col.get_card(card).factor == 2100
+    # The compatibility boundary accepts string IDs, scalar keys/values and string warning_check.
+    assert old(native, 'setSpecificValueOfCard', card=str(card), keys='factor', newValues=2150) == [True]
+    assert col.get_card(card).factor == 2150
+    assert specific(card, ['ivl'], [3], warning_check='true') == [True]
+    assert col.get_card(card).ivl == 3
+    assert specific(card, ['factor', 'ivl', 'reps', 'lapses'], [2200, 7, 3, 1], warning_check=True) == [True]
+    stored = col.get_card(card)
+    assert (stored.factor, stored.ivl, stored.reps, stored.lapses) == (2200, 7, 3, 1)
+    for flag in (7, 0):
+        assert specific(card, ['flags'], [flag]) == [True]
+        assert col.get_card(card).flags & 7 == flag
+    target = col.decks.id('Target')
+    assert specific(card, ['did'], [target], warning_check=True) == [True]
+    assert col.get_card(card).did == target
+    if hasattr(col.get_card(card), 'custom_data'):
+        assert specific(card, ['custom_data'], ['{"source":"script"}']) == [True]
+        assert json.loads(col.get_card(card).custom_data) == {'source': 'script'}
+    else:
+        assert specific(card, ['custom_data'], ['{}']) == [[False, 'Card custom data requires Anki 2.1.55.']]
+    assert card_columns(col, other) == untouched
+
+
+def test_legacy_specific_value_due_sets_only_the_given_new_card_position(native):
+    owner, service = native
+    col = service.col
+    def specific(card, value):
+        return old(native, 'setSpecificValueOfCard', card=card, keys=['due'], newValues=[value])
+    note = old(native, 'addNote', note={**legacy_note('pair'), 'modelName': 'Basic (and reversed card)'})
+    forward, reverse = sorted(col.get_note(note).card_ids(), key=lambda id: col.get_card(id).ord)
+    later = col.get_note(old(native, 'addNote', note=legacy_note('later'))).card_ids()[0]
+    positions = {id: col.get_card(id).due for id in (forward, later)}
+    # Like the historical raw write, siblings and cards already at the position stay put.
+    assert specific(reverse, positions[later]) == [True]
+    assert col.get_card(reverse).due == positions[later]
+    assert {id: col.get_card(id).due for id in (forward, later)} == positions
+    assert specific(reverse, 0) == [True]
+    assert (col.get_card(reverse).due, col.get_card(reverse).queue, col.get_card(reverse).type) == (0, 0, 0)
+    # Browser reposition options belong to the user, not to this single-card write.
+    try:
+        from anki.collection import Config
+    except ImportError:
+        Config = None  # Releases before 2.1.45 have no remembered reposition options.
+    options = [getattr(Config.Bool, name) for name in ('RANDOM_ORDER_REPOSITION', 'SHIFT_POSITION_OF_EXISTING_CARDS')
+               if Config and hasattr(Config.Bool, name)]
+    for option in options:
+        col.set_config_bool(option, True)
+    assert specific(reverse, 3) == [True]
+    assert col.get_card(reverse).due == 3 and all(col.get_config_bool(option) for option in options)
+    # Suspended and buried new cards keep their position and queue.
+    old(native, 'suspend', cards=[later])
+    assert specific(later, 7) == [True]
+    assert (col.get_card(later).due, col.get_card(later).queue) == (7, -1)
+    col.db.execute('update cards set queue = -3 where id = ?', reverse)
+    assert specific(reverse, 8) == [True]
+    assert (col.get_card(reverse).due, col.get_card(reverse).queue) == (8, -3)
+    # Filtered and learning cards store other due meanings and are refused.
+    did = col.decks.new_filtered('Filtered')
+    deck = col.decks.get(did)
+    deck['terms'] = [['cid:{}'.format(forward), 100, 0]]
+    col.decks.save(deck)
+    col.sched.rebuild_filtered_deck(did)
+    learning = col.get_note(old(native, 'addNote', note=legacy_note('learning'))).card_ids()[0]
+    old(native, 'answerCards', answers=[{'cardId': learning, 'ease': 1}])
+    assert col.get_card(forward).did == did and col.get_card(learning).queue == 1
+    for card in (forward, learning):
+        before = card_columns(col, card)
+        with pytest.raises(ApiError) as caught:
+            specific(card, 5)
+        assert caught.value.kind == 'compatibilityError'
+        assert card_columns(col, card) == before
+
+
+@pytest.mark.parametrize('keys,values', [(['due'], [5]), (['factor'], [2100])])
+def test_legacy_specific_value_card_writes_notify_the_gui(admitted, keys, values):
+    owner, service, drain, _, notifications = admitted
+    card = service.col.get_note(old((owner, service), 'addNote', note=legacy_note('notify'))).card_ids()[0]
+    service.changes.clear()
+    pending = owner.handler_async({'action': 'setSpecificValueOfCard', 'version': 6,
+                                   'params': {'card': card, 'keys': keys, 'newValues': values}})
+    drain()
+    assert pending.value == {'result': [True], 'error': None}
+    # Anki 2.1.45's update_card drops the backend's changes, which must still refresh the GUI.
+    assert notifications
 
 
 def test_legacy_card_batches_skip_missing_and_unanswerable_cards(native):
