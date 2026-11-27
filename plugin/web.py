@@ -14,6 +14,8 @@ from .contract import SCHEMA
 LEGACY_MAX_REQUEST_BYTES = 134217728
 # Bytes read per poll; the timer interval otherwise throttles large uploads.
 MAX_READ_PER_ADVANCE = 16777216
+# Connections without a pending request are closed this long after they open.
+IDLE_TIMEOUT_SECONDS = 10
 
 
 def is_rpc_path(path):
@@ -38,7 +40,7 @@ class WebClient:
     def advance(self, recvSize=65536):
         if self.sock is None:
             return False
-        if not self.pending and time.monotonic() - self.started > 10:
+        if not self.pending and time.monotonic() - self.started > IDLE_TIMEOUT_SECONDS:
             self.close()
             return False
         # Windows select() rejects empty socket lists while accepted work waits.
@@ -187,7 +189,7 @@ class WebServer:
             return response(None, empty=True)
         # Historical servers ignored the request target; only /api/v1 is reserved.
         rpc = is_rpc_path(req.path)
-        if getattr(req, 'too_large', False):
+        if req.too_large:
             if rpc:
                 return response(None, '413 Payload Too Large', empty=True)
             # Legacy clients commonly parse the body without checking the status.
@@ -267,8 +269,7 @@ class WebServer:
 def format_success_reply(api_version, result):
     if api_version <= 4:
         return result
-    else:
-        return {"result": result, "error": None}
+    return {"result": result, "error": None}
 
 
 def format_exception_reply(_api_version, exception):

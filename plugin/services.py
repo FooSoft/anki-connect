@@ -5,12 +5,14 @@ import hashlib
 import json
 import os
 import re
+import fnmatch
 import time
 import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import compat
+from .contract import SCHEMA
 from .protocol import ApiError, error_record, timestamp
 
 
@@ -20,10 +22,12 @@ QUEUES = {0: 'new', 1: 'learning', 2: 'review', 3: 'dayLearning', 4: 'preview',
 RATINGS = ('again', 'hard', 'good', 'easy')
 FILTERED_POSITION_OFFSET = 100000
 KINDS = ('learning', 'review', 'relearning', 'filtered', 'manual', 'rescheduled')
-# Preserve Anki's legacy filename filter without its deprecated stripIllegal API.
+# Cards keep the user flag in the low three bits of their flags.
+FLAG_MASK = 7
 # Internal legacy note option. Public v1 schemas reject it, so only the legacy
 # adapter can attach it after schema validation.
 LEGACY_SKIP_CLOZE = 'x-legacySkipClozeChecks'
+# Preserve Anki's legacy filename filter without its deprecated stripIllegal API.
 MEDIA_ILLEGAL_CHARACTERS = re.compile(r'[][><:"/?*^\\|\0\r\n]')
 FIELD_KEYS = {'fontFamily': 'font', 'fontSize': 'size', 'description': 'description',
               'sticky': 'sticky', 'rtl': 'rtl', 'plainText': 'plainText',
@@ -123,6 +127,20 @@ def normalized_field(value):
     return unicodedata.normalize('NFC', compat.strip_html_media(value))
 
 
+def created_note(note):
+    return {'noteId': str(note.id), 'cardIds': [str(id) for id in note.card_ids()]}
+
+
+def review_total(counts):
+    """Reviews of every kind in one bucket of Anki's review graph."""
+    return counts.learn + counts.relearn + counts.young + counts.mature + counts.filtered
+
+
+def scheduler_day(cutoff):
+    """The date of the scheduler day that ends at cutoff."""
+    return datetime.fromtimestamp(cutoff - 86400).date()
+
+
 def template_fields(text, names):
     """Mirror Anki's template tokens; its parsed tree is not exposed to Python."""
     directive = '{{=<% %>=}}'
@@ -204,7 +222,6 @@ class Services:
         reason = self.runtime.capability_reason(method, self.col)
         if reason:
             raise ApiError('unsupportedCapability', reason)
-        from .contract import SCHEMA
         previous_group = self.undo_target
         if SCHEMA['x-methods'][method]['undo'] in ('single', 'grouped'):
             self.undo_target = None
@@ -213,8 +230,7 @@ class Services:
         except ApiError:
             raise
         except Exception as error:
-            from anki.errors import NotFoundError
-            if isinstance(error, NotFoundError):
+            if compat.is_not_found(error):
                 raise ApiError('notFound', compat.error_message(error)) from error
             if method in ('packages.import', 'packages.export', 'media.get', 'media.delete') and isinstance(error, (OSError,) + compat.backend_errors()):
                 raise ApiError('ioError', str(error)) from error
@@ -232,8 +248,7 @@ class Services:
             try:
                 entry = {'result': function(value)}
             except Exception as error:
-                from anki.errors import NotFoundError
-                if isinstance(error, NotFoundError):
+                if compat.is_not_found(error):
                     error = ApiError('notFound', compat.error_message(error))
                 entry = {'error': error_record(error)}
             cache[key] = entry
@@ -339,28 +354,36 @@ class Services:
             self.col, note._to_backend_note(), template['ord'], to_json_bytes(template), fill_empty=False))
             for template in templates)
 
+    def duplicate_scope(self, policy, deck):
+        """Deck ids a deck-scoped duplicate policy covers, or None for the whole collection."""
+        if policy.get('scope', 'collection') != 'deck':
+            return None
+        target = self.resolve(policy.get('deck', self.summary(deck)), 'deck')['id']
+        ids = {target}
+        if policy.get('includeChildren', False):
+            ids.update(id for _, id in self.col.decks.children(target))
+        return ids
+
+    def validate_note_data(self, note, deck, data):
+        return self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True),
+                               data.get(LEGACY_SKIP_CLOZE) is not True)
+
     def validation(self, note, deck, policy, reject_empty, cloze_checks=True):
         result = int(note.fields_check())
         reasons = {1: 'emptyFirstField', 3: 'missingCloze', 4: 'notClozeNoteType', 5: 'notClozeField'}
+        # Legacy deck/all-model duplicate checks never ran Anki's cloze checks.
+        skipped = () if cloze_checks else (3, 4, 5)
         issues = []
-        if not cloze_checks and result in (3, 4, 5):
-            # Legacy deck/all-model duplicate checks never ran Anki's cloze checks.
-            pass
-        elif result in reasons:
+        if result in reasons and result not in skipped:
             issues.append({'type': reasons[result], 'message': 'Anki field validation: ' + reasons[result]})
-        elif result not in (0, 2):
+        elif result not in (0, 2) + skipped:
             raise ApiError('unsupportedCapability', 'Unknown native field validation result.')
         duplicates = []
         policy = policy or {}
         source = normalized_field(note.fields[0])
         if not policy.get('allow', False):
             candidates = self.col.db.list('select id from notes where csum=? and id!=?', compat.field_checksum(note.fields[0]), note.id)
-            scope_decks = None
-            if policy.get('scope', 'collection') == 'deck':
-                target = self.resolve(policy.get('deck', self.summary(deck)), 'deck')
-                scope_decks = {target['id']}
-                if policy.get('includeChildren', False):
-                    scope_decks.update(id for _, id in self.col.decks.children(target['id']))
+            scope_decks = self.duplicate_scope(policy, deck)
             for id in candidates:
                 other = self.col.get_note(id)
                 if not policy.get('acrossNoteTypes', False) and int(other.mid) != int(note.mid):
@@ -378,20 +401,18 @@ class Services:
 
     def notes_validate(self, note):
         native, deck = self.prepare_note(note)
-        return self.validation(native, deck, note.get('duplicates'), note.get('rejectEmptyQuestions', True),
-                               note.get(LEGACY_SKIP_CLOZE) is not True)
+        return self.validate_note_data(native, deck, note)
 
     def notes_validateMany(self, notes):
         return self.many(notes, self.notes_validate)
 
     def notes_create(self, **data):
         note, deck = self.prepare_note(data)
-        validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True),
-                                     data.get(LEGACY_SKIP_CLOZE) is not True)
+        validation = self.validate_note_data(note, deck, data)
         if not validation['valid']:
             raise ApiError('validationFailed', 'Note cannot be created.', validation)
         self.change(self.col.add_note(note, deck['id']))
-        return {'noteId': str(note.id), 'cardIds': [str(id) for id in note.card_ids()]}
+        return created_note(note)
 
     def notes_createMany(self, notes, atomic=False):
         if not atomic:
@@ -401,8 +422,7 @@ class Services:
             raise ApiError('validationFailed', 'Atomic batch validation failed.', {'items': errors})
         if prepared:
             self.add_notes(prepared)
-        return {'items': [{'index': index, 'result': {'noteId': str(req.note.id), 'cardIds': [str(id) for id in req.note.card_ids()]}}
-                          for index, req in enumerate(prepared)]}
+        return {'items': [{'index': index, 'result': created_note(request.note)} for index, request in enumerate(prepared)]}
 
     def add_notes(self, requests):
         if compat.has(self.col, 'add_notes'):
@@ -430,22 +450,18 @@ class Services:
         for index, data in enumerate(notes):
             try:
                 note, deck = self.prepare_note(data)
-                validation = self.validation(note, deck, data.get('duplicates'), data.get('rejectEmptyQuestions', True),
-                                             data.get(LEGACY_SKIP_CLOZE) is not True)
+                validation = self.validate_note_data(note, deck, data)
                 policy = data.get('duplicates', {})
                 if not policy.get('allow', False):
+                    source = normalized_field(note.fields[0])
+                    scope_decks = self.duplicate_scope(policy, deck)
                     for old_note, old_deck in seen:
-                        if normalized_field(note.fields[0]) != normalized_field(old_note.fields[0]):
+                        if source != normalized_field(old_note.fields[0]):
                             continue
                         if not policy.get('acrossNoteTypes', False) and int(old_note.mid) != int(note.mid):
                             continue
-                        if policy.get('scope') == 'deck':
-                            scoped = self.resolve(policy.get('deck', self.summary(deck)), 'deck')['id']
-                            dids = {scoped}
-                            if policy.get('includeChildren'):
-                                dids.update(did for _, did in self.col.decks.children(scoped))
-                            if old_deck['id'] not in dids:
-                                continue
+                        if scope_decks is not None and old_deck['id'] not in scope_decks:
+                            continue
                         validation['valid'] = False
                         validation['issues'].append({'type': 'duplicate', 'message': 'Duplicate within batch.'})
                 if not validation['valid']:
@@ -601,7 +617,7 @@ class Services:
     def card_record(self, card):
         return {'id': str(card.id), 'noteId': str(card.nid), 'deck': self.summary(self.resolve({'id': str(card.did)}, 'deck')),
                 'homeDeck': self.summary(self.resolve({'id': str(card.odid)}, 'deck')) if card.odid else None,
-                'templateIndex': card.ord, 'flags': card.flags & 7, 'modifiedAt': timestamp(card.mod),
+                'templateIndex': card.ord, 'flags': card.flags & FLAG_MASK, 'modifiedAt': timestamp(card.mod),
                 'scheduling': self.state_record(card)}
 
     def cards_get(self, id):
@@ -639,7 +655,7 @@ class Services:
     def cards_setFlags(self, ids, flag):
         def mutate(id):
             card = self.card(id)
-            changed = card.flags & 7 != flag
+            changed = card.flags & FLAG_MASK != flag
             if changed:
                 self.change(self.col.set_user_flag_for_cards(flag, [card.id]))
             return {'changed': changed}
@@ -679,8 +695,12 @@ class Services:
             else:
                 amount = None
             answers.append({'rating': rating, 'label': label, 'interval': amount})
-        token = self.runtime.token('scheduler', [card._to_backend_card().SerializeToString().hex(), states.SerializeToString().hex(), self.col.sched.today])
+        token = self.runtime.token('scheduler', self.scheduler_state(card, states))
         return {'cardId': cardId, 'source': 'scheduler', 'stateToken': token, 'answers': answers}
+
+    def scheduler_state(self, card, states):
+        """What a state token binds: an answer must see the card and states its prediction described."""
+        return [card._to_backend_card().SerializeToString().hex(), states.SerializeToString().hex(), self.col.sched.today]
 
     def scheduling_getDue(self, cardId, includeLearnAhead=False):
         card = self.card(cardId)
@@ -702,7 +722,7 @@ class Services:
         if self.runtime.active_reviewer_card == card.id:
             raise ApiError('invalidState', 'Use reviewer.answer for the active GUI card.')
         states = compat.scheduling_states(self.col, card.id)
-        self.runtime.check_token(stateToken, 'scheduler', [card._to_backend_card().SerializeToString().hex(), states.SerializeToString().hex(), self.col.sched.today])
+        self.runtime.check_token(stateToken, 'scheduler', self.scheduler_state(card, states))
         card.start_timer()
         native_rating = {'again': CardAnswer.AGAIN, 'hard': CardAnswer.HARD,
                          'good': CardAnswer.GOOD, 'easy': CardAnswer.EASY}[rating]
@@ -1061,7 +1081,6 @@ class Services:
         return MEDIA_ILLEGAL_CHARACTERS.sub('', unicodedata.normalize('NFC', filename))
 
     def media_list(self, pattern='*'):
-        import fnmatch
         self.media_filename(pattern)
         return sorted(name for name in os.listdir(self.col.media.dir()) if fnmatch.fnmatchcase(name, pattern))
 
@@ -1161,13 +1180,12 @@ class Services:
     def statistics_getToday(self):
         graphs = compat.graphs(self.col, '')
         cutoff = compat.day_cutoff(self.col)
-        return {'count': graphs.today.answer_count, 'day': datetime.fromtimestamp(cutoff - 86400).date().isoformat(), 'nextDayAt': timestamp(cutoff)}
+        return {'count': graphs.today.answer_count, 'day': scheduler_day(cutoff).isoformat(), 'nextDayAt': timestamp(cutoff)}
 
     def statistics_getReviewDays(self):
         graphs = compat.graphs(self.col, '')
-        today = datetime.fromtimestamp(compat.day_cutoff(self.col) - 86400).date()
-        return [{'day': (today + timedelta(days=offset)).isoformat(),
-                 'count': counts.learn + counts.relearn + counts.young + counts.mature + counts.filtered}
+        today = scheduler_day(compat.day_cutoff(self.col))
+        return [{'day': (today + timedelta(days=offset)).isoformat(), 'count': review_total(counts)}
                 for offset, counts in sorted(graphs.reviews.count.items(), reverse=True)]
 
     def statistics_getSummary(self, deck=None):
@@ -1176,8 +1194,8 @@ class Services:
         counts = graphs.card_counts.excluding_inactive
         card_ids = self.col.find_cards(query)
         note_ids = {self.col.get_card(id).nid for id in card_ids}
-        review_count = sum(value.learn + value.relearn + value.young + value.mature + value.filtered for value in graphs.reviews.count.values())
-        times = sum(value.learn + value.relearn + value.young + value.mature + value.filtered for value in graphs.reviews.time.values())
+        review_count = sum(review_total(value) for value in graphs.reviews.count.values())
+        times = sum(review_total(value) for value in graphs.reviews.time.values())
         return {'cardCount': len(card_ids), 'noteCount': len(note_ids), 'reviewCount': review_count,
                 'reviewTimeMs': times * 1000, 'newCount': counts.newCards, 'learningCount': counts.learn + counts.relearn,
                 'reviewCardCount': counts.young + counts.mature, 'suspendedCount': counts.suspended}

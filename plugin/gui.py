@@ -3,6 +3,8 @@ import json
 import uuid
 import time
 
+import aqt
+
 from . import compat
 from .protocol import ApiError, Deferred, timestamp
 from .services import RATINGS, entity_id
@@ -16,7 +18,6 @@ class Gui:
 
     @property
     def mw(self):
-        import aqt
         return aqt.mw
 
     def service(self):
@@ -43,7 +44,6 @@ class Gui:
         return update
 
     def browser(self):
-        import aqt
         return aqt.dialogs._dialogs.get('Browser', (None, None))[1]
 
     def browser_getSelection(self):
@@ -53,7 +53,6 @@ class Gui:
                 'selectedCardIds': [str(id) for id in browser.selectedCards()] if browser else []}
 
     def browser_open(self, query=None, sort=None):
-        import aqt
         already_open = self.browser() is not None
         # Start a new browser with the target query, before its editor loads.
         # Existing browsers must save their current note before changing search.
@@ -114,7 +113,6 @@ class Gui:
         return self.browser_getSelection()
 
     def add_dialog(self):
-        import aqt
         return (aqt.dialogs._dialogs.get('NewAddCards', (None, None))[1] or
                 aqt.dialogs._dialogs.get('AddCards', (None, None))[1])
 
@@ -202,7 +200,6 @@ class Gui:
         return self.editor_record(dialog, 'note')
 
     def editors_openAdd(self, note=None):
-        import aqt
         existing = self.add_dialog()
         def open_dialog(record=None):
             if record and record['dirty'] and note:
@@ -242,42 +239,41 @@ class Gui:
         dialog, kind, _ = entry
         if kind != 'add' or dialog is not self.add_dialog():
             raise ApiError('invalidState', 'Only the active Add draft can be updated.')
+        # Changing the note type or replacing fields would discard typed content.
+        overwrites = 'noteType' in patch or mode == 'replace' and 'fields' in patch
         if not hasattr(dialog.editor, 'note'):
             def update(record):
-                if record['dirty'] and ('noteType' in patch or mode == 'replace' and 'fields' in patch):
+                if record['dirty'] and overwrites:
                     raise ApiError('editorConflict', 'Draft contains unsaved edits.')
                 model = self.service().resolve(patch.get('noteType', {'id': record['noteType']['id']}), 'noteType')
-                from anki.notes import Note
-                note = Note(self.mw.col, model)
-                for field in note.keys():
-                    note[field] = record['fields'].get(field, '')
-                for field, value in patch.get('fields', {}).items():
-                    if field not in note:
-                        raise ApiError('validationFailed', 'Unknown field: ' + field)
-                    note[field] = note[field] + value if mode == 'append' else value
-                tags = list(patch.get('tags', record['tags']))
-                note.tags = list(dict.fromkeys(record['tags'] + tags)) if mode == 'append' else tags
+                note = self.draft_note(model, record['fields'], record['tags'], patch, mode)
                 deck = self.service().resolve(patch.get('deck', {'id': record['deck']['id']}), 'deck')
                 return self.populate_svelte(dialog, note, deck['id'])
             return self.svelte_record(dialog, kind).map(update)
         current = dialog.editor.note
-        if any(current.fields) and ('noteType' in patch or (mode == 'replace' and 'fields' in patch)):
+        if any(current.fields) and overwrites:
             raise ApiError('editorConflict', 'Draft contains unsaved edits.')
         model = self.service().resolve(patch['noteType'], 'noteType') if 'noteType' in patch else current.note_type()
-        from anki.notes import Note
-        updated = Note(self.mw.col, model)
-        for name, value in current.items():
-            if name in updated:
-                updated[name] = value
-        for name, value in patch.get('fields', {}).items():
-            if name not in updated:
-                raise ApiError('validationFailed', 'Unknown field: ' + name)
-            updated[name] = updated[name] + value if mode == 'append' else value
-        tags = patch.get('tags', current.tags)
-        updated.tags = list(dict.fromkeys(list(current.tags) + list(tags))) if mode == 'append' else list(tags)
+        updated = self.draft_note(model, dict(current.items()), current.tags, patch, mode)
         deck = self.service().resolve(patch['deck'], 'deck')['id'] if 'deck' in patch else compat.add_dialog_deck_id(dialog)
         compat.add_dialog_set_note(dialog, updated, deck)
         return self.editor_record(dialog, 'add')
+
+    def draft_note(self, model, fields, tags, patch, mode):
+        """A new note of model holding a draft's matching fields and tags, with patch applied."""
+        from anki.notes import Note
+        note = Note(self.mw.col, model)
+        for name in note.keys():
+            if name in fields:
+                note[name] = fields[name]
+        for name, value in patch.get('fields', {}).items():
+            if name not in note:
+                raise ApiError('validationFailed', 'Unknown field: ' + name)
+            note[name] = note[name] + value if mode == 'append' else value
+        tags = list(tags)
+        added = list(patch.get('tags', tags))
+        note.tags = list(dict.fromkeys(tags + added)) if mode == 'append' else added
+        return note
 
     def reviewer(self):
         reviewer = self.mw.reviewer
@@ -543,12 +539,10 @@ class Gui:
         return pending
 
     def guard_lifecycle(self):
-        import aqt
         if compat.background_op_count(self.mw):
             raise ApiError('busy', 'Anki has an active collection operation.')
-        for _, dialog in aqt.dialogs._dialogs.values():
-            if dialog is not None and hasattr(dialog, 'editor'):
-                raise ApiError('editorConflict', 'Close editors before changing collection lifecycle.')
+        if any(True for _ in self.open_editors()):
+            raise ApiError('editorConflict', 'Close editors before changing collection lifecycle.')
 
     def collection_refresh(self, target='windows'):
         if target == 'cachesAndWindows':
@@ -647,23 +641,28 @@ class Gui:
         self.mw.taskman.with_progress(lambda: compat.sync_collection(col, auth, includeMedia), synced)
         return pending
 
+    @staticmethod
+    def open_editors():
+        """The editors of every open Anki dialog that hosts one."""
+        for _, dialog in aqt.dialogs._dialogs.values():
+            if dialog is not None and hasattr(dialog, 'editor'):
+                yield dialog.editor
+
     def guard(self, method, params, saved=False):
         """Reject affected open editors, including changes still pending in JS.
 
         With saved, the caller saves open editors before writing, so note and tag
         writes skip editors whose hosts reload the changed note afterwards."""
-        import aqt
         if method.startswith(('scheduling.', 'cards.')):
             return
-        for _, dialog in aqt.dialogs._dialogs.values():
-            if dialog is None or not hasattr(dialog, 'editor'):
-                continue
-            editor = dialog.editor
-            note = getattr(editor, 'note', None)
-            note_id = note.id if note is not None else getattr(editor, 'nid', None)
-            affected = method.startswith(('noteTypes.', 'collection.', 'packages.', 'advanced.')) or method == 'application.importFile'
-            ids = params.get('ids', params.get('noteIds', [params.get('id')]))
-            if method.startswith(('notes.', 'tags.')):
+        broad = method.startswith(('noteTypes.', 'collection.', 'packages.', 'advanced.')) or method == 'application.importFile'
+        per_note = method.startswith(('notes.', 'tags.'))
+        ids = params.get('ids', params.get('noteIds', [params.get('id')]))
+        for editor in self.open_editors():
+            affected = broad
+            if per_note:
+                note = getattr(editor, 'note', None)
+                note_id = note.id if note is not None else getattr(editor, 'nid', None)
                 affected = bool(note_id) and (str(note_id) in ids or params.get('allNotes', False))
                 affected = affected and not (saved and compat.reloads_changed_notes(editor, method))
             if affected:
@@ -671,11 +670,7 @@ class Gui:
 
     def guard_note_type(self, name):
         """Reject only editors that may show a note of the named note type."""
-        import aqt
-        for _, dialog in aqt.dialogs._dialogs.values():
-            if dialog is None or not hasattr(dialog, 'editor'):
-                continue
-            editor = dialog.editor
+        for editor in self.open_editors():
             note = getattr(editor, 'note', None)
             if note is not None:
                 try:

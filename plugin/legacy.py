@@ -1,14 +1,20 @@
 """Legacy argument translation and result projection over shared domain services."""
+import base64
 import copy
 import html
 import os
 import re
+import time
 
-from . import compat
+from . import compat, util
+from .media import MediaTransaction
 from .protocol import ApiError, Deferred, epoch_seconds
-from .services import RATINGS, KINDS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, entity_id, preset_enum_value, PRESET_ENUMS, native_preset_enum
+from .services import (RATINGS, KINDS, MEDIA_ILLEGAL_CHARACTERS, LEGACY_SKIP_CLOZE, PRESET_ENUMS,
+                       entity_id, interval, native_preset_enum, preset_enum_value)
 
 EMPTY_NOTE = 'cannot create note because it is empty'
+MEDIA_KINDS = ('audio', 'video', 'picture')
+MEDIA_SIZE_LIMIT = 64 * 1024 * 1024
 
 
 def integer(value):
@@ -18,6 +24,16 @@ def integer(value):
     if type(value) is float and value.is_integer() and abs(value) <= 9007199254740991:
         return int(value)
     return value
+
+
+def review_ease(rating):
+    """The legacy 1-4 ease of a review rating; 0 for reviews without one."""
+    return RATINGS.index(rating) + 1 if rating else 0
+
+
+def is_missing(error):
+    """Whether a native or API error reports a missing entity."""
+    return compat.is_not_found(error) or isinstance(error, ApiError) and error.kind == 'notFound'
 
 
 def legacy_request(request):
@@ -48,6 +64,12 @@ class Legacy:
         self.owner, self.runtime = owner, owner.runtime
         self.service = service
         self.media_transaction = None
+
+    def ensure_service(self):
+        """The shared services, bound to the active collection on first use."""
+        if self.service is None:
+            self.service = self.runtime.service()
+        return self.service
 
     @staticmethod
     def boolean(value, default, label):
@@ -136,7 +158,7 @@ class Legacy:
             if isinstance(scoped, dict):
                 scoped = dict(scoped)
             options['duplicateScopeOptions'] = scoped
-        for kind in ('audio', 'video', 'picture'):
+        for kind in MEDIA_KINDS:
             if note.get(kind):
                 entries = []
                 for entry in cls.array(note[kind]):
@@ -186,9 +208,7 @@ class Legacy:
         Legacy actions predate v3, so they answer and describe cards the way
         Anki-Connect did on those schedulers.
         """
-        if self.service is None:
-            self.service = self.runtime.service()
-        col = self.service.col
+        col = self.ensure_service().col
         if self.runtime.capability_reason('scheduling.answer', col) is None:
             return None
         return col.sched if callable(getattr(col.sched, 'answerCard', None)) else None
@@ -254,8 +274,7 @@ class Legacy:
         return True
 
     def s(self, method, **params):
-        if self.service is None:
-            self.service = self.runtime.service()
+        self.ensure_service()
         notes = [params['note']] if isinstance(params.get('note'), dict) else params.get('notes', [])
         flags = [isinstance(note, dict) and note.get(LEGACY_SKIP_CLOZE) for note in notes]
         if any(flags):
@@ -352,9 +371,7 @@ class Legacy:
 
     def native_search(self, kind, query):
         # Unlike paginated v1 searches, legacy results keep Anki's native order.
-        if self.service is None:
-            self.service = self.runtime.service()
-        col = self.service.col
+        col = self.ensure_service().col
         try:
             return [int(id) for id in (col.find_notes if kind == 'notes' else col.find_cards)(query)]
         except Exception as error:
@@ -362,8 +379,7 @@ class Legacy:
 
     def model(self, name=None, id=None):
         # Compatibility projections are snapshots, never a writable alternate service.
-        if self.service is None:
-            self.service = self.runtime.service()
+        self.ensure_service()
         return self.resolve({'id': str(id)} if id is not None else self.ref(name), 'noteType')
 
     @staticmethod
@@ -443,8 +459,6 @@ class Legacy:
         return data
 
     def acquire(self, params):
-        import base64
-        from . import util
         sources = [key for key in ('data', 'path', 'url') if params.get(key)]
         if not sources:
             raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
@@ -453,20 +467,17 @@ class Legacy:
             data = base64.b64decode(params[key])
         elif key == 'path':
             with open(params[key], 'rb') as file:
-                data = file.read(67108865)
+                data = file.read(MEDIA_SIZE_LIMIT + 1)
         else:
-            data = util.download(params[key], 67108864)
-        if len(data) > 67108864:
+            data = util.download(params[key], MEDIA_SIZE_LIMIT)
+        if len(data) > MEDIA_SIZE_LIMIT:
             raise ApiError('invalidParams', 'Media exceeds the size limit.')
         return data
 
     def install(self, entry, data, transaction=None):
-        from .media import MediaTransaction
         if transaction is None:
-            if self.service is None:
-                self.service = self.runtime.service()
             if self.media_transaction is None:
-                self.media_transaction = MediaTransaction(self.service)
+                self.media_transaction = MediaTransaction(self.ensure_service())
             transaction = self.media_transaction
         skip = {'algorithm': 'md5', 'digest': entry['skipHash']} if entry.get('skipHash') else None
         return transaction.install(self.media_name(entry['filename']), data, skip,
@@ -481,7 +492,7 @@ class Legacy:
     def stage_media(self, source, pure=False):
         """Acquire every attachment before any install; failures become field text."""
         staged = []
-        for kind in ('audio', 'video', 'picture'):
+        for kind in MEDIA_KINDS:
             for entry in self.array(source.get(kind)):
                 if not entry:
                     continue
@@ -540,7 +551,6 @@ class Legacy:
         # Acquire every attachment before installing any file. Back up only
         # destinations this request owns; never scan or restore unrelated media.
         staged = [self.stage_media(source) for source in sources]
-        from .media import MediaTransaction
         transaction = MediaTransaction(self.service)
         try:
             filenames = {id(entry): self.install(entry, data, transaction)
@@ -570,9 +580,7 @@ class Legacy:
                 'cards': [int(id) for id in value['cardIds']]}
 
     def card_info(self, id, fields=None):
-        if self.service is None:
-            self.service = self.runtime.service()
-        card = self.service.card(str(id))
+        card = self.ensure_service().card(str(id))
         result = {'cardId': card.id, 'fieldOrder': card.ord, 'ord': card.ord,
                 'factor': card.factor, 'interval': card.ivl, 'note': card.nid, 'type': card.type, 'queue': card.queue,
                 'due': card.due, 'reps': card.reps, 'lapses': card.lapses, 'left': card.left, 'mod': card.mod,
@@ -600,8 +608,7 @@ class Legacy:
         runtime = self.runtime
         gui = runtime.gui
         def call(method, **params):
-            value = gui.execute(method, params)
-            return value
+            return gui.execute(method, params)
         def accepted(method, value, final=lambda value: value, **params):
             pending = runtime.await_value(runtime.invoke(method, runtime.dispatcher.params(method, params)))
             return Accepted(value, pending, final)
@@ -631,9 +638,7 @@ class Legacy:
                     raise ApiError('invalidParams', 'Must provide a "columnId" and a "order" property"')
                 if sort['order'] not in ('ascending', 'descending'):
                     raise ApiError('invalidParams', 'invalid card order: ' + str(sort['order']))
-                if self.service is None:
-                    self.service = runtime.service()
-                if not compat.browser_column_exists(self.service.col, sort['columnId']):
+                if not compat.browser_column_exists(self.ensure_service().col, sort['columnId']):
                     raise ApiError('invalidParams', 'invalid columnId: ' + str(sort['columnId']))
                 sort = {'column': sort['columnId'], 'direction': sort['order']}
             value = call('browser.open', query=p['query'], sort=sort)
@@ -655,8 +660,7 @@ class Legacy:
             try:
                 call('browser.select', cardIds=[str(p.get('card', p.get('note')))])
             except Exception as error:
-                from anki.errors import NotFoundError
-                if not isinstance(error, NotFoundError) and getattr(error, 'kind', None) != 'notFound':
+                if not is_missing(error):
                     raise
                 # Historically a missing card only cleared the selection.
                 call('browser.select', cardIds=[])
@@ -678,7 +682,7 @@ class Legacy:
                     note.pop('rejectEmptyQuestions', None)
                     note.pop(LEGACY_SKIP_CLOZE, None)
                 return accepted('editors.openAdd', 0, lambda value: int(value['noteId'] or 0), **({'note': note} if note else {}))
-            if note and any(p['note'].get(kind) for kind in ('audio', 'video', 'picture')):
+            if note and any(p['note'].get(kind) for kind in MEDIA_KINDS):
                 return self.prepare_gui_media(note['fields'], p['note']).map(open_add)
             return open_add()
         if name == 'guiAddNoteSetData':
@@ -686,8 +690,7 @@ class Legacy:
             if dialog is None:
                 return {'error': 'Add Note dialog is not open', 'code': 1}
             source = copy.deepcopy(p['note'])
-            if self.service is None:
-                self.service = runtime.service()
+            self.ensure_service()
             for key, kind, label in [('deckName', 'deck', 'Deck'), ('modelName', 'noteType', 'Model')]:
                 if key in source:
                     try:
@@ -724,7 +727,7 @@ class Legacy:
                 return call('editors.updateDraft', editorId=editor_id, patch=patch,
                             mode='append' if p['append'] else 'replace')
             value = (self.prepare_gui_media(patch['fields'], source).map(update)
-                     if 'fields' in patch and any(source.get(kind) for kind in ('audio', 'video', 'picture'))
+                     if 'fields' in patch and any(source.get(kind) for kind in MEDIA_KINDS)
                      else update())
             if isinstance(value, Deferred):
                 pending = Deferred()
@@ -831,7 +834,6 @@ class Legacy:
             return cleanup(error=error)
 
     def dispatch(self, name, p):
-        from . import util
         if name == 'version':
             return util.setting('apiVersion')
         if name == 'requestPermission':
@@ -970,11 +972,11 @@ class Legacy:
             source = p['note']
             source = {'id': source, 'tags': p['tags']} if name == 'updateNoteTags' else copy.deepcopy(source)
             patch = {}
-            if 'fields' in source or any(source.get(kind) for kind in ('audio', 'video', 'picture')):
+            if 'fields' in source or any(source.get(kind) for kind in MEDIA_KINDS):
                 current = self.s('notes.get', id=str(source['id']))
                 patch['fields'] = self.fields(source.get('fields'), current['fields'])
                 # Attachments may target a field omitted from the text patch.
-                for kind in ('audio', 'video', 'picture'):
+                for kind in MEDIA_KINDS:
                     for entry in self.array(source.get(kind)):
                         if entry:
                             for field in self.media_targets(entry, current['fields']):
@@ -1066,8 +1068,7 @@ class Legacy:
                     else:
                         result.append(self.record(kind, id, fields))
                 except Exception as error:
-                    from anki.errors import NotFoundError
-                    if isinstance(error, NotFoundError) or isinstance(error, ApiError) and error.kind == 'notFound':
+                    if is_missing(error):
                         result.append({})
                     else:
                         raise
@@ -1106,7 +1107,6 @@ class Legacy:
                 else:
                     # Historical queries depend on the latest review, including
                     # their IndexError when the card has no review history.
-                    import time
                     date, ivl = self.service.col.db.all('select id/1000.0, ivl from revlog where cid = ?', id)[-1]
                     result.append(bool(self.all_pages('cards.search', query='cid:{} is:due'.format(id)))
                                   if ivl >= -1200 else date - ivl <= time.time())
@@ -1161,10 +1161,9 @@ class Legacy:
                     self.answer_card(answer['cardId'], answer['ease'])
                     result.append(True)
                 except Exception as error:
-                    from anki.errors import NotFoundError
                     # Missing and unanswerable cards fail individually, so one
                     # suspended or on-screen card cannot abort a partial batch.
-                    if isinstance(error, NotFoundError) or isinstance(error, ApiError) and (error.kind == 'notFound' or name == 'answerCards' and error.kind == 'invalidState'):
+                    if is_missing(error) or name == 'answerCards' and isinstance(error, ApiError) and error.kind == 'invalidState':
                         result.append(False)
                     else:
                         raise
@@ -1190,16 +1189,15 @@ class Legacy:
                 params = {'cardIds': [value['id'] for value in values if value]}
             reviews = self.all_pages('reviews.list', **params)
             if name == 'cardReviews':
-                return [[int(row['id']), int(row['cardId']), row['syncSequence'], RATINGS.index(row['rating']) + 1 if row['rating'] else 0,
+                return [[int(row['id']), int(row['cardId']), row['syncSequence'], review_ease(row['rating']),
                          self.signed(row['interval']), self.signed(row['previousInterval']), row['factor']['value'], row['elapsedMs'], KINDS.index(row['kind'])] for row in reviews]
             result = {str(id): [] for id in p['cards']}
             for row in reviews:
-                result[row['cardId']].append({'id': int(row['id']), 'usn': row['syncSequence'], 'ease': RATINGS.index(row['rating']) + 1 if row['rating'] else 0,
+                result[row['cardId']].append({'id': int(row['id']), 'usn': row['syncSequence'], 'ease': review_ease(row['rating']),
                                               'ivl': self.signed(row['interval']), 'lastIvl': self.signed(row['previousInterval']), 'factor': row['factor']['value'], 'time': row['elapsedMs'], 'type': KINDS.index(row['kind'])})
             return result
         if name == 'insertReviews':
             values = []
-            from .services import interval
             for row in p['reviews']:
                 if not isinstance(row, (list, tuple)) or len(row) != 9 or not all(type(value) is int for value in row):
                     raise ApiError('invalidParams', 'Review rows require nine integers.')

@@ -524,6 +524,12 @@ def backend_errors():
     return tuple(getattr(anki.errors, name) for name in names if hasattr(anki.errors, name))
 
 
+def is_not_found(error):
+    """Whether Anki raised its NotFoundError, which install_backports provides on every release."""
+    import anki.errors
+    return isinstance(error, anki.errors.NotFoundError)
+
+
 def renders_uncommitted(col):
     """Whether the backend renders unsaved notes; from 2.1.28."""
     return has(col._backend, 'render_uncommitted_card_legacy') or has(col._backend, 'render_uncommitted_card')
@@ -739,7 +745,6 @@ def ask_user(text, callback, buttons, default_button, parent):
     box.buttonClicked.connect(lambda button: callback(added.index(button)))
     box.open()
     return box
-
 
 
 def _graph_rows(col, search):
@@ -1197,7 +1202,6 @@ def _fields_check(note):
     return state
 
 
-# Modern names that releases before 2.1.45 expose under older spellings.
 @functools.lru_cache(maxsize=None)
 def release():
     """The running Anki release, for rules that no API exposes."""
@@ -1246,6 +1250,7 @@ _SCHEDULER_BACKPORTS = {
 }
 
 
+# Modern names that releases before 2.1.45 expose under older spellings.
 BACKPORTS = {
     'anki.collection.Collection': {
         'get_note': _note,
@@ -1389,7 +1394,6 @@ def collection_class():
 
 def install_backports():
     """Add modern collection methods to releases that lack them, never replacing native ones."""
-    import importlib
     import importlib.util
     for path, methods in BACKPORTS.items():
         module, name = path.rsplit('.', 1)

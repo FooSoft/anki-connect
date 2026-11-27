@@ -42,9 +42,9 @@ from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 from . import compat, util, web
 compat.install_backports()
 from .legacy import Legacy, Accepted, legacy_request
-from .runtime import Runtime
+from .runtime import Runtime, LIFECYCLE_BUSY, OPERATION_BUSY
 from .contract import SCHEMA, LEGACY_TARGETS
-from .protocol import Deferred, completed
+from .protocol import ApiError, Deferred, completed
 from .web import format_success_reply, format_exception_reply
 
 macos_helper = compat.macos_helper()
@@ -68,7 +68,8 @@ LEGACY_LIFECYCLE_EXEMPT = ('version', 'requestPermission', 'apiReflect', 'getPro
 LEGACY_FIELD_EDITS = frozenset(('modelFieldAdd', 'modelFieldRemove', 'modelFieldRename', 'modelFieldReposition'))
 # Lifecycle actions start on a later tick; legacy admission is reserved until they finish.
 LEGACY_LIFECYCLE = ('sync', 'loadProfile')
-LEGACY_DIRECT = ('version', 'requestPermission', 'apiReflect', 'getProfiles', 'getActiveProfile', 'loadProfile', 'sync', 'reloadCollection')
+# Actions that run on Qt's main thread instead of as background collection work.
+LEGACY_DIRECT = LEGACY_LIFECYCLE_EXEMPT + LEGACY_LIFECYCLE + ('reloadCollection',)
 
 
 class AnkiConnect:
@@ -162,15 +163,19 @@ class AnkiConnect:
         return self.waits_for_collection_work(name) and bool(compat.background_op_count(self.window()))
 
     @staticmethod
-    def legacy_writes(name):
-        return any(target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite')
-                   for target in LEGACY_TARGETS.get(name, []))
+    def legacy_write_targets(name):
+        """The v1 write methods a legacy action is declared to run."""
+        return [target for target in LEGACY_TARGETS.get(name, [])
+                if target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite')]
+
+    @classmethod
+    def legacy_writes(cls, name):
+        return bool(cls.legacy_write_targets(name))
 
     def save_open_editors(self):
         """Commit pending editor input before a write's change notification
         makes open editors reload their notes from the collection."""
-        editors = [dialog.editor for _, dialog in aqt.dialogs._dialogs.values()
-                   if dialog is not None and compat.saves_editor(getattr(dialog, 'editor', None))]
+        editors = [editor for editor in self.runtime.gui.open_editors() if compat.saves_editor(editor)]
         if not editors:
             return None
         pending = Deferred()
@@ -191,7 +196,6 @@ class AnkiConnect:
             elif time.monotonic() < deadline:
                 self.runtime.schedule_later(check)
             else:
-                from .protocol import ApiError
                 pending.resolve(error=ApiError('busy', 'An open editor did not save its note.'))
         for editor in editors:
             compat.editor_save(editor, saved, keepFocus=True)
@@ -201,11 +205,14 @@ class AnkiConnect:
 
     def guard_legacy(self, name, params):
         if self.waits_for_collection_work(name) and compat.background_op_count(self.window()):
-            from .protocol import ApiError
-            raise ApiError('busy', 'A collection operation is active.')
+            raise ApiError('busy', OPERATION_BUSY)
         if self.lifecycle_busy(name):
-            from .protocol import ApiError
-            raise ApiError('busy', 'Collection lifecycle operation is active.')
+            raise ApiError('busy', LIFECYCLE_BUSY)
+        if name in LEGACY_EDITOR_SAFE:
+            return
+        if name in LEGACY_FIELD_EDITS:
+            self.runtime.gui.guard_note_type(params.get('modelName'))
+            return
         # Editors are guarded by the existing note IDs a write names; new note objects have none.
         note = params.get('note')
         notes = params.get('notes')
@@ -214,15 +221,9 @@ class AnkiConnect:
         if note_id is not None:
             ids.append(str(note_id))
         converted = {'ids': ids, 'allNotes': name == 'replaceTagsInAllNotes'}
-        if name in LEGACY_EDITOR_SAFE:
-            return
-        if name in LEGACY_FIELD_EDITS:
-            self.runtime.gui.guard_note_type(params.get('modelName'))
-            return
-        for target in LEGACY_TARGETS.get(name, []):
-            if target in SCHEMA['x-methods'] and SCHEMA['x-methods'][target]['effect'] in ('write', 'advancedWrite'):
-                # Legacy writes save open editors first; see save_open_editors.
-                self.runtime.gui.guard(target, converted, saved=True)
+        for target in self.legacy_write_targets(name):
+            # Legacy writes save open editors first; see save_open_editors.
+            self.runtime.gui.guard(target, converted, saved=True)
 
     def validate_multi(self, actions, depth=0, state=None):
         """Preflight the entire tree before admitting any executable action."""
@@ -299,9 +300,13 @@ class AnkiConnect:
                 value = Legacy(self).call(name, params)
                 if isinstance(value, Accepted) and name in LEGACY_LIFECYCLE:
                     self.reserve_lifecycle(value.pending)
-                # Historical sync replied after syncing, so standalone sync waits too.
                 def admitted(value):
-                    return value.pending.map(value.project) if isinstance(value, Accepted) and (barrier or name == 'sync') else value.value if isinstance(value, Accepted) else value
+                    if not isinstance(value, Accepted):
+                        return value
+                    # Historical sync replied after syncing, so standalone sync waits too.
+                    if barrier or name == 'sync':
+                        return value.pending.map(value.project)
+                    return value.value
                 pending = value.map(admitted) if isinstance(value, Deferred) else completed(value).map(admitted)
             else:
                 pending = self.runtime.background(lambda service: Legacy(self, service).call(name, params))
@@ -331,48 +336,50 @@ class AnkiConnect:
         self.runtime.schedule_later(check)
         return pending
 
+    @staticmethod
+    def granted_permission():
+        return {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
+
+    @staticmethod
+    def remember_origin(key, origin):
+        """Persist origin in the configured origin list named by key."""
+        config = aqt.mw.addonManager.getConfig(__name__) or {}
+        config[key] = list(util.setting(key)) + [origin]
+        aqt.mw.addonManager.writeConfig(__name__, config)
+
     def permission(self, origin, allowed):
-        results = {'permission': 'denied'}
         if allowed:
-            results = {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
-        elif origin in util.setting('ignoreOriginList'):
-            pass
-        else:
-            msg = QMessageBox(self.window())
-            msg.setWindowTitle('A website wants to access to Anki')
-            msg.setText('"{}" requests permission to use Anki through AnkiConnect. Do you want to give it access?'.format(origin))
-            msg.setInformativeText("By granting permission, you'll allow the website to modify your collection on your behalf, including the execution of destructive actions such as deck deletion.")
-            msg.setWindowIcon(self.window().windowIcon())
-            msg.setIcon(QMessageBox.Icon.Question)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.No)
-            msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
-            msg.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
-            pending = Deferred()
-            def chosen(pressedButton):
-                try:
-                    value = {'permission': 'denied'}
-                    if pressedButton == QMessageBox.StandardButton.Yes:
-                        config = aqt.mw.addonManager.getConfig(__name__) or {}
-                        config['webCorsOriginList'] = list(util.setting('webCorsOriginList'))
-                        config['webCorsOriginList'].append(origin)
-                        aqt.mw.addonManager.writeConfig(__name__, config)
-                        value = {'permission': 'granted', 'requireApikey': bool(util.setting('apiKey')), 'version': util.setting('apiVersion')}
-                    elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
-                        config = aqt.mw.addonManager.getConfig(__name__) or {}
-                        config['ignoreOriginList'] = list(util.setting('ignoreOriginList'))
-                        config['ignoreOriginList'].append(origin)
-                        aqt.mw.addonManager.writeConfig(__name__, config)
-                    pending.resolve(value)
-                except Exception as error:
-                    pending.resolve(error=error)
-                finally:
-                    msg.deleteLater()
-            msg.finished.connect(chosen)
-            msg.setWindowModality(Qt.WindowModality.ApplicationModal)
-            msg.show()
-            return pending
-        return results
+            return self.granted_permission()
+        if origin in util.setting('ignoreOriginList'):
+            return {'permission': 'denied'}
+        msg = QMessageBox(self.window())
+        msg.setWindowTitle('A website wants to access to Anki')
+        msg.setText('"{}" requests permission to use Anki through AnkiConnect. Do you want to give it access?'.format(origin))
+        msg.setInformativeText("By granting permission, you'll allow the website to modify your collection on your behalf, including the execution of destructive actions such as deck deletion.")
+        msg.setWindowIcon(self.window().windowIcon())
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
+        msg.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        pending = Deferred()
+        def chosen(pressedButton):
+            try:
+                value = {'permission': 'denied'}
+                if pressedButton == QMessageBox.StandardButton.Yes:
+                    self.remember_origin('webCorsOriginList', origin)
+                    value = self.granted_permission()
+                elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
+                    self.remember_origin('ignoreOriginList', origin)
+                pending.resolve(value)
+            except Exception as error:
+                pending.resolve(error=error)
+            finally:
+                msg.deleteLater()
+        msg.finished.connect(chosen)
+        msg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        msg.show()
+        return pending
 
     @util.api()
     def version(self): ...

@@ -1,16 +1,29 @@
 """Shared dispatcher, Qt admission and serialized native operation completion."""
+import base64
 import copy
 import hashlib
 import json
 import time
 import uuid
 
-from . import compat
+import aqt
+
+from . import compat, util
 from .contract import SCHEMA
 from .gui import Gui
-from .protocol import ApiError, Deferred, Dispatcher, Operations, completed
+from .media import MediaTransaction
+from .protocol import ApiError, Deferred, Dispatcher, Operations, completed, error_record
 from .services import Services
 
+LIFECYCLE_BUSY = 'Collection lifecycle operation is active.'
+OPERATION_BUSY = 'A collection operation is active.'
+# Prediction/conversion tokens and search cursors expire after this long.
+SNAPSHOT_SECONDS = 600
+TOKEN_LIMIT = 1000
+CURSOR_LIMIT = 100
+SNAPSHOT_ID_LIMIT = 1000000
+# Polling delay for work that waits for active collection operations.
+POLL_MILLISECONDS = 25
 
 GUI_METHODS = {'collection.refresh', 'collection.sync', 'profiles.list', 'profiles.getActive',
                'profiles.switch', 'application.navigate', 'application.exit', 'application.importFile'}
@@ -63,8 +76,7 @@ class Runtime:
         from aqt.qt import QTimer
         self.owner = owner
         self.schedule = schedule or (lambda callback: QTimer.singleShot(0, callback))
-        # Polling delay for work that waits for active collection operations.
-        self.schedule_later = lambda callback: QTimer.singleShot(25, callback)
+        self.schedule_later = lambda callback: QTimer.singleShot(POLL_MILLISECONDS, callback)
         self.operations = Operations(self.schedule)
         self.dispatcher = Dispatcher(self)
         self.gui = Gui(self)
@@ -82,25 +94,25 @@ class Runtime:
 
     @property
     def mw(self):
-        import aqt
         return aqt.mw
 
     @property
     def session(self):
         col = self.mw.col if self.mw else None
         if col is not self._collection:
-            clear_editor_history()
+            self.clear_session_state()
             self._collection = col
             self._session = uuid.uuid4().hex if col else None
             self.profile_name = self.mw.pm.name if col else None
-            self.tokens.clear()
-            self.cursors.clear()
-            self.gui.editors.clear()
         return self._session
 
     def invalidate_session(self, *args):
         self._collection = None
         self._session = None
+        self.clear_session_state()
+
+    def clear_session_state(self):
+        """Forget everything bound to the previous collection session."""
         self.tokens.clear()
         self.cursors.clear()
         self.gui.editors.clear()
@@ -111,10 +123,7 @@ class Runtime:
         compat.register_collection_close(self.invalidate_session)
 
     def service(self):
-        session = self.session
-        if session is None:
-            raise ApiError('collectionUnavailable', 'Collection is not available.')
-        return Services(self, self._collection, session)
+        return Services(self, *self.capture())
 
     def capture(self, expected=None):
         session = self.session
@@ -127,19 +136,21 @@ class Runtime:
     def invalidate_predictions(self):
         self.generation += 1
 
+    @staticmethod
+    def digest(value):
+        return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
     def token(self, kind, value):
-        if len(self.tokens) >= 1000:
+        if len(self.tokens) >= TOKEN_LIMIT:
             oldest = min(self.tokens, key=lambda key: self.tokens[key][3])
             self.tokens.pop(oldest)
         key = uuid.uuid4().hex
-        digest = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
-        self.tokens[key] = (kind, digest, self._session, time.monotonic())
+        self.tokens[key] = (kind, self.digest(value), self._session, time.monotonic())
         return key
 
     def check_token(self, key, kind, value):
         token = self.tokens.get(key)
-        digest = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
-        if not token or token[:3] != (kind, digest, self._session) or time.monotonic() - token[3] > 600:
+        if not token or token[:3] != (kind, self.digest(value), self._session) or time.monotonic() - token[3] > SNAPSHOT_SECONDS:
             raise ApiError('conflict', 'Prediction/conversion token is stale.')
 
     def page(self, ids, method, params, session):
@@ -147,7 +158,7 @@ class Runtime:
         cursor = params.pop('cursor', None)
         limit = params.get('limit', 100)
         now = time.monotonic()
-        self.cursors = {key: value for key, value in self.cursors.items() if now - value['created'] <= 600}
+        self.cursors = {key: value for key, value in self.cursors.items() if now - value['created'] <= SNAPSHOT_SECONDS}
         if cursor:
             state = self.cursors.get(cursor)
             if not state or state['session'] != session:
@@ -156,7 +167,7 @@ class Runtime:
                 raise ApiError('invalidParams', 'Cursor query parameters changed.')
             self.cursors.pop(cursor)
         else:
-            if len(self.cursors) >= 100 or len(ids) > 1000000:
+            if len(self.cursors) >= CURSOR_LIMIT or len(ids) > SNAPSHOT_ID_LIMIT:
                 raise ApiError('busy', 'Search snapshot capacity exceeded.')
             state = {'ids': ids, 'offset': 0, 'created': now, 'session': session, 'method': method, 'params': params}
         start = state['offset']
@@ -167,7 +178,7 @@ class Runtime:
             self.cursors[next_cursor] = {**state, 'offset': next_offset}
         else:
             next_cursor = None
-        if method == 'notes.search' or method == 'notes.findEmpty':
+        if method in ('notes.search', 'notes.findEmpty'):
             selected = [id for id in selected if self._collection.db.scalar('select 1 from notes where id=?', id)]
         elif method == 'cards.search':
             selected = [id for id in selected if self._collection.db.scalar('select 1 from cards where id=?', id)]
@@ -203,7 +214,6 @@ class Runtime:
             raise ApiError('unsupportedCapability', reason)
 
     def describe(self):
-        import aqt
         methods = []
         for name in SCHEMA['x-methods']:
             reason = self.capability_reason(name)
@@ -229,7 +239,7 @@ class Runtime:
             return self.gui.execute(method, params)
         service = self.service()
         if self.lifecycle_active:
-            raise ApiError('busy', 'Collection lifecycle operation is active.')
+            raise ApiError('busy', LIFECYCLE_BUSY)
         if meta['effect'] in ('write', 'advancedWrite'):
             self.gui.guard(method, params)
         try:
@@ -246,7 +256,6 @@ class Runtime:
         reviewer = self.mw.reviewer
         self.active_reviewer_card = reviewer.card.id if reviewer and reviewer.card and self.mw.state == 'review' else None
         def task():
-            from .media import MediaTransaction
             if self._collection is not col or self._session != session:
                 raise ApiError('staleSession', 'Collection changed before execution.')
             # Restore interrupted journals before a session's first collection work.
@@ -288,7 +297,7 @@ class Runtime:
             return completed(self.operations.submit(method, session, lambda key: self.execute_commands(params['commands'], session, key)))
         meta = SCHEMA['x-methods'][method]
         if self.lifecycle_active and meta['scope'] == 'collection':
-            raise ApiError('busy', 'Collection lifecycle operation is active.')
+            raise ApiError('busy', LIFECYCLE_BUSY)
         if meta['scope'] == 'collection':
             _, session = self.capture(params.get('session'))
         else:
@@ -296,17 +305,17 @@ class Runtime:
         if meta['effect'] in ('write', 'advancedWrite'):
             self.gui.guard(method, params)
         if method in GUI_METHODS and meta['scope'] == 'collection' and compat.background_op_count(self.mw):
-            raise ApiError('busy', 'A collection operation is active.')
+            raise ApiError('busy', OPERATION_BUSY)
         def start(key=None):
             self.require_capability(method)
             if self.lifecycle_active and (meta['scope'] == 'collection' or meta['effect'] == 'lifecycle'):
-                raise ApiError('busy', 'Collection lifecycle operation is active.')
+                raise ApiError('busy', LIFECYCLE_BUSY)
             if meta['effect'] in ('write', 'advancedWrite'):
                 self.gui.guard(method, params)
             if meta['scope'] == 'collection':
                 self.capture(session)
                 if method in GUI_METHODS and compat.background_op_count(self.mw):
-                    raise ApiError('busy', 'A collection operation is active.')
+                    raise ApiError('busy', OPERATION_BUSY)
             if method in GUI_METHODS:
                 value = self.gui.execute(method, params, operation_id=key)
                 return value if isinstance(value, Deferred) else completed(value)
@@ -348,7 +357,6 @@ class Runtime:
             except Exception as error:
                 pending = completed(error=error)
             def finish(source):
-                from .protocol import error_record
                 items.append({'index': index, 'method': name, **({'error': error_record(source.error)} if source.error else {'result': source.value})})
                 self.schedule(lambda: step(index + 1))
             pending.then(finish)
@@ -356,9 +364,6 @@ class Runtime:
         return result
 
     def acquire_media(self, params, session):
-        import base64
-        from . import util
-        from .protocol import completed
         result = Deferred()
         limit = SCHEMA['x-limits']['maxMediaBytes']
         source = params['source']
@@ -385,7 +390,6 @@ class Runtime:
 
     def permission(self, context):
         # The facade owns the persisted user-facing permission flow, shared by both APIs.
-        from . import util
         value = self.owner.permission(context.get('origin', ''), context.get('allowed', False))
         pending = value if isinstance(value, Deferred) else completed(value)
         return pending.map(lambda value: {'permission': value['permission'], 'requireApiKey': bool(util.setting('apiKey'))})

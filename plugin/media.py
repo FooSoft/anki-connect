@@ -7,13 +7,15 @@ from pathlib import Path
 
 from .protocol import ApiError
 
+JOURNAL_DIRECTORY = '.anki-connect-media-journal'
+
 
 class MediaTransaction:
     _active = set()
     def __init__(self, service):
         self.service = service
         self.media = Path(service.col.media.dir())
-        self.root = self.media.parent / '.anki-connect-media-journal'
+        self.root = self.media.parent / JOURNAL_DIRECTORY
         self.root.mkdir(exist_ok=True)
         self.recover(service, self.root)
         self.path = self.root / uuid.uuid4().hex
@@ -117,7 +119,7 @@ class MediaTransaction:
     def recover(cls, service, root=None):
         """Restore interrupted journals. Unresolvable journals are quarantined
         with their backups, never reapplied, and never block later requests."""
-        root = root or Path(service.col.media.dir()).parent / '.anki-connect-media-journal'
+        root = root or Path(service.col.media.dir()).parent / JOURNAL_DIRECTORY
         if not root.exists():
             return []
         failures = []
