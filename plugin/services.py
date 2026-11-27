@@ -556,7 +556,7 @@ class Services:
             note = self.note(id)
             before = list(note.tags)
             for tag in tags:
-                note.remove_tag(tag) if remove else note.add_tag(tag)
+                note.remove_tag(tag) if remove else note.has_tag(tag) or note.add_tag(tag)
             if before != note.tags:
                 self.change(self.col.update_note(note))
             return {'changed': before != note.tags}

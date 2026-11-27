@@ -1070,6 +1070,19 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
+      "case": "test_adding_tags_a_note_already_has_leaves_it_unchanged",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "tags.add"
+      ],
+      "legacy": [
+        "addTags"
+      ],
+      "notes": "Real disposable collection; adding a tag the note already has, in any case, reports changed false and leaves the note's tags, mod time and usn as they were, through both APIs. A new tag repeated in one request is added once. Legacy calls bind the public signature but bypass HTTP and the public dispatcher."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
       "case": "test_legacy_scoped_duplicate_checks_skip_native_cloze_validation",
       "layer": "legacy-forwarder",
       "outcome": "success",

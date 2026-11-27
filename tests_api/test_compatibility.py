@@ -1027,3 +1027,17 @@ def test_moving_filtered_cards_returns_them_home_first(native):
     assert call(service, 'cards.move', ids=[str(card)], deck={'id': target['id']})['items'][0]['result']['changed']
     moved = col.get_card(card)
     assert (moved.did, moved.odid, moved.odue, moved.due) == (int(target['id']), 0, 0, home_due)
+
+
+def test_adding_tags_a_note_already_has_leaves_it_unchanged(native):
+    owner, service = native
+    id = int(call(service, 'notes.create', **note_input('tagged', tags=['Present']))['noteId'])
+    # An old mod time and a synced usn make any rewrite of the note visible.
+    service.col.db.execute('update notes set mod=1, usn=0 where id=?', id)
+    assert call(service, 'tags.add', noteIds=[str(id)], tags=['Present', 'present']) == {
+        'items': [{'index': 0, 'result': {'changed': False}}]}
+    assert old(native, 'addTags', notes=[id], tags='present') is None
+    note = service.col.get_note(id)
+    assert (note.tags, note.mod, note.usn) == (['Present'], 1, 0)
+    assert call(service, 'tags.add', noteIds=[str(id)], tags=['New', 'new'])['items'][0]['result'] == {'changed': True}
+    assert service.col.get_note(id).tags == ['New', 'Present']
