@@ -127,10 +127,16 @@ Legacy requests, including nested `multi` items, use these input normalization r
   Null note `options` and `duplicateScopeOptions` use the normal defaults.
 - Note field keys and attachment targets accept unambiguous case-insensitive
   matches, including surrounding whitespace. Exact field keys take precedence;
-  conflicting non-exact keys fail. A null field value means an empty string.
+  conflicting non-exact keys fail. A null field value means an empty string;
+  numbers and booleans become their text, such as `"123"`, `"1.5"`, and `"true"`.
+  Array and object values fail with `Field values must be strings: FIELD`.
   Unknown fields are ignored during creation and note updates; Add dialog draft
   updates still report unknown fields. Media targets accept a string or list;
   repeated targets append each attachment once per field.
+- Base64 media `data` accepts whitespace and omitted trailing `=` padding.
+- `modelFieldNames`, `modelFieldDescriptions`, `modelFieldFonts`,
+  `modelFieldsOnTemplates`, `modelTemplates`, and `modelStyling` report
+  `model was not found: NAME` for a missing, empty, null, or non-string `modelName`.
 
 For example, this updates a Basic note's `Back`, clears its `Front`, and replaces
 its tags with `one` and `two`, returning `{"result":null,"error":null}` on success:
@@ -1693,7 +1699,7 @@ Return whether the GUI reviewer is active.
 
 ### `storeMediaFile`
 
-Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. URLs are fetched with Anki's HTTP client, so non-ASCII URLs are encoded, Anki's user agent is sent, and any status other than 200 fails with `URL download failed with return code STATUS`. Legacy filenames use the host platform's basename and have Anki's illegal characters removed before storage inside the media directory; v1 requires a basename. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
+Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace and omitted trailing padding are accepted. URLs are fetched with Anki's HTTP client, so non-ASCII URLs are encoded, Anki's user agent is sent, and any status other than 200 fails with `URL download failed with return code STATUS`. Legacy filenames use the host platform's basename and have Anki's illegal characters removed before storage inside the media directory; v1 requires a basename. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
 
 **Parameters:** `storeMediaFile(filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True)`
 

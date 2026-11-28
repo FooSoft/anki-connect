@@ -1,5 +1,6 @@
 """Legacy argument translation and result projection over shared domain services."""
 import base64
+import binascii
 import copy
 import html
 import os
@@ -24,6 +25,20 @@ def integer(value):
     if type(value) is float and value.is_integer() and abs(value) <= 9007199254740991:
         return int(value)
     return value
+
+
+def decode_base64(value):
+    """Decode like the historical server, also accepting omitted '=' padding."""
+    try:
+        return base64.b64decode(value)
+    except binascii.Error:
+        if not isinstance(value, str):
+            raise
+        # b64decode discards non-alphabet characters, so pad by the kept count.
+        missing = -len(re.sub(r'[^A-Za-z0-9+/]', '', value)) % 4
+        if missing not in (1, 2):
+            raise
+    return base64.b64decode(value + '=' * missing)
 
 
 def review_ease(rating):
@@ -189,9 +204,16 @@ class Legacy:
         for key, value in values.items():
             actual = cls.field_name(key, names)
             if actual is not None:
-                value = '' if value is None else value
                 if actual in values and key != actual:
                     continue
+                value = '' if value is None else value
+                # JSON scalars become their text, as Gson-based clients send them.
+                if type(value) is bool:
+                    value = 'true' if value else 'false'
+                elif type(value) in (int, float):
+                    value = str(value)
+                elif not isinstance(value, str):
+                    raise ApiError('invalidParams', 'Field values must be strings: ' + actual)
                 if actual in result and result[actual] != value:
                     raise ApiError('compatibilityError', 'Ambiguous field name.')
                 result[actual] = value
@@ -464,7 +486,7 @@ class Legacy:
             raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
         key = sources[0]
         if key == 'data':
-            data = base64.b64decode(params[key])
+            data = decode_base64(params[key])
         elif key == 'path':
             with open(params[key], 'rb') as file:
                 data = file.read(MEDIA_SIZE_LIMIT + 1)
@@ -1359,6 +1381,9 @@ class Legacy:
                            latexHeader=defaults['latexPre'], latexFooter=defaults['latexPost'])
             return self.model(id=value['id'])
         if name in ('modelFieldNames', 'modelFieldDescriptions', 'modelFieldFonts', 'modelTemplates', 'modelStyling', 'modelFieldsOnTemplates'):
+            # Names v1 cannot represent are missing models, as in historical lookups.
+            if not isinstance(p['modelName'], str) or not p['modelName']:
+                raise ApiError('notFound', 'model was not found: ' + str(p['modelName']))
             model = self.s('noteTypes.get', noteType=ref)
             if name == 'modelFieldNames':
                 return [value['name'] for value in model['fields']]

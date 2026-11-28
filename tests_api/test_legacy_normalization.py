@@ -1,4 +1,6 @@
 """Forgiving legacy inputs against real collections and controlled Qt admission."""
+import base64
+import binascii
 import copy
 import json
 from pathlib import Path
@@ -159,6 +161,47 @@ def test_exact_field_names_win_and_ambiguous_updates_leave_notes_unchanged(admit
     drain()
     assert pending.value == {'result': None, 'error': 'Ambiguous field name.'}
     assert service.col.get_note(id).fields == ['exact update', '']
+
+
+def test_scalar_field_values_become_text_and_structures_are_rejected(admitted):
+    """AnkiconnectAndroid's Gson parsing accepts numbers and booleans as field text."""
+    owner, service, drain, _, _ = admitted
+    scalar = note(fields={'Front': 123, 'Back': True})
+    assert invoke(admitted, 'canAddNotesWithErrorDetail', notes=[scalar]) == [{'canAdd': True}]
+    id = invoke(admitted, 'addNote', note=scalar)
+    assert service.col.get_note(id).fields == ['123', 'true']
+    assert invoke(admitted, 'updateNoteFields', note={'id': id, 'fields': {'Front': 1.5, 'Back': False}}) is None
+    assert service.col.get_note(id).fields == ['1.5', 'false']
+    for action, params in (('addNote', {'note': note(fields={'Front': 'list', 'Back': ['a']})}),
+                           ('updateNoteFields', {'note': {'id': id, 'fields': {'Front': {'a': 1}}}})):
+        pending = owner.handler_async({'action': action, 'version': 6, 'params': params})
+        drain()
+        assert pending.value['error'] == 'Field values must be strings: ' + ('Back' if action == 'addNote' else 'Front')
+    assert service.col.note_count() == 1
+    assert service.col.get_note(id).fields == ['1.5', 'false']
+    # Exact keys still discard case variants before their values are checked.
+    for fields in ({'Front': 'exact', 'front': ['ignored']}, {'front': {'a': 1}, 'Front': 'exact'}):
+        assert invoke(admitted, 'updateNoteFields', note={'id': id, 'fields': fields}) is None
+        assert service.col.get_note(id)['Front'] == 'exact'
+
+
+def test_unpadded_base64_media_decodes(admitted):
+    """AnkiconnectAndroid's decoder accepts base64 without trailing '=' padding."""
+    owner, service, drain, _, _ = admitted
+    directory = Path(service.col.media.dir())
+    assert invoke(admitted, 'storeMediaFile', filename='one.bin', data='Y Q\n') == 'one.bin'
+    assert (directory / 'one.bin').read_bytes() == b'a'
+    assert invoke(admitted, 'storeMediaFile', filename='two.bin', data='YWI') == 'two.bin'
+    assert (directory / 'two.bin').read_bytes() == b'ab'
+    id = invoke(admitted, 'addNote', note=note(audio={'filename': 'three.mp3', 'data': 'YWI', 'fields': 'Back'}))
+    assert service.col.get_note(id)['Back'] == 'answer[sound:three.mp3]'
+    assert (directory / 'three.mp3').read_bytes() == b'ab'
+    pending = owner.handler_async({'action': 'storeMediaFile', 'version': 6, 'params': {'filename': 'bad.bin', 'data': 'YWJjZ'}})
+    drain()
+    with pytest.raises(binascii.Error) as invalid:
+        base64.b64decode('YWJjZ')
+    assert pending.value == {'result': None, 'error': str(invalid.value)}
+    assert not (directory / 'bad.bin').exists()
 
 
 def test_scalar_model_inputs_and_integer_parameters(admitted):

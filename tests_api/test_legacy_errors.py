@@ -77,6 +77,9 @@ def test_binding_baseline_covers_every_retained_legacy_action():
     ('deleteMediaFile', {'filename': 'missing.txt'}, None),
     ('storeMediaFile', {'filename': 'empty.txt', 'data': ''}, 'You must provide a "data", "path", or "url" field.'),
     ('exportPackage', {'deck': 'Missing', 'path': 'unused.apkg'}, False),
+    ('modelFieldNames', {'modelName': ''}, 'model was not found: '),
+    ('modelStyling', {'modelName': None}, 'model was not found: None'),
+    ('modelFieldsOnTemplates', {'modelName': 123}, 'model was not found: 123'),
 ])
 def test_legacy_missing_entities_and_failure_sentinels(admitted, version, action, params, expected):
     owner, service, drain, _, _ = admitted
